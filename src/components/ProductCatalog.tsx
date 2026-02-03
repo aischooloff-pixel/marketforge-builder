@@ -1,46 +1,84 @@
 import { useState, useMemo } from 'react';
-import { products, categories, Product } from '@/data/products';
+import { useProducts, Product } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
 import { ProductCard } from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Filter, SlidersHorizontal } from 'lucide-react';
+import { Search, X, Filter, SlidersHorizontal, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+
 export const ProductCatalog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all');
   const [selectedType, setSelectedType] = useState<string>('all');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 25000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [showFilters, setShowFilters] = useState(false);
-  const maxPrice = Math.max(...products.map(p => p.price));
+
+  // Fetch from database
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+  const { data: allProducts = [], isLoading: productsLoading } = useProducts({
+    categorySlug: selectedCategory !== 'all' ? selectedCategory : undefined,
+    type: selectedType !== 'all' ? selectedType as 'one-time' | 'subscription' : undefined,
+  });
+
+  const isLoading = categoriesLoading || productsLoading;
+
+  // Client-side filtering for search and price (for instant feedback)
   const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      const matchesSearch = search === '' || product.name.toLowerCase().includes(search.toLowerCase()) || product.shortDesc.toLowerCase().includes(search.toLowerCase()) || product.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      const matchesType = selectedType === 'all' || product.type === selectedType;
+    return allProducts.filter(product => {
+      const matchesSearch = search === '' || 
+        product.name.toLowerCase().includes(search.toLowerCase()) || 
+        product.short_desc?.toLowerCase().includes(search.toLowerCase()) || 
+        product.tags?.some(tag => tag.toLowerCase().includes(search.toLowerCase()));
+      
       const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
-      return matchesSearch && matchesCategory && matchesType && matchesPrice;
+      
+      return matchesSearch && matchesPrice;
     });
-  }, [search, selectedCategory, selectedType, priceRange]);
-  const activeFiltersCount = [selectedCategory !== 'all', selectedType !== 'all', priceRange[0] > 0 || priceRange[1] < maxPrice].filter(Boolean).length;
+  }, [allProducts, search, priceRange]);
+
+  const maxPrice = useMemo(() => {
+    if (allProducts.length === 0) return 50000;
+    return Math.max(...allProducts.map(p => p.price), 50000);
+  }, [allProducts]);
+
+  const activeFiltersCount = [
+    selectedCategory !== 'all', 
+    selectedType !== 'all', 
+    priceRange[0] > 0 || priceRange[1] < maxPrice
+  ].filter(Boolean).length;
+
   const clearFilters = () => {
     setSelectedCategory('all');
     setSelectedType('all');
-    setPriceRange([0, 25000]);
+    setPriceRange([0, 50000]);
     setSearch('');
     setSearchParams({});
   };
-  return <div className="min-h-screen pt-16 md:pt-20">
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
+    if (value !== 'all') {
+      setSearchParams({ category: value });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  return (
+    <div className="min-h-screen pt-16 md:pt-20">
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
         {/* Header */}
         <div className="mb-4 md:mb-8">
           <h1 className="text-2xl md:text-4xl font-bold mb-1 md:mb-2">Каталог</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            {filteredProducts.length} товаров
+            {isLoading ? 'Загрузка...' : `${filteredProducts.length} товаров`}
           </p>
         </div>
 
@@ -48,56 +86,75 @@ export const ProductCatalog = () => {
         <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-4 md:mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Поиск товаров..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 h-10 md:h-11" />
-            {search && <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setSearch('')}>
+            <Input 
+              placeholder="Поиск товаров..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              className="pl-10 h-10 md:h-11" 
+            />
+            {search && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" 
+                onClick={() => setSearch('')}
+              >
                 <X className="h-4 w-4" />
-              </Button>}
+              </Button>
+            )}
           </div>
-          <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="md:hidden gap-2 h-10">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowFilters(!showFilters)} 
+            className="md:hidden gap-2 h-10"
+          >
             <Filter className="h-4 w-4" />
             Фильтры
-            {activeFiltersCount > 0 && <Badge variant="secondary" className="ml-1">
+            {activeFiltersCount > 0 && (
+              <Badge variant="secondary" className="ml-1">
                 {activeFiltersCount}
-              </Badge>}
+              </Badge>
+            )}
           </Button>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 md:gap-8">
           {/* Filters Sidebar - Mobile Sheet / Desktop Sticky */}
           <AnimatePresence>
-            {showFilters && <motion.aside initial={{
-            opacity: 0,
-            height: 0
-          }} animate={{
-            opacity: 1,
-            height: 'auto'
-          }} exit={{
-            opacity: 0,
-            height: 0
-          }} className="w-full md:hidden flex-shrink-0 overflow-hidden">
+            {showFilters && (
+              <motion.aside 
+                initial={{ opacity: 0, height: 0 }} 
+                animate={{ opacity: 1, height: 'auto' }} 
+                exit={{ opacity: 0, height: 0 }} 
+                className="w-full md:hidden flex-shrink-0 overflow-hidden"
+              >
                 <div className="space-y-4 p-4 rounded-xl border bg-card mb-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold flex items-center gap-2 text-sm">
                       <SlidersHorizontal className="h-4 w-4" />
                       Фильтры
                     </h3>
-                    {activeFiltersCount > 0 && <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs">
+                    {activeFiltersCount > 0 && (
+                      <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs">
                         Сбросить
-                      </Button>}
+                      </Button>
+                    )}
                   </div>
 
                   {/* Category Filter */}
                   <div className="space-y-2">
                     <label className="text-xs font-medium">Категория</label>
-                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <Select value={selectedCategory} onValueChange={handleCategoryChange}>
                       <SelectTrigger className="h-9">
                         <SelectValue placeholder="Все категории" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Все категории</SelectItem>
-                        {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>
+                        {categories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.slug}>
                             {cat.icon} {cat.name}
-                          </SelectItem>)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -122,10 +179,18 @@ export const ProductCatalog = () => {
                     <label className="text-xs font-medium">
                       Цена: {priceRange[0].toLocaleString('ru-RU')} — {priceRange[1].toLocaleString('ru-RU')} ₽
                     </label>
-                    <Slider value={priceRange} onValueChange={value => setPriceRange(value as [number, number])} min={0} max={25000} step={100} className="py-4" />
+                    <Slider 
+                      value={priceRange} 
+                      onValueChange={value => setPriceRange(value as [number, number])} 
+                      min={0} 
+                      max={maxPrice} 
+                      step={100} 
+                      className="py-4" 
+                    />
                   </div>
                 </div>
-              </motion.aside>}
+              </motion.aside>
+            )}
           </AnimatePresence>
 
           {/* Desktop Sidebar */}
@@ -136,25 +201,33 @@ export const ProductCatalog = () => {
                   <SlidersHorizontal className="h-4 w-4" />
                   Фильтры
                 </h3>
-                {activeFiltersCount > 0 && <Button variant="ghost" size="sm" onClick={clearFilters}>
+                {activeFiltersCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
                     Сбросить
-                  </Button>}
+                  </Button>
+                )}
               </div>
 
               {/* Category Filter */}
               <div className="space-y-3">
                 <label className="text-sm font-medium">Категория</label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Все категории" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все категории</SelectItem>
-                    {categories.map(cat => <SelectItem key={cat.id} value={cat.id}>
-                        {cat.icon} {cat.name}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
+                {categoriesLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Все категории" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Все категории</SelectItem>
+                      {categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.slug}>
+                          {cat.icon} {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Type Filter */}
@@ -177,32 +250,53 @@ export const ProductCatalog = () => {
                 <label className="text-sm font-medium">
                   Цена: {priceRange[0].toLocaleString('ru-RU')} — {priceRange[1].toLocaleString('ru-RU')} ₽
                 </label>
-                <Slider value={priceRange} onValueChange={value => setPriceRange(value as [number, number])} min={0} max={25000} step={100} className="py-4" />
+                <Slider 
+                  value={priceRange} 
+                  onValueChange={value => setPriceRange(value as [number, number])} 
+                  min={0} 
+                  max={maxPrice} 
+                  step={100} 
+                  className="py-4" 
+                />
               </div>
             </div>
           </aside>
 
           {/* Products Grid */}
           <div className="flex-1 min-w-0">
-            {/* Category Pills - Horizontal scroll on mobile */}
-            
-
-            {filteredProducts.length > 0 ? <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
-                {filteredProducts.map((product, index) => <ProductCard key={product.id} product={product} index={index} />)}
-              </div> : <motion.div initial={{
-            opacity: 0
-          }} animate={{
-            opacity: 1
-          }} className="text-center py-12 md:py-16">
+            {isLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="p-3 md:p-4 rounded-xl md:rounded-2xl border bg-card">
+                    <Skeleton className="aspect-square md:aspect-[4/3] rounded-lg md:rounded-xl mb-2 md:mb-4" />
+                    <Skeleton className="h-5 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ))}
+              </div>
+            ) : filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                {filteredProducts.map((product, index) => (
+                  <ProductCard key={product.id} product={product} index={index} />
+                ))}
+              </div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                className="text-center py-12 md:py-16"
+              >
                 <p className="text-muted-foreground mb-4 text-sm md:text-base">
                   Товары не найдены
                 </p>
                 <Button variant="outline" size="sm" onClick={clearFilters}>
                   Сбросить фильтры
                 </Button>
-              </motion.div>}
+              </motion.div>
+            )}
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
