@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { countries, services } from '@/data/products';
 import { Check } from 'lucide-react';
 import { ServiceIcon } from './ServiceIcons';
+import { CountryFlag } from './CountryFlags';
 
 interface CountrySelectorProps {
   selectedCountry: string | null;
@@ -42,7 +43,10 @@ export const CountrySelector = ({
             } ${!country.available ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={!country.available}
           >
-            <span className="text-2xl">{country.flag}</span>
+            <div className="flex flex-col items-center gap-1">
+              <CountryFlag countryCode={country.code} className="h-6 w-9" />
+              <span className="text-[10px] font-semibold text-muted-foreground">{country.code}</span>
+            </div>
             {selectedCountry === country.code && (
               <motion.div
                 initial={{ scale: 0 }}
@@ -88,9 +92,10 @@ export const CountrySelector = ({
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-2 p-3 rounded-lg bg-secondary"
         >
-          <span className="text-xl">
-            {countries.find(c => c.code === selectedCountry)?.flag}
-          </span>
+          <CountryFlag 
+            countryCode={selectedCountry} 
+            className="h-5 w-7"
+          />
           <span className="font-medium">
             {countries.find(c => c.code === selectedCountry)?.name}
           </span>
