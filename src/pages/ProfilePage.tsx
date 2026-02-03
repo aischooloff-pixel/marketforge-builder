@@ -11,33 +11,57 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { User, Wallet, Package, Clock, CreditCard, Smartphone, Building, Loader2, Copy, Check, Eye, EyeOff } from 'lucide-react';
+import { User, Wallet, Package, Clock, Loader2, Copy, Check, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
 
 const ProfilePage = () => {
-  const { user, isAuthenticated, isLoading: authLoading } = useTelegram();
+  const { user, isAuthenticated, isLoading: authLoading, webApp } = useTelegram();
   const { data: orders = [], isLoading: ordersLoading } = useOrders();
   const { data: transactions = [], isLoading: transactionsLoading } = useTransactions();
   
   const [topUpAmount, setTopUpAmount] = useState('');
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
   const [visibleContent, setVisibleContent] = useState<Record<string, boolean>>({});
 
-  const paymentMethods = [
-    { id: 'card', name: 'Банковская карта', icon: CreditCard, description: 'Visa, MasterCard, МИР' },
-    { id: 'sbp', name: 'СБП', icon: Smartphone, description: 'Система быстрых платежей' },
-    { id: 'crypto', name: 'Криптовалюта', icon: Building, description: 'BTC, ETH, USDT' },
-  ];
-
-  const handleTopUp = () => {
+  const handleTopUp = async () => {
     const amount = parseInt(topUpAmount);
-    if (!amount || amount < 100) return;
+    if (!amount || amount < 100 || !user) return;
 
-    // TODO: Integrate with CryptoBot payment
-    toast.info('Функция пополнения будет доступна в следующем обновлении');
-    setIsTopUpOpen(false);
+    setIsProcessing(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('cryptobot-create-invoice', {
+        body: {
+          userId: user.id,
+          amount,
+          description: `Пополнение баланса на ${amount} ₽`,
+        },
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || 'Ошибка создания счёта');
+      }
+
+      // Open CryptoBot payment
+      if (webApp && data.miniAppUrl) {
+        webApp.openTelegramLink(data.miniAppUrl);
+      } else if (data.payUrl) {
+        window.open(data.payUrl, '_blank');
+      }
+
+      toast.success('Счёт создан! Оплатите в CryptoBot.');
+      setIsTopUpOpen(false);
+      setTopUpAmount('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Ошибка';
+      toast.error(message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const copyToClipboard = (text: string, orderId: string) => {
@@ -158,7 +182,7 @@ const ProfilePage = () => {
                     <span className="sm:hidden">+</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md mx-4">
+                <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="text-lg">Пополнение баланса</DialogTitle>
                   </DialogHeader>
@@ -189,37 +213,40 @@ const ProfilePage = () => {
                       </div>
                     </div>
 
-                    {/* Payment Method */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Способ оплаты</label>
-                      <div className="grid gap-2">
-                        {paymentMethods.map(method => (
-                          <button
-                            key={method.id}
-                            onClick={() => setSelectedMethod(method.id)}
-                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                              selectedMethod === method.id
-                                ? 'border-foreground bg-secondary'
-                                : 'border-border hover:border-foreground/50'
-                            }`}
-                          >
-                            <method.icon className="h-4 w-4" />
-                            <div className="text-left">
-                              <p className="font-medium text-sm">{method.name}</p>
-                              <p className="text-xs text-muted-foreground">{method.description}</p>
-                            </div>
-                          </button>
-                        ))}
+                    {/* CryptoBot Payment */}
+                    <div className="p-3 rounded-lg border border-foreground bg-secondary flex items-center gap-3">
+                      <img 
+                        src={cryptoBotLogo} 
+                        alt="CryptoBot" 
+                        className="w-8 h-8 rounded-full"
+                      />
+                      <div className="text-left">
+                        <p className="font-medium text-sm">CryptoBot</p>
+                        <p className="text-xs text-muted-foreground">USDT, TON, BTC, ETH</p>
                       </div>
                     </div>
 
                     {/* Submit */}
                     <Button
-                      className="w-full"
-                      disabled={!topUpAmount || parseInt(topUpAmount) < 100 || !selectedMethod}
+                      className="w-full gap-2"
+                      disabled={!topUpAmount || parseInt(topUpAmount) < 100 || isProcessing}
                       onClick={handleTopUp}
                     >
-                      Пополнить на {topUpAmount || '0'} ₽
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Создание счёта...
+                        </>
+                      ) : (
+                        <>
+                          <img 
+                            src={cryptoBotLogo} 
+                            alt="" 
+                            className="w-4 h-4 rounded-full"
+                          />
+                          Пополнить на {topUpAmount || '0'} ₽
+                        </>
+                      )}
                     </Button>
 
                     <p className="text-xs text-muted-foreground text-center">
