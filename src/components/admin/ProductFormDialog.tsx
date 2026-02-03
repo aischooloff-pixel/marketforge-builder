@@ -88,7 +88,7 @@ export const ProductFormDialog = ({
       short_desc: '',
       long_desc: '',
       price: 0,
-      category_id: '',
+      category_id: 'none',
       type: 'one-time',
       is_active: true,
       is_popular: false,
@@ -103,7 +103,7 @@ export const ProductFormDialog = ({
         short_desc: product.short_desc || '',
         long_desc: product.long_desc || '',
         price: product.price,
-        category_id: product.category_id || '',
+        category_id: product.category_id || 'none',
         type: product.type as 'one-time' | 'subscription',
         is_active: product.is_active,
         is_popular: product.is_popular,
@@ -115,7 +115,7 @@ export const ProductFormDialog = ({
         short_desc: '',
         long_desc: '',
         price: 0,
-        category_id: '',
+        category_id: 'none',
         type: 'one-time',
         is_active: true,
         is_popular: false,
@@ -130,7 +130,7 @@ export const ProductFormDialog = ({
       short_desc: data.short_desc,
       long_desc: data.long_desc,
       price: data.price,
-      category_id: data.category_id || undefined,
+      category_id: data.category_id && data.category_id !== 'none' ? data.category_id : undefined,
       type: data.type,
       is_active: data.is_active,
       is_popular: data.is_popular,
@@ -226,8 +226,8 @@ export const ProductFormDialog = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Без категории</SelectItem>
-                        {categories.map((cat) => (
+                        <SelectItem value="none">Без категории</SelectItem>
+                        {categories.filter(cat => cat.id).map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
                             {cat.icon} {cat.name}
                           </SelectItem>
