@@ -1,0 +1,270 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const url = new URL(req.url);
+    const path = url.pathname.replace("/admin-api", "");
+    const { userId, ...body } = await req.json().catch(() => ({}));
+
+    // Verify admin role
+    if (userId) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      const isAdmin = roles?.some((r) => r.role === "admin" || r.role === "moderator");
+      if (!isAdmin) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Route handling
+    switch (true) {
+      // ============ ANALYTICS ============
+      case path === "/stats" && req.method === "GET": {
+        const [
+          { count: usersCount },
+          { count: ordersCount },
+          { data: revenue },
+          { count: productsCount },
+        ] = await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("status", "completed"),
+          supabase.from("orders").select("total").eq("status", "completed"),
+          supabase.from("products").select("*", { count: "exact", head: true }).eq("is_active", true),
+        ]);
+
+        const totalRevenue = revenue?.reduce((sum, o) => sum + parseFloat(o.total), 0) || 0;
+
+        return new Response(
+          JSON.stringify({
+            users: usersCount || 0,
+            orders: ordersCount || 0,
+            revenue: totalRevenue,
+            products: productsCount || 0,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // ============ PRODUCTS ============
+      case path === "/products" && req.method === "GET": {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*, categories(name, icon)")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path === "/products" && req.method === "POST": {
+        const { data, error } = await supabase
+          .from("products")
+          .insert(body.product)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/products/") && req.method === "PUT": {
+        const productId = path.split("/")[2];
+        const { data, error } = await supabase
+          .from("products")
+          .update(body.product)
+          .eq("id", productId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/products/") && req.method === "DELETE": {
+        const productId = path.split("/")[2];
+        const { error } = await supabase
+          .from("products")
+          .delete()
+          .eq("id", productId);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ============ ORDERS ============
+      case path === "/orders" && req.method === "GET": {
+        const { data, error } = await supabase
+          .from("orders")
+          .select("*, profiles(username, first_name, telegram_id), order_items(*)")
+          .order("created_at", { ascending: false })
+          .limit(100);
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/orders/") && req.method === "PUT": {
+        const orderId = path.split("/")[2];
+        const { data, error } = await supabase
+          .from("orders")
+          .update({ status: body.status })
+          .eq("id", orderId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ============ USERS ============
+      case path === "/users" && req.method === "GET": {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*, user_roles(role)")
+          .order("created_at", { ascending: false })
+          .limit(100);
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/users/") && path.endsWith("/ban") && req.method === "POST": {
+        const targetUserId = path.split("/")[2];
+        const { error } = await supabase
+          .from("profiles")
+          .update({ is_banned: body.banned, ban_reason: body.reason })
+          .eq("id", targetUserId);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/users/") && path.endsWith("/role") && req.method === "POST": {
+        const targetUserId = path.split("/")[2];
+        
+        // Remove existing role and add new one
+        await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", targetUserId);
+
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: targetUserId, role: body.role });
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ============ CATEGORIES ============
+      case path === "/categories" && req.method === "GET": {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("*")
+          .order("sort_order");
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path === "/categories" && req.method === "POST": {
+        const { data, error } = await supabase
+          .from("categories")
+          .insert(body.category)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ============ PRODUCT ITEMS ============
+      case path === "/product-items" && req.method === "POST": {
+        const { items, productId } = body;
+        const insertData = items.map((content: string) => ({
+          product_id: productId,
+          content,
+        }));
+
+        const { data, error } = await supabase
+          .from("product_items")
+          .insert(insertData)
+          .select();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/product-items/") && req.method === "GET": {
+        const productId = path.split("/")[2];
+        const { data, error } = await supabase
+          .from("product_items")
+          .select("*, profiles(username)")
+          .eq("product_id", productId)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      default:
+        return new Response(
+          JSON.stringify({ error: "Not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+  } catch (err) {
+    console.error("Admin API error:", err);
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return new Response(
+      JSON.stringify({ error: message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
