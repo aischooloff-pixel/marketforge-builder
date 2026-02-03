@@ -1,23 +1,51 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { products, countries } from '@/data/products';
+import { useProduct, useProductStock } from '@/hooks/useProducts';
 import { useCart } from '@/contexts/CartContext';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CountrySelector, ServiceSelector } from '@/components/CountrySelector';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { ShoppingCart, ArrowLeft, Shield, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2 } from 'lucide-react';
 
 const ProductPage = () => {
   const { id } = useParams<{ id: string }>();
-  const product = products.find(p => p.id === id);
+  const { data: product, isLoading, error } = useProduct(id);
+  const { data: stockCount = 0, isLoading: stockLoading } = useProductStock(id);
   const { addItem } = useCart();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
-  if (!product) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 pt-20">
+          <div className="container mx-auto px-4 py-8">
+            <Skeleton className="h-6 w-32 mb-8" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              <div>
+                <Skeleton className="h-8 w-24 mb-4" />
+                <Skeleton className="h-10 w-3/4 mb-4" />
+                <Skeleton className="h-20 w-full mb-6" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+              <div>
+                <Skeleton className="aspect-[16/9] rounded-xl mb-6" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !product) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -31,7 +59,22 @@ const ProductPage = () => {
   }
 
   const handleAddToCart = () => {
-    addItem(product, {
+    if (isOutOfStock) return;
+    
+    addItem({
+      id: product.id,
+      name: product.name,
+      shortDesc: product.short_desc || '',
+      longDesc: product.long_desc || '',
+      price: product.price,
+      type: product.type || 'one-time',
+      category: product.categories?.slug || '',
+      tags: product.tags || [],
+      legalNote: product.legal_note || '',
+      popular: product.is_popular || false,
+      countries: product.countries || undefined,
+      services: product.services || undefined,
+    }, {
       country: selectedCountry || undefined,
       services: selectedServices.length > 0 ? selectedServices : undefined
     });
@@ -47,6 +90,8 @@ const ProductPage = () => {
 
   const needsCountrySelector = product.countries && product.countries.length > 0;
   const needsServiceSelector = product.services && product.services.length > 0;
+  const isOutOfStock = stockCount === 0;
+  const categoryIcon = product.categories?.icon || '📦';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -74,8 +119,14 @@ const ProductPage = () => {
                 <Badge variant={product.type === 'subscription' ? 'default' : 'secondary'}>
                   {product.type === 'subscription' ? 'Подписка' : 'Разовый платёж'}
                 </Badge>
-                {product.popular && (
+                {product.is_popular && (
                   <Badge variant="outline">Популярное</Badge>
+                )}
+                {isOutOfStock && (
+                  <Badge variant="destructive" className="gap-1">
+                    <PackageX className="h-3 w-3" />
+                    Нет в наличии
+                  </Badge>
                 )}
               </div>
 
@@ -84,37 +135,41 @@ const ProductPage = () => {
               </h1>
 
               <p className="text-lg text-muted-foreground mb-6">
-                {product.shortDesc}
+                {product.short_desc}
               </p>
 
               <p className="text-foreground mb-8 leading-relaxed">
-                {product.longDesc}
+                {product.long_desc}
               </p>
 
               {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-8">
-                {product.tags.map(tag => (
-                  <span 
-                    key={tag}
-                    className="px-3 py-1 rounded-full bg-secondary text-sm"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              {product.tags && product.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {product.tags.map(tag => (
+                    <span 
+                      key={tag}
+                      className="px-3 py-1 rounded-full bg-secondary text-sm"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {/* Legal Note */}
-              <div className="p-4 rounded-xl bg-secondary/50 border mb-8">
-                <div className="flex items-start gap-3">
-                  <Shield className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                  <div>
-                    <h4 className="font-medium mb-1">Условия использования</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {product.legalNote}
-                    </p>
+              {product.legal_note && (
+                <div className="p-4 rounded-xl bg-secondary/50 border mb-8">
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                    <div>
+                      <h4 className="font-medium mb-1">Условия использования</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {product.legal_note}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </motion.div>
 
             {/* Purchase Section */}
@@ -127,78 +182,101 @@ const ProductPage = () => {
                 <div className="relative aspect-[16/9] bg-secondary/50">
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-6xl">
-                      {product.category === 'scripts' && '⚡'}
-                      {product.category === 'automation' && '🤖'}
-                      {product.category === 'social' && '📱'}
-                      {product.category === 'consumables' && '📦'}
-                      {product.category === 'proxy' && '🌐'}
-                      {product.category === 'services' && '💼'}
-                      {product.category === 'manuals' && '📚'}
+                      {categoryIcon}
                     </div>
                   </div>
-                  {product.popular && (
+                  {product.is_popular && !isOutOfStock && (
                     <div className="absolute top-3 left-3">
                       <Badge className="bg-primary text-primary-foreground">
                         Популярное
                       </Badge>
                     </div>
                   )}
+                  {isOutOfStock && (
+                    <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                      <Badge variant="destructive" className="text-lg py-2 px-4 gap-2">
+                        <PackageX className="h-5 w-5" />
+                        Нет в наличии
+                      </Badge>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="p-6">
-                {/* Country Selector for Proxy/VPS */}
-                {needsCountrySelector && (
-                  <div className="mb-6">
-                    <CountrySelector
-                      selectedCountry={selectedCountry}
-                      onSelect={setSelectedCountry}
-                      availableCountries={product.countries}
-                    />
-                  </div>
-                )}
+                  {/* Stock info */}
+                  {!stockLoading && !isOutOfStock && (
+                    <div className="mb-4">
+                      <p className="text-sm text-muted-foreground">
+                        В наличии: <span className={stockCount <= 5 ? 'text-orange-500 font-medium' : 'font-medium'}>{stockCount} шт</span>
+                      </p>
+                    </div>
+                  )}
 
-                {/* Service Selector for Virtual Numbers */}
-                {needsServiceSelector && (
-                  <div className="mb-6">
-                    <ServiceSelector
-                      selectedServices={selectedServices}
-                      onToggle={toggleService}
-                      availableServices={product.services?.map(s => s.toLowerCase())}
-                    />
-                  </div>
-                )}
+                  {/* Country Selector for Proxy/VPS */}
+                  {needsCountrySelector && !isOutOfStock && (
+                    <div className="mb-6">
+                      <CountrySelector
+                        selectedCountry={selectedCountry}
+                        onSelect={setSelectedCountry}
+                        availableCountries={product.countries}
+                      />
+                    </div>
+                  )}
 
-                {/* Price */}
-                <div className="mb-6">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold">
-                      {product.price.toLocaleString('ru-RU')}
-                    </span>
-                    <span className="text-xl text-muted-foreground">₽</span>
-                    {product.type === 'subscription' && (
-                      <span className="text-muted-foreground">/мес</span>
+                  {/* Service Selector for Virtual Numbers */}
+                  {needsServiceSelector && !isOutOfStock && (
+                    <div className="mb-6">
+                      <ServiceSelector
+                        selectedServices={selectedServices}
+                        onToggle={toggleService}
+                        availableServices={product.services?.map(s => s.toLowerCase())}
+                      />
+                    </div>
+                  )}
+
+                  {/* Price */}
+                  <div className="mb-6">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold">
+                        {product.price.toLocaleString('ru-RU')}
+                      </span>
+                      <span className="text-xl text-muted-foreground">₽</span>
+                      {product.type === 'subscription' && (
+                        <span className="text-muted-foreground">/мес</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Add to Cart */}
+                  <Button 
+                    size="lg" 
+                    className="w-full gap-2 mb-4"
+                    onClick={handleAddToCart}
+                    disabled={isOutOfStock}
+                  >
+                    {isOutOfStock ? (
+                      <>
+                        <PackageX className="h-5 w-5" />
+                        Нет в наличии
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="h-5 w-5" />
+                        Добавить в корзину
+                      </>
                     )}
-                  </div>
-                </div>
+                  </Button>
 
-                {/* Add to Cart */}
-                <Button 
-                  size="lg" 
-                  className="w-full gap-2 mb-4"
-                  onClick={handleAddToCart}
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  Добавить в корзину
-                </Button>
-
-                {/* Warning */}
-                <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <p>
-                    Оформляя заказ, вы подтверждаете, что будете использовать 
-                    продукт в соответствии с законодательством и правилами магазина.
-                  </p>
-                </div>
+                  {/* Warning */}
+                  {!isOutOfStock && (
+                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <p>
+                        Оформляя заказ, вы подтверждаете, что будете использовать 
+                        продукт в соответствии с законодательством и правилами магазина.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom';
-import { products, categories, storeData } from '@/data/products';
+import { storeData } from '@/data/products';
+import { usePopularProducts } from '@/hooks/useProducts';
+import { useCategories } from '@/hooks/useCategories';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ProductCard } from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { ArrowRight, Shield, Zap, Users, Star, Quote } from 'lucide-react';
 
@@ -31,33 +34,31 @@ const reviews = [
     rating: 5,
   },
 ];
+
 const Index = () => {
-  const popularProducts = products.filter(p => p.popular).slice(0, 6);
-  return <div className="min-h-screen flex flex-col">
+  const { data: popularProducts = [], isLoading: productsLoading } = usePopularProducts(6);
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
+
+  return (
+    <div className="min-h-screen flex flex-col">
       <Header />
       
       <main className="flex-1">
         {/* Hero Section */}
         <section className="pt-24 pb-12 md:pt-40 md:pb-32">
           <div className="container mx-auto px-4">
-            <motion.div initial={{
-            opacity: 0,
-            y: 30
-          }} animate={{
-            opacity: 1,
-            y: 0
-          }} transition={{
-            duration: 0.6
-          }} className="max-w-4xl mx-auto text-center">
-              <motion.div initial={{
-              opacity: 0,
-              scale: 0.9
-            }} animate={{
-              opacity: 1,
-              scale: 1
-            }} transition={{
-              delay: 0.2
-            }} className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-secondary text-xs md:text-sm font-medium mb-4 md:mb-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              transition={{ duration: 0.6 }} 
+              className="max-w-4xl mx-auto text-center"
+            >
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                transition={{ delay: 0.2 }} 
+                className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-secondary text-xs md:text-sm font-medium mb-4 md:mb-8"
+              >
                 <Shield className="h-3 w-3 md:h-4 md:w-4" />
                 Только легальные инструменты
               </motion.div>
@@ -91,29 +92,19 @@ const Index = () => {
         <section className="py-8 md:py-16 border-y bg-secondary/30">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
-              {[{
-              icon: Shield,
-              title: 'Легально',
-              desc: 'Все товары проверены на соответствие законодательству'
-            }, {
-              icon: Zap,
-              title: 'Мгновенно',
-              desc: 'Автоматическая доставка после оплаты'
-            }, {
-              icon: Users,
-              title: 'Для профи',
-              desc: 'Инструменты для мастеров своих дел'
-            }].map((feature, index) => <motion.div key={feature.title} initial={{
-              opacity: 0,
-              y: 20
-            }} whileInView={{
-              opacity: 1,
-              y: 0
-            }} transition={{
-              delay: index * 0.1
-            }} viewport={{
-              once: true
-            }} className="flex items-start gap-3 md:gap-4 p-4 md:p-6">
+              {[
+                { icon: Shield, title: 'Легально', desc: 'Все товары проверены на соответствие законодательству' },
+                { icon: Zap, title: 'Мгновенно', desc: 'Автоматическая доставка после оплаты' },
+                { icon: Users, title: 'Для профи', desc: 'Инструменты для мастеров своих дел' }
+              ].map((feature, index) => (
+                <motion.div 
+                  key={feature.title} 
+                  initial={{ opacity: 0, y: 20 }} 
+                  whileInView={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: index * 0.1 }} 
+                  viewport={{ once: true }} 
+                  className="flex items-start gap-3 md:gap-4 p-4 md:p-6"
+                >
                   <div className="p-2 md:p-3 rounded-lg md:rounded-xl bg-foreground text-background">
                     <feature.icon className="h-5 w-5 md:h-6 md:w-6" />
                   </div>
@@ -121,7 +112,8 @@ const Index = () => {
                     <h3 className="font-semibold text-base md:text-lg mb-0.5 md:mb-1">{feature.title}</h3>
                     <p className="text-sm text-muted-foreground">{feature.desc}</p>
                   </div>
-                </motion.div>)}
+                </motion.div>
+              ))}
             </div>
           </div>
         </section>
@@ -129,13 +121,12 @@ const Index = () => {
         {/* Popular Products */}
         <section className="py-10 md:py-20">
           <div className="container mx-auto px-4">
-            <motion.div initial={{
-            opacity: 0
-          }} whileInView={{
-            opacity: 1
-          }} viewport={{
-            once: true
-          }} className="flex justify-between items-center gap-4 mb-6 md:mb-10">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              whileInView={{ opacity: 1 }} 
+              viewport={{ once: true }} 
+              className="flex justify-between items-center gap-4 mb-6 md:mb-10"
+            >
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold mb-1">Популярное</h2>
                 <p className="text-sm md:text-base text-muted-foreground">Самые востребованные товары</p>
@@ -148,63 +139,110 @@ const Index = () => {
               </Link>
             </motion.div>
 
-            {/* Horizontal scroll on Mobile, Grid on Desktop */}
-            <div className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
-              <div className="flex gap-3 snap-x snap-mandatory">
-                {popularProducts.map((product, index) => (
-                  <div key={product.id} className="w-[85vw] flex-shrink-0 snap-center">
-                    <ProductCard product={product} index={index} />
+            {/* Loading state */}
+            {productsLoading ? (
+              <>
+                <div className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
+                  <div className="flex gap-3">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="w-[85vw] flex-shrink-0">
+                        <div className="p-3 rounded-xl border bg-card">
+                          <Skeleton className="aspect-square rounded-lg mb-2" />
+                          <Skeleton className="h-5 w-3/4 mb-2" />
+                          <Skeleton className="h-4 w-1/2" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="p-4 rounded-2xl border bg-card">
+                      <Skeleton className="aspect-[4/3] rounded-xl mb-4" />
+                      <Skeleton className="h-6 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : popularProducts.length > 0 ? (
+              <>
+                {/* Horizontal scroll on Mobile, Grid on Desktop */}
+                <div className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
+                  <div className="flex gap-3 snap-x snap-mandatory">
+                    {popularProducts.map((product, index) => (
+                      <div key={product.id} className="w-[85vw] flex-shrink-0 snap-center">
+                        <ProductCard product={product} index={index} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {popularProducts.map((product, index) => (
+                    <ProductCard key={product.id} product={product} index={index} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Популярные товары скоро появятся</p>
               </div>
-            </div>
-            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {popularProducts.map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
-              ))}
-            </div>
+            )}
           </div>
         </section>
 
         {/* Categories */}
         <section className="py-10 md:py-20 bg-secondary/30">
           <div className="container mx-auto px-4">
-            <motion.div initial={{
-            opacity: 0
-          }} whileInView={{
-            opacity: 1
-          }} viewport={{
-            once: true
-          }} className="text-center mb-6 md:mb-12">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              whileInView={{ opacity: 1 }} 
+              viewport={{ once: true }} 
+              className="text-center mb-6 md:mb-12"
+            >
               <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">Категории</h2>
               <p className="text-sm md:text-base text-muted-foreground">Найдите нужный инструмент</p>
             </motion.div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
-              {categories.map((category, index) => <motion.div key={category.id} initial={{
-              opacity: 0,
-              scale: 0.9
-            }} whileInView={{
-              opacity: 1,
-              scale: 1
-            }} transition={{
-              delay: index * 0.05
-            }} viewport={{
-              once: true
-            }}>
-                  <Link to={`/catalog?category=${category.id}`}>
-                    <div className="p-4 md:p-6 rounded-lg md:rounded-xl border bg-card hover:shadow-lg hover:-translate-y-1 transition-all text-center group">
-                      <div className="text-3xl md:text-4xl mb-2 md:mb-3">{category.icon}</div>
-                      <h3 className="font-semibold text-sm md:text-base mb-0.5 md:mb-1 group-hover:text-foreground transition-colors">
-                        {category.name}
-                      </h3>
-                      <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 hidden md:block">
-                        {category.description}
-                      </p>
-                    </div>
-                  </Link>
-                </motion.div>)}
-            </div>
+            {categoriesLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="p-4 md:p-6 rounded-lg md:rounded-xl border bg-card">
+                    <Skeleton className="h-10 w-10 mx-auto mb-2 rounded" />
+                    <Skeleton className="h-4 w-3/4 mx-auto mb-1" />
+                    <Skeleton className="h-3 w-1/2 mx-auto hidden md:block" />
+                  </div>
+                ))}
+              </div>
+            ) : categories.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+                {categories.map((category, index) => (
+                  <motion.div 
+                    key={category.id} 
+                    initial={{ opacity: 0, scale: 0.9 }} 
+                    whileInView={{ opacity: 1, scale: 1 }} 
+                    transition={{ delay: index * 0.05 }} 
+                    viewport={{ once: true }}
+                  >
+                    <Link to={`/catalog?category=${category.slug}`}>
+                      <div className="p-4 md:p-6 rounded-lg md:rounded-xl border bg-card hover:shadow-lg hover:-translate-y-1 transition-all text-center group">
+                        <div className="text-3xl md:text-4xl mb-2 md:mb-3">{category.icon}</div>
+                        <h3 className="font-semibold text-sm md:text-base mb-0.5 md:mb-1 group-hover:text-foreground transition-colors">
+                          {category.name}
+                        </h3>
+                        <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 hidden md:block">
+                          {category.description}
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Категории скоро появятся</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -252,6 +290,8 @@ const Index = () => {
       </main>
 
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
