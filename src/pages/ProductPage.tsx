@@ -122,7 +122,30 @@ const ProductPage = () => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
             >
-              <div className="sticky top-24 p-6 rounded-xl border bg-card">
+              <div className="sticky top-24 rounded-xl border bg-card overflow-hidden">
+                {/* Product Image */}
+                <div className="relative aspect-[16/9] bg-secondary/50">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-6xl">
+                      {product.category === 'scripts' && '⚡'}
+                      {product.category === 'automation' && '🤖'}
+                      {product.category === 'social' && '📱'}
+                      {product.category === 'consumables' && '📦'}
+                      {product.category === 'proxy' && '🌐'}
+                      {product.category === 'services' && '💼'}
+                      {product.category === 'manuals' && '📚'}
+                    </div>
+                  </div>
+                  {product.popular && (
+                    <div className="absolute top-3 left-3">
+                      <Badge className="bg-primary text-primary-foreground">
+                        Популярное
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-6">
                 {/* Country Selector for Proxy/VPS */}
                 {needsCountrySelector && (
                   <div className="mb-6">
@@ -175,6 +198,7 @@ const ProductPage = () => {
                     Оформляя заказ, вы подтверждаете, что будете использовать 
                     продукт в соответствии с законодательством и правилами магазина.
                   </p>
+                </div>
                 </div>
               </div>
             </motion.div>
