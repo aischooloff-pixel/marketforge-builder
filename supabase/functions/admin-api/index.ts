@@ -23,38 +23,43 @@ serve(async (req) => {
     const path = requestPath || url.pathname.replace("/admin-api", "") || "/";
     const method = requestMethod || req.method;
 
-    // CRITICAL: Always verify admin role - no userId = no access
-    if (!userId) {
-      console.log("Admin API: Missing userId");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // ВРЕМЕННО: открытый доступ к админке (убрать после настройки!)
+    const TEMP_OPEN_ACCESS = true;
+
+    if (!TEMP_OPEN_ACCESS) {
+      // CRITICAL: Always verify admin role - no userId = no access
+      if (!userId) {
+        console.log("Admin API: Missing userId");
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      if (rolesError) {
+        console.error("Admin API: Role check error:", rolesError);
+        return new Response(
+          JSON.stringify({ error: "Authorization failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const isAdmin = roles?.some((r) => r.role === "admin" || r.role === "moderator");
+      if (!isAdmin) {
+        console.log(`Admin API: User ${userId} is not admin. Roles:`, roles);
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
-    const { data: roles, error: rolesError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-
-    if (rolesError) {
-      console.error("Admin API: Role check error:", rolesError);
-      return new Response(
-        JSON.stringify({ error: "Authorization failed" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const isAdmin = roles?.some((r) => r.role === "admin" || r.role === "moderator");
-    if (!isAdmin) {
-      console.log(`Admin API: User ${userId} is not admin. Roles:`, roles);
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Admin API: ${method} ${path} by user ${userId}`);
+    console.log(`Admin API: ${method} ${path} (open access: ${TEMP_OPEN_ACCESS})`);
 
     // Route handling
     switch (true) {
