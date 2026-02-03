@@ -48,12 +48,16 @@ export const useAdmin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ВРЕМЕННО: открытый доступ
+  const TEMP_OPEN_ACCESS = true;
+
   const invokeAdminApi = useCallback(async <T>(
     path: string,
     method: string = 'GET',
     body?: Record<string, unknown>
   ): Promise<T | null> => {
-    if (!user?.id) {
+    // При открытом доступе не требуем user.id
+    if (!TEMP_OPEN_ACCESS && !user?.id) {
       setError('User not authenticated');
       toast.error('Требуется авторизация');
       return null;
@@ -65,7 +69,7 @@ export const useAdmin = () => {
     try {
       const { data, error: fnError } = await supabase.functions.invoke('admin-api', {
         body: {
-          userId: user.id,
+          userId: user?.id || 'temp-admin',
           path,
           method,
           ...body,
