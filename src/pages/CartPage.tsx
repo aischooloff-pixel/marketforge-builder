@@ -6,21 +6,19 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, ShoppingBag, ArrowRight, AlertTriangle, Check, CreditCard, Wallet } from 'lucide-react';
+import { Trash2, ShoppingBag, AlertTriangle, Check } from 'lucide-react';
 import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
 
 const CartPage = () => {
   const { items, removeItem, clearCart, total, itemCount } = useCart();
   const { user, webApp, hapticFeedback } = useTelegram();
-  const { payWithCryptoBot, payWithBalance, isProcessing } = usePayment();
+  const { payWithCryptoBot, isProcessing } = usePayment();
   
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
-  const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
-
-  const canPayWithBalance = user && user.balance >= total;
 
   const handlePayWithCrypto = async () => {
     if (!agreedToTerms || !user) return;
@@ -52,36 +50,6 @@ const CartPage = () => {
     } else {
       hapticFeedback('error');
       toast.error(result.error || 'Ошибка создания счёта');
-    }
-  };
-
-  const handlePayWithBalance = async () => {
-    if (!agreedToTerms || !user || !canPayWithBalance) return;
-
-    hapticFeedback('medium');
-
-    const cartItems = items.map(item => ({
-      productId: item.product.id,
-      productName: item.product.name,
-      price: item.product.price,
-      quantity: item.quantity,
-      options: {
-        country: item.selectedCountry,
-        services: item.selectedServices,
-      },
-    }));
-
-    const result = await payWithBalance(cartItems, total);
-
-    if (result.success) {
-      hapticFeedback('success');
-      setCompletedOrderId(result.orderId || null);
-      clearCart();
-      setOrderComplete(true);
-      toast.success('Заказ оплачен!');
-    } else {
-      hapticFeedback('error');
-      toast.error(result.error || 'Ошибка оплаты');
     }
   };
 
@@ -219,22 +187,6 @@ const CartPage = () => {
                     </div>
                   </div>
 
-                  {user && (
-                    <div className="mb-6 p-3 rounded-lg bg-secondary text-sm">
-                      <div className="flex justify-between">
-                        <span>Ваш баланс</span>
-                        <span className={!canPayWithBalance ? 'text-destructive' : 'text-green-500'}>
-                          {user.balance.toLocaleString('ru-RU')} ₽
-                        </span>
-                      </div>
-                      {!canPayWithBalance && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Недостаточно средств. Пополните баланс или оплатите через CryptoBot.
-                        </p>
-                      )}
-                    </div>
-                  )}
-
                   {/* Terms Agreement */}
                   <div className="flex items-start gap-3 mb-6">
                     <Checkbox
@@ -248,43 +200,26 @@ const CartPage = () => {
                     </label>
                   </div>
 
-                  {/* Payment Buttons */}
-                  <div className="space-y-3">
-                    {canPayWithBalance && (
-                      <Button
-                        size="lg"
-                        className="w-full gap-2"
-                        disabled={!agreedToTerms || isProcessing}
-                        onClick={handlePayWithBalance}
-                      >
-                        {isProcessing ? (
-                          'Обработка...'
-                        ) : (
-                          <>
-                            <Wallet className="h-4 w-4" />
-                            Оплатить с баланса
-                          </>
-                        )}
-                      </Button>
+                  {/* CryptoBot Payment Button */}
+                  <Button
+                    size="lg"
+                    className="w-full gap-3"
+                    disabled={!agreedToTerms || isProcessing}
+                    onClick={handlePayWithCrypto}
+                  >
+                    {isProcessing ? (
+                      'Создание счёта...'
+                    ) : (
+                      <>
+                        <img 
+                          src={cryptoBotLogo} 
+                          alt="CryptoBot" 
+                          className="w-5 h-5 rounded-full"
+                        />
+                        Оплатить через CryptoBot
+                      </>
                     )}
-
-                    <Button
-                      size="lg"
-                      variant={canPayWithBalance ? 'outline' : 'default'}
-                      className="w-full gap-2"
-                      disabled={!agreedToTerms || isProcessing}
-                      onClick={handlePayWithCrypto}
-                    >
-                      {isProcessing ? (
-                        'Обработка...'
-                      ) : (
-                        <>
-                          <CreditCard className="h-4 w-4" />
-                          Оплатить через CryptoBot
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  </Button>
 
                   <div className="flex items-start gap-2 mt-4 text-xs text-muted-foreground">
                     <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
