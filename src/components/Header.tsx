@@ -24,11 +24,11 @@ export const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-3 md:px-4 h-14 md:h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold tracking-tight">TEMKA</span>
-          <span className="text-xl font-light text-muted-foreground">.STORE</span>
+        <Link to="/" className="flex items-center gap-1">
+          <span className="text-lg md:text-xl font-bold tracking-tight">TEMKA</span>
+          <span className="text-lg md:text-xl font-light text-muted-foreground">.STORE</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -47,13 +47,13 @@ export const Header = () => {
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {/* Theme Toggle */}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className="rounded-full"
+            className="rounded-full h-9 w-9 md:h-10 md:w-10"
           >
             <AnimatePresence mode="wait">
               {theme === 'light' ? (
@@ -64,7 +64,7 @@ export const Header = () => {
                   exit={{ rotate: 90, opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Moon className="h-5 w-5" />
+                  <Moon className="h-4 w-4 md:h-5 md:w-5" />
                 </motion.div>
               ) : (
                 <motion.div
@@ -74,7 +74,7 @@ export const Header = () => {
                   exit={{ rotate: -90, opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Sun className="h-5 w-5" />
+                  <Sun className="h-4 w-4 md:h-5 md:w-5" />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -82,13 +82,13 @@ export const Header = () => {
 
           {/* Cart */}
           <Link to="/cart">
-            <Button variant="ghost" size="icon" className="rounded-full relative">
-              <ShoppingCart className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="rounded-full relative h-9 w-9 md:h-10 md:w-10">
+              <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
               {itemCount > 0 && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-foreground text-background text-xs flex items-center justify-center font-medium"
+                  className="absolute -top-0.5 -right-0.5 md:-top-1 md:-right-1 h-4 w-4 md:h-5 md:w-5 rounded-full bg-foreground text-background text-[10px] md:text-xs flex items-center justify-center font-medium"
                 >
                   {itemCount}
                 </motion.span>
@@ -98,7 +98,7 @@ export const Header = () => {
 
           {/* User */}
           <Link to="/profile" className="hidden md:block">
-            <Button variant="ghost" size="icon" className="rounded-full">
+            <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
               <User className="h-5 w-5" />
             </Button>
           </Link>
@@ -114,10 +114,10 @@ export const Header = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden rounded-full"
+            className="md:hidden rounded-full h-9 w-9"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </Button>
         </div>
       </div>
