@@ -7,19 +7,22 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { ProductFormDialog } from '@/components/admin/ProductFormDialog';
+import { ProductItemsDialog } from '@/components/admin/ProductItemsDialog';
+import { StatsCharts } from '@/components/admin/StatsCharts';
 import { 
   LayoutDashboard, 
   Package, 
   ShoppingCart, 
   Users, 
-  BarChart3,
   Plus,
   Edit,
   Ban,
   Shield,
   ArrowLeft,
   Search,
-  Loader2
+  Loader2,
+  Upload
 } from 'lucide-react';
 
 interface Stats {
@@ -32,12 +35,22 @@ interface Stats {
 interface Product {
   id: string;
   name: string;
-  short_desc: string;
+  short_desc?: string;
+  long_desc?: string;
   price: number;
   type: string;
   is_active: boolean;
   is_popular: boolean;
+  category_id?: string;
+  tags?: string[];
   categories?: { name: string; icon: string };
+}
+
+interface Category {
+  id: string;
+  name: string;
+  icon?: string;
+  slug: string;
 }
 
 interface Order {
@@ -68,10 +81,17 @@ const AdminPage = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState<Stats>({ users: 0, orders: 0, revenue: 0, products: 0 });
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
+
+  // Dialogs state
+  const [productFormOpen, setProductFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productItemsOpen, setProductItemsOpen] = useState(false);
+  const [selectedProductForItems, setSelectedProductForItems] = useState<Product | null>(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -90,17 +110,19 @@ const AdminPage = () => {
   const loadAllData = async () => {
     setDataLoading(true);
     
-    const [statsData, productsData, ordersData, usersData] = await Promise.all([
+    const [statsData, productsData, ordersData, usersData, categoriesData] = await Promise.all([
       admin.fetchStats(),
       admin.fetchProducts(),
       admin.fetchOrders(),
       admin.fetchUsers(),
+      admin.fetchCategories(),
     ]);
 
     if (statsData) setStats(statsData);
     if (productsData) setProducts(productsData);
     if (ordersData) setOrders(ordersData);
     if (usersData) setUsers(usersData);
+    if (categoriesData) setCategories(categoriesData as Category[]);
     
     setDataLoading(false);
   };
@@ -121,6 +143,27 @@ const AdminPage = () => {
     await admin.toggleUserBan(userId, isBanned);
     const updated = await admin.fetchUsers();
     if (updated) setUsers(updated);
+  };
+
+  const handleProductSubmit = async (productData: Partial<Product>) => {
+    if (editingProduct) {
+      await admin.updateProduct(editingProduct.id, productData);
+    } else {
+      await admin.createProduct(productData);
+    }
+    const updated = await admin.fetchProducts();
+    if (updated) setProducts(updated);
+    setEditingProduct(null);
+  };
+
+  const handleOpenProductForm = (product?: Product) => {
+    setEditingProduct(product || null);
+    setProductFormOpen(true);
+  };
+
+  const handleOpenProductItems = (product: Product) => {
+    setSelectedProductForItems(product);
+    setProductItemsOpen(true);
   };
 
   if (authLoading) {
@@ -195,7 +238,7 @@ const AdminPage = () => {
             <>
               {/* Dashboard */}
               <TabsContent value="dashboard">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mb-6">
                   <Card className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-primary/10">
@@ -221,17 +264,6 @@ const AdminPage = () => {
                   <Card className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-primary/10">
-                        <BarChart3 className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold">{stats.revenue.toLocaleString('ru-RU')}</p>
-                        <p className="text-xs text-muted-foreground">Выручка ₽</p>
-                      </div>
-                    </div>
-                  </Card>
-                  <Card className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
                         <Package className="h-5 w-5 text-primary" />
                       </div>
                       <div>
@@ -240,7 +272,21 @@ const AdminPage = () => {
                       </div>
                     </div>
                   </Card>
+                  <Card className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <span className="text-primary font-bold">₽</span>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold">{stats.revenue.toLocaleString('ru-RU')}</p>
+                        <p className="text-xs text-muted-foreground">Выручка</p>
+                      </div>
+                    </div>
+                  </Card>
                 </div>
+
+                {/* Charts */}
+                <StatsCharts orders={orders} />
               </TabsContent>
 
               {/* Products */}
@@ -256,7 +302,7 @@ const AdminPage = () => {
                         className="pl-10"
                       />
                     </div>
-                    <Button size="icon">
+                    <Button size="icon" onClick={() => handleOpenProductForm()}>
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
@@ -282,12 +328,26 @@ const AdminPage = () => {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => handleOpenProductItems(product)}
+                              title="Загрузить позиции"
+                            >
+                              <Upload className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleToggleProductActive(product.id, product.is_active)}
                               disabled={admin.isLoading}
+                              title={product.is_active ? 'Скрыть' : 'Показать'}
                             >
                               {product.is_active ? <Ban className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
                             </Button>
-                            <Button variant="ghost" size="icon">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleOpenProductForm(product)}
+                              title="Редактировать"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </div>
@@ -332,6 +392,11 @@ const AdminPage = () => {
                             </Badge>
                           </div>
                         </div>
+                        {order.order_items && order.order_items.length > 0 && (
+                          <div className="text-xs text-muted-foreground mb-2">
+                            {order.order_items.map(item => item.product_name).join(', ')}
+                          </div>
+                        )}
                         {order.status === 'paid' && (
                           <Button
                             size="sm"
@@ -398,6 +463,25 @@ const AdminPage = () => {
           )}
         </Tabs>
       </main>
+
+      {/* Dialogs */}
+      <ProductFormDialog
+        open={productFormOpen}
+        onOpenChange={setProductFormOpen}
+        product={editingProduct}
+        categories={categories}
+        onSubmit={handleProductSubmit}
+        isLoading={admin.isLoading}
+      />
+
+      <ProductItemsDialog
+        open={productItemsOpen}
+        onOpenChange={setProductItemsOpen}
+        product={selectedProductForItems}
+        onFetchItems={admin.fetchProductItems}
+        onAddItems={admin.addProductItems}
+        isLoading={admin.isLoading}
+      />
     </div>
   );
 };
