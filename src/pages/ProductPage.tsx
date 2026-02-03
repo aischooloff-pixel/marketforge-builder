@@ -97,18 +97,18 @@ const ProductPage = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       
-      <main className="flex-1 pt-20">
-        <div className="container mx-auto px-4 py-8">
+      <main className="flex-1 pt-16 md:pt-20 pb-20 md:pb-0">
+        <div className="container mx-auto px-4 py-4 md:py-8">
           {/* Back Link */}
           <Link 
             to="/catalog" 
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors"
+            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 md:mb-8 transition-colors text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
             Назад в каталог
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12">
             {/* Product Info */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -130,15 +130,15 @@ const ProductPage = () => {
                 )}
               </div>
 
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
+              <h1 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4">
                 {product.name}
               </h1>
 
-              <p className="text-lg text-muted-foreground mb-6">
+              <p className="text-base md:text-lg text-muted-foreground mb-4 md:mb-6">
                 {product.short_desc}
               </p>
 
-              <p className="text-foreground mb-8 leading-relaxed">
+              <p className="text-sm md:text-base text-foreground mb-6 md:mb-8 leading-relaxed">
                 {product.long_desc}
               </p>
 
@@ -174,35 +174,36 @@ const ProductPage = () => {
 
             {/* Purchase Section */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="lg:sticky lg:top-24"
             >
-              <div className="sticky top-24 rounded-xl border bg-card overflow-hidden">
-                {/* Product Image */}
-                <div className="relative aspect-[16/9] bg-secondary/50">
+              <div className="rounded-xl border bg-card overflow-hidden">
+                {/* Product Image - smaller on mobile */}
+                <div className="relative aspect-[2/1] md:aspect-[16/9] bg-secondary/50">
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-6xl">
+                    <div className="text-5xl md:text-6xl">
                       {categoryIcon}
                     </div>
                   </div>
                   {product.is_popular && !isOutOfStock && (
-                    <div className="absolute top-3 left-3">
-                      <Badge className="bg-primary text-primary-foreground">
+                    <div className="absolute top-2 left-2 md:top-3 md:left-3">
+                      <Badge className="bg-primary text-primary-foreground text-xs">
                         Популярное
                       </Badge>
                     </div>
                   )}
                   {isOutOfStock && (
                     <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                      <Badge variant="destructive" className="text-lg py-2 px-4 gap-2">
-                        <PackageX className="h-5 w-5" />
+                      <Badge variant="destructive" className="text-sm md:text-lg py-1.5 px-3 md:py-2 md:px-4 gap-1.5 md:gap-2">
+                        <PackageX className="h-4 w-4 md:h-5 md:w-5" />
                         Нет в наличии
                       </Badge>
                     </div>
                   )}
                 </div>
                 
-                <div className="p-6">
+                <div className="p-4 md:p-6">
                   {/* Stock info */}
                   {!stockLoading && !isOutOfStock && (
                     <div className="mb-4">
@@ -235,14 +236,14 @@ const ProductPage = () => {
                   )}
 
                   {/* Price */}
-                  <div className="mb-6">
+                  <div className="mb-4 md:mb-6">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-bold">
+                      <span className="text-3xl md:text-4xl font-bold">
                         {product.price.toLocaleString('ru-RU')}
                       </span>
-                      <span className="text-xl text-muted-foreground">₽</span>
+                      <span className="text-lg md:text-xl text-muted-foreground">₽</span>
                       {product.type === 'subscription' && (
-                        <span className="text-muted-foreground">/мес</span>
+                        <span className="text-muted-foreground text-sm">/мес</span>
                       )}
                     </div>
                   </div>
