@@ -64,7 +64,7 @@ serve(async (req) => {
     // Route handling
     switch (true) {
       // ============ ANALYTICS ============
-      case path === "/stats" && req.method === "GET": {
+      case path === "/stats" && method === "GET": {
         const [
           { count: usersCount },
           { count: ordersCount },
@@ -91,7 +91,7 @@ serve(async (req) => {
       }
 
       // ============ PRODUCTS ============
-      case path === "/products" && req.method === "GET": {
+      case path === "/products" && method === "GET": {
         const { data, error } = await supabase
           .from("products")
           .select("*, categories(name, icon)")
@@ -103,7 +103,7 @@ serve(async (req) => {
         });
       }
 
-      case path === "/products" && req.method === "POST": {
+      case path === "/products" && method === "POST": {
         const { data, error } = await supabase
           .from("products")
           .insert(body.product)
@@ -116,7 +116,7 @@ serve(async (req) => {
         });
       }
 
-      case path.startsWith("/products/") && req.method === "PUT": {
+      case path.startsWith("/products/") && method === "PUT": {
         const productId = path.split("/")[2];
         const { data, error } = await supabase
           .from("products")
@@ -131,7 +131,7 @@ serve(async (req) => {
         });
       }
 
-      case path.startsWith("/products/") && req.method === "DELETE": {
+      case path.startsWith("/products/") && method === "DELETE": {
         const productId = path.split("/")[2];
         const { error } = await supabase
           .from("products")
@@ -145,7 +145,7 @@ serve(async (req) => {
       }
 
       // ============ ORDERS ============
-      case path === "/orders" && req.method === "GET": {
+      case path === "/orders" && method === "GET": {
         const { data, error } = await supabase
           .from("orders")
           .select("*, profiles(username, first_name, telegram_id), order_items(*)")
@@ -158,7 +158,7 @@ serve(async (req) => {
         });
       }
 
-      case path.startsWith("/orders/") && req.method === "PUT": {
+      case path.startsWith("/orders/") && method === "PUT": {
         const orderId = path.split("/")[2];
         const { data, error } = await supabase
           .from("orders")
@@ -174,7 +174,7 @@ serve(async (req) => {
       }
 
       // ============ USERS ============
-      case path === "/users" && req.method === "GET": {
+      case path === "/users" && method === "GET": {
         const { data, error } = await supabase
           .from("profiles")
           .select("*, user_roles(role)")
@@ -187,7 +187,7 @@ serve(async (req) => {
         });
       }
 
-      case path.startsWith("/users/") && path.endsWith("/ban") && req.method === "POST": {
+      case path.startsWith("/users/") && path.endsWith("/ban") && method === "POST": {
         const targetUserId = path.split("/")[2];
         const { error } = await supabase
           .from("profiles")
@@ -200,7 +200,7 @@ serve(async (req) => {
         });
       }
 
-      case path.startsWith("/users/") && path.endsWith("/role") && req.method === "POST": {
+      case path.startsWith("/users/") && path.endsWith("/role") && method === "POST": {
         const targetUserId = path.split("/")[2];
         
         // Remove existing role and add new one
@@ -220,22 +220,35 @@ serve(async (req) => {
       }
 
       // ============ CATEGORIES ============
-      case path === "/categories" && req.method === "GET": {
+      case path === "/categories" && method === "GET": {
         const { data, error } = await supabase
           .from("categories")
           .select("*")
           .order("sort_order");
 
         if (error) throw error;
-        return new Response(JSON.stringify(data), {
+        return new Response(JSON.stringify(data || []), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      case path === "/categories" && req.method === "POST": {
+      case path === "/categories" && method === "POST": {
+        const categoryData = body.category || body;
+        if (!categoryData || !categoryData.name || !categoryData.slug) {
+          return new Response(
+            JSON.stringify({ error: "Missing category name or slug" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         const { data, error } = await supabase
           .from("categories")
-          .insert(body.category)
+          .insert({
+            name: categoryData.name,
+            slug: categoryData.slug,
+            icon: categoryData.icon || null,
+            description: categoryData.description || null,
+          })
           .select()
           .single();
 
@@ -246,7 +259,7 @@ serve(async (req) => {
       }
 
       // ============ PRODUCT ITEMS ============
-      case path === "/product-items" && req.method === "POST": {
+      case path === "/product-items" && method === "POST": {
         const { items, productId } = body;
         const insertData = items.map((content: string) => ({
           product_id: productId,
@@ -264,7 +277,7 @@ serve(async (req) => {
         });
       }
 
-      case path.startsWith("/product-items/") && req.method === "GET": {
+      case path.startsWith("/product-items/") && method === "GET": {
         const productId = path.split("/")[2];
         const { data, error } = await supabase
           .from("product_items")
