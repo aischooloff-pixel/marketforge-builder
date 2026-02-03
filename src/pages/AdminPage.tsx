@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ProductFormDialog } from '@/components/admin/ProductFormDialog';
 import { ProductItemsDialog } from '@/components/admin/ProductItemsDialog';
+import { CategoryFormDialog } from '@/components/admin/CategoryFormDialog';
 import { StatsCharts } from '@/components/admin/StatsCharts';
 import { 
   LayoutDashboard, 
@@ -22,7 +23,8 @@ import {
   ArrowLeft,
   Search,
   Loader2,
-  Upload
+  Upload,
+  FolderOpen
 } from 'lucide-react';
 
 interface Stats {
@@ -95,6 +97,7 @@ const AdminPage = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productItemsOpen, setProductItemsOpen] = useState(false);
   const [selectedProductForItems, setSelectedProductForItems] = useState<Product | null>(null);
+  const [categoryFormOpen, setCategoryFormOpen] = useState(false);
 
   // Redirect if not admin (disabled temporarily)
   useEffect(() => {
@@ -169,6 +172,12 @@ const AdminPage = () => {
     setProductItemsOpen(true);
   };
 
+  const handleCategorySubmit = async (categoryData: Partial<Category>) => {
+    await admin.createCategory(categoryData as { name: string; slug: string; icon?: string });
+    const updated = await admin.fetchCategories();
+    if (updated) setCategories(updated as Category[]);
+  };
+
   if (authLoading && !TEMP_OPEN_ACCESS) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -211,7 +220,7 @@ const AdminPage = () => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-5 mb-6">
             <TabsTrigger value="dashboard" className="text-xs">
               <LayoutDashboard className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Обзор</span>
@@ -219,6 +228,10 @@ const AdminPage = () => {
             <TabsTrigger value="products" className="text-xs">
               <Package className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Товары</span>
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="text-xs">
+              <FolderOpen className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Категории</span>
             </TabsTrigger>
             <TabsTrigger value="orders" className="text-xs">
               <ShoppingCart className="h-4 w-4 mr-1" />
@@ -361,6 +374,52 @@ const AdminPage = () => {
                 </div>
               </TabsContent>
 
+              {/* Categories */}
+              <TabsContent value="categories">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-semibold">Категории ({categories.length})</h2>
+                    <Button size="sm" onClick={() => setCategoryFormOpen(true)}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Добавить
+                    </Button>
+                  </div>
+
+                  {categories.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Категорий пока нет</p>
+                      <Button 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={() => setCategoryFormOpen(true)}
+                      >
+                        Создать первую категорию
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {categories.map((cat) => (
+                        <Card key={cat.id} className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">{cat.icon || '📁'}</span>
+                              <div>
+                                <h3 className="font-medium">{cat.name}</h3>
+                                <p className="text-xs text-muted-foreground">/{cat.slug}</p>
+                              </div>
+                            </div>
+                            <Badge variant="secondary">
+                              {products.filter(p => p.category_id === cat.id).length} товаров
+                            </Badge>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
               {/* Orders */}
               <TabsContent value="orders">
                 <div className="space-y-2">
@@ -483,6 +542,13 @@ const AdminPage = () => {
         product={selectedProductForItems}
         onFetchItems={admin.fetchProductItems}
         onAddItems={admin.addProductItems}
+        isLoading={admin.isLoading}
+      />
+
+      <CategoryFormDialog
+        open={categoryFormOpen}
+        onOpenChange={setCategoryFormOpen}
+        onSubmit={handleCategorySubmit}
         isLoading={admin.isLoading}
       />
     </div>
