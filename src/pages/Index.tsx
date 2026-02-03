@@ -123,8 +123,17 @@ const Index = () => {
               </Link>
             </motion.div>
 
-            {/* 2x2 Grid on Mobile, 3 cols on Desktop */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            {/* Horizontal scroll on Mobile, Grid on Desktop */}
+            <div className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
+              <div className="flex gap-3 snap-x snap-mandatory">
+                {popularProducts.map((product, index) => (
+                  <div key={product.id} className="w-[85vw] flex-shrink-0 snap-center">
+                    <ProductCard product={product} index={index} />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {popularProducts.map((product, index) => (
                 <ProductCard key={product.id} product={product} index={index} />
               ))}
