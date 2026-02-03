@@ -52,9 +52,9 @@ const Index = () => {
                     <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
                   </Button>
                 </Link>
-                <Link to="/catalog?category=proxy">
+                <Link to="/info">
                   <Button size="lg" variant="outline" className="w-full sm:w-auto text-sm md:text-base px-6 md:px-8 h-11 md:h-12">
-                    Прокси и VPS
+                    Информация
                   </Button>
                 </Link>
               </div>
