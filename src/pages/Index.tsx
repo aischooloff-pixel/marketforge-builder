@@ -33,6 +33,34 @@ const reviews = [
     text: 'Удобный бот, всё автоматом. Рекомендую!',
     rating: 5,
   },
+  {
+    id: 4,
+    name: 'Алексей',
+    username: '@alex_smm',
+    text: 'Качественные аккаунты, ни один не заблокировали. Буду заказывать ещё.',
+    rating: 5,
+  },
+  {
+    id: 5,
+    name: 'Иван',
+    username: '@ivan_traffic',
+    text: 'Быстрая выдача, цены ниже конкурентов. Топ магазин!',
+    rating: 5,
+  },
+  {
+    id: 6,
+    name: 'Сергей',
+    username: '@sergey_ads',
+    text: 'Работаю с ребятами уже год. Всегда всё чётко и без проблем.',
+    rating: 5,
+  },
+  {
+    id: 7,
+    name: 'Николай',
+    username: '@nick_pro',
+    text: 'Отличный сервис! Техподдержка решает любые вопросы за минуты.',
+    rating: 5,
+  },
 ];
 
 const Index = () => {
@@ -259,31 +287,35 @@ const Index = () => {
               <p className="text-sm md:text-base text-muted-foreground">Что говорят наши клиенты</p>
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {reviews.map((review, index) => (
-                <motion.div
-                  key={review.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                >
-                  <Card className="p-4 md:p-5 h-full">
-                    <div className="flex items-center gap-1 mb-3">
-                      {Array.from({ length: review.rating }).map((_, i) => (
-                        <Star key={i} className="h-4 w-4 fill-primary text-primary" />
-                      ))}
-                    </div>
-                    <Quote className="h-5 w-5 text-muted-foreground/30 mb-2" />
-                    <p className="text-sm md:text-base text-foreground mb-4">{review.text}</p>
-                    <div className="mt-auto">
-                      <p className="font-medium text-sm">{review.name}</p>
-                      <p className="text-xs text-muted-foreground">{review.username}</p>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
+            <div className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+              <div className="flex gap-4" style={{ width: 'max-content' }}>
+                {reviews.map((review, index) => (
+                  <motion.div
+                    key={review.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    viewport={{ once: true }}
+                    className="w-[280px] md:w-[320px] flex-shrink-0"
+                  >
+                    <Card className="p-4 md:p-5 h-full">
+                      <div className="flex items-center gap-1 mb-3">
+                        {Array.from({ length: review.rating }).map((_, i) => (
+                          <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+                        ))}
+                      </div>
+                      <Quote className="h-5 w-5 text-muted-foreground/30 mb-2" />
+                      <p className="text-sm md:text-base text-foreground mb-4">{review.text}</p>
+                      <div className="mt-auto">
+                        <p className="font-medium text-sm">{review.name}</p>
+                        <p className="text-xs text-muted-foreground">{review.username}</p>
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
             </div>
+            <p className="text-center text-xs text-muted-foreground mt-2">← Листайте →</p>
           </div>
         </section>
         
