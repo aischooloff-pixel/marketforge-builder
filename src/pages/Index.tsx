@@ -4,8 +4,33 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ProductCard } from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { ArrowRight, Shield, Zap, Users } from 'lucide-react';
+import { ArrowRight, Shield, Zap, Users, Star, Quote } from 'lucide-react';
+
+const reviews = [
+  {
+    id: 1,
+    name: 'Артём',
+    username: '@artem_arb',
+    text: 'Лучший магаз для арбитража. Прокси работают стабильно, выдача моментальная.',
+    rating: 5,
+  },
+  {
+    id: 2,
+    name: 'Максим',
+    username: '@max_seo',
+    text: 'Пользуюсь уже полгода. Цены адекватные, поддержка отвечает быстро.',
+    rating: 5,
+  },
+  {
+    id: 3,
+    name: 'Дмитрий',
+    username: '@dmitry_mk',
+    text: 'Удобный бот, всё автоматом. Рекомендую!',
+    rating: 5,
+  },
+];
 const Index = () => {
   const popularProducts = products.filter(p => p.popular).slice(0, 6);
   return <div className="min-h-screen flex flex-col">
@@ -183,7 +208,46 @@ const Index = () => {
           </div>
         </section>
 
-        {/* CTA */}
+        {/* Reviews */}
+        <section className="py-10 md:py-20">
+          <div className="container mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="text-center mb-6 md:mb-10"
+            >
+              <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">Отзывы</h2>
+              <p className="text-sm md:text-base text-muted-foreground">Что говорят наши клиенты</p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {reviews.map((review, index) => (
+                <motion.div
+                  key={review.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                >
+                  <Card className="p-4 md:p-5 h-full">
+                    <div className="flex items-center gap-1 mb-3">
+                      {Array.from({ length: review.rating }).map((_, i) => (
+                        <Star key={i} className="h-4 w-4 fill-primary text-primary" />
+                      ))}
+                    </div>
+                    <Quote className="h-5 w-5 text-muted-foreground/30 mb-2" />
+                    <p className="text-sm md:text-base text-foreground mb-4">{review.text}</p>
+                    <div className="mt-auto">
+                      <p className="font-medium text-sm">{review.name}</p>
+                      <p className="text-xs text-muted-foreground">{review.username}</p>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
         
       </main>
 
