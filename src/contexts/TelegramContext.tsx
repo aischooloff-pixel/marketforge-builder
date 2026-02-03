@@ -104,7 +104,10 @@ export const TelegramProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [webApp, setWebApp] = useState<typeof window.Telegram.WebApp | null>(null);
 
-  const isTelegramWebApp = typeof window !== 'undefined' && !!window.Telegram?.WebApp?.initData;
+  const isTelegramWebApp = typeof window !== 'undefined' && 
+    !!window.Telegram?.WebApp && 
+    !!window.Telegram.WebApp.initData &&
+    window.Telegram.WebApp.initData.length > 0;
 
   const hapticFeedback = (type: 'light' | 'medium' | 'heavy' | 'success' | 'error' | 'warning') => {
     if (!webApp?.HapticFeedback) return;
@@ -117,28 +120,40 @@ export const TelegramProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const authenticateUser = async () => {
-    if (!window.Telegram?.WebApp?.initData) {
-      console.log('Not running in Telegram WebApp');
+    console.log('[TelegramAuth] Checking Telegram WebApp...');
+    console.log('[TelegramAuth] window.Telegram:', !!window.Telegram);
+    console.log('[TelegramAuth] window.Telegram.WebApp:', !!window.Telegram?.WebApp);
+    console.log('[TelegramAuth] initData length:', window.Telegram?.WebApp?.initData?.length || 0);
+    
+    const initData = window.Telegram?.WebApp?.initData;
+    
+    if (!initData || initData.length === 0) {
+      console.log('[TelegramAuth] No initData - running in dev mode');
       setIsLoading(false);
       return;
     }
 
+    console.log('[TelegramAuth] Calling telegram-auth edge function...');
+
     try {
       const { data, error } = await supabase.functions.invoke('telegram-auth', {
-        body: { initData: window.Telegram.WebApp.initData },
+        body: { initData },
       });
 
+      console.log('[TelegramAuth] Response:', { data, error });
+
       if (error) {
-        console.error('Auth error:', error);
+        console.error('[TelegramAuth] Auth error:', error);
         setIsLoading(false);
         return;
       }
 
       if (data?.success && data?.user) {
+        console.log('[TelegramAuth] User authenticated:', data.user);
         setUser(data.user);
       }
     } catch (err) {
-      console.error('Authentication failed:', err);
+      console.error('[TelegramAuth] Authentication failed:', err);
     } finally {
       setIsLoading(false);
     }
@@ -149,8 +164,11 @@ export const TelegramProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    console.log('[TelegramAuth] Initializing...');
+    
     if (window.Telegram?.WebApp) {
       const tgWebApp = window.Telegram.WebApp;
+      console.log('[TelegramAuth] Telegram WebApp found, initData:', tgWebApp.initData?.substring(0, 50) + '...');
       setWebApp(tgWebApp);
       
       // Initialize Telegram WebApp
@@ -161,7 +179,7 @@ export const TelegramProvider = ({ children }: { children: ReactNode }) => {
       authenticateUser();
     } else {
       // Development mode - simulate regular user (NO admin rights for security)
-      console.log('Development mode: simulating Telegram user (no admin access)');
+      console.log('[TelegramAuth] Development mode: simulating Telegram user (no admin access)');
       setUser({
         id: 'dev-user-id',
         telegram_id: 123456789,
