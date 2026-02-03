@@ -39,17 +39,25 @@ export const Header = () => {
           <span className="text-lg md:text-xl font-light text-muted-foreground">.STORE</span>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map(link => <Link key={link.href} to={link.href} className={`text-sm font-medium transition-colors hover:text-foreground ${isActive(link.href) ? 'text-foreground' : 'text-muted-foreground'}`}>
-              {link.label}
-            </Link>)}
+        {/* Navigation - Always visible */}
+        <nav className="flex items-center gap-1 md:gap-8">
+          {navLinks.map(link => <Link 
+            key={link.href} 
+            to={link.href} 
+            className={`px-2 py-1 md:px-0 md:py-0 rounded-md text-xs md:text-sm font-medium transition-colors hover:text-foreground ${
+              isActive(link.href) 
+                ? 'text-foreground bg-secondary md:bg-transparent' 
+                : 'text-muted-foreground'
+            }`}
+          >
+            {link.label}
+          </Link>)}
         </nav>
 
         {/* Actions */}
         <div className="flex items-center gap-1 md:gap-2">
           {/* Theme Toggle */}
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full h-9 w-9 md:h-10 md:w-10">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full h-8 w-8 md:h-10 md:w-10">
             <AnimatePresence mode="wait">
               {theme === 'light' ? <motion.div key="moon" initial={{
               rotate: -90,
@@ -63,7 +71,7 @@ export const Header = () => {
             }} transition={{
               duration: 0.2
             }}>
-                  <Moon className="h-4 w-4 md:h-5 md:w-5" />
+                  <Moon className="h-4 w-4" />
                 </motion.div> : <motion.div key="sun" initial={{
               rotate: 90,
               opacity: 0
@@ -76,65 +84,30 @@ export const Header = () => {
             }} transition={{
               duration: 0.2
             }}>
-                  <Sun className="h-4 w-4 md:h-5 md:w-5" />
+                  <Sun className="h-4 w-4" />
                 </motion.div>}
             </AnimatePresence>
           </Button>
 
           {/* Cart */}
           <Link to="/cart">
-            <Button variant="ghost" size="icon" className="rounded-full relative h-9 w-9 md:h-10 md:w-10">
-              <ShoppingCart className="h-4 w-4 md:h-5 md:w-5" />
+            <Button variant="ghost" size="icon" className="rounded-full relative h-8 w-8 md:h-10 md:w-10">
+              <ShoppingCart className="h-4 w-4" />
               {itemCount > 0 && <motion.span initial={{
               scale: 0
             }} animate={{
               scale: 1
-            }} className="absolute -top-0.5 -right-0.5 md:-top-1 md:-right-1 h-4 w-4 md:h-5 md:w-5 rounded-full bg-foreground text-background text-[10px] md:text-xs flex items-center justify-center font-medium">
+            }} className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-foreground text-background text-[10px] flex items-center justify-center font-medium">
                   {itemCount}
                 </motion.span>}
             </Button>
           </Link>
 
-          {/* User */}
-          <Link to="/profile" className="hidden md:block">
-            <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
-              
-            </Button>
-          </Link>
-
-          {/* Balance */}
+          {/* Balance - visible on larger screens */}
           {isLoggedIn && user && <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium">
               <span>{user.balance.toLocaleString('ru-RU')} ₽</span>
             </div>}
-
-          {/* Mobile Menu Toggle */}
-          <Button variant="ghost" size="icon" className="md:hidden rounded-full h-9 w-9" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </Button>
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {mobileMenuOpen && <motion.div initial={{
-        opacity: 0,
-        height: 0
-      }} animate={{
-        opacity: 1,
-        height: 'auto'
-      }} exit={{
-        opacity: 0,
-        height: 0
-      }} className="md:hidden border-t glass">
-            <nav className="container mx-auto px-4 py-4 flex flex-col gap-2">
-              {navLinks.map(link => <Link key={link.href} to={link.href} onClick={() => setMobileMenuOpen(false)} className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${isActive(link.href) ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-secondary hover:text-foreground'}`}>
-                  {link.label}
-                </Link>)}
-              {isLoggedIn && user && <div className="py-2 px-4 text-sm font-medium">
-                  Баланс: {user.balance.toLocaleString('ru-RU')} ₽
-                </div>}
-            </nav>
-          </motion.div>}
-      </AnimatePresence>
     </header>;
 };
