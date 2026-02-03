@@ -34,11 +34,11 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
       className="group h-full"
     >
       <Link to={`/product/${product.id}`} className="block h-full">
-        <div className="h-full p-4 rounded-2xl border bg-card shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
+        <div className="h-full p-3 md:p-4 rounded-xl md:rounded-2xl border bg-card shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
           {/* Product Image/Icon Area */}
-          <div className="relative aspect-[4/3] rounded-xl bg-secondary/80 flex items-center justify-center mb-4 overflow-hidden">
+          <div className="relative aspect-square md:aspect-[4/3] rounded-lg md:rounded-xl bg-secondary/80 flex items-center justify-center mb-2 md:mb-4 overflow-hidden">
             {/* Category Icon as placeholder */}
-            <span className="text-6xl md:text-7xl opacity-60 group-hover:scale-110 transition-transform duration-300">
+            <span className="text-4xl md:text-7xl opacity-60 group-hover:scale-110 transition-transform duration-300">
               {getCategoryIcon(product.category)}
             </span>
             
@@ -46,47 +46,47 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               whileHover={{ scale: 1 }}
-              className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-2 right-2 md:top-3 md:right-3 opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <Button
                 size="icon"
                 variant="secondary"
-                className="h-10 w-10 rounded-full shadow-lg bg-background/90 backdrop-blur-sm hover:bg-background"
+                className="h-8 w-8 md:h-10 md:w-10 rounded-full shadow-lg bg-background/90 backdrop-blur-sm hover:bg-background"
                 onClick={handleAddToCart}
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
             </motion.div>
 
             {/* Type badge */}
             {product.type === 'subscription' && (
-              <div className="absolute top-3 left-3 px-2 py-1 rounded-md bg-foreground text-background text-xs font-medium">
+              <div className="absolute top-2 left-2 md:top-3 md:left-3 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md bg-foreground text-background text-[10px] md:text-xs font-medium">
                 Подписка
               </div>
             )}
           </div>
 
           {/* Content */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-h-0">
             {/* Title */}
-            <h3 className="font-bold text-base md:text-lg leading-tight mb-1 group-hover:text-foreground transition-colors line-clamp-2">
+            <h3 className="font-bold text-sm md:text-lg leading-tight mb-0.5 md:mb-1 group-hover:text-foreground transition-colors line-clamp-2">
               {product.name}
             </h3>
             
-            {/* Description */}
-            <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
+            {/* Description - hidden on mobile to save space */}
+            <p className="hidden md:block text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
               {product.shortDesc}
             </p>
 
-            {/* Price - aligned to bottom right */}
-            <div className="flex items-end justify-end">
-              <div className="text-right">
-                <span className="text-xl md:text-2xl font-bold">
+            {/* Price - aligned to bottom */}
+            <div className="flex items-end justify-between mt-auto pt-1 md:pt-0">
+              <div>
+                <span className="text-base md:text-2xl font-bold">
                   {product.price.toLocaleString('ru-RU')}
                 </span>
-                <span className="text-sm text-muted-foreground ml-1">₽</span>
+                <span className="text-xs md:text-sm text-muted-foreground ml-0.5">₽</span>
                 {product.type === 'subscription' && (
-                  <span className="text-xs text-muted-foreground">/мес</span>
+                  <span className="text-[10px] md:text-xs text-muted-foreground">/мес</span>
                 )}
               </div>
             </div>
