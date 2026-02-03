@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { countries, services } from '@/data/products';
 import { Check } from 'lucide-react';
+import { ServiceIcon } from './ServiceIcons';
 
 interface CountrySelectorProps {
   selectedCountry: string | null;
@@ -136,7 +137,7 @@ export const ServiceSelector = ({
                 : 'border-border hover:border-foreground/50'
             }`}
           >
-            <span>{service.icon}</span>
+            <ServiceIcon serviceId={service.id} className="h-5 w-5" />
             <span className="text-sm font-medium">{service.name}</span>
             {selectedServices.includes(service.id) && (
               <Check className="h-4 w-4" />
