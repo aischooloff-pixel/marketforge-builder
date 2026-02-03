@@ -78,6 +78,9 @@ const AdminPage = () => {
   const navigate = useNavigate();
   const admin = useAdmin();
   
+  // ВРЕМЕННО: открытый доступ к админке
+  const TEMP_OPEN_ACCESS = true;
+  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState<Stats>({ users: 0, orders: 0, revenue: 0, products: 0 });
   const [products, setProducts] = useState<Product[]>([]);
@@ -93,16 +96,16 @@ const AdminPage = () => {
   const [productItemsOpen, setProductItemsOpen] = useState(false);
   const [selectedProductForItems, setSelectedProductForItems] = useState<Product | null>(null);
 
-  // Redirect if not admin
+  // Redirect if not admin (disabled temporarily)
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!TEMP_OPEN_ACCESS && !authLoading && !isAdmin) {
       navigate('/');
     }
   }, [isAdmin, authLoading, navigate]);
 
   // Load data via admin-api
   useEffect(() => {
-    if (isAdmin) {
+    if (TEMP_OPEN_ACCESS || isAdmin) {
       loadAllData();
     }
   }, [isAdmin]);
@@ -166,7 +169,7 @@ const AdminPage = () => {
     setProductItemsOpen(true);
   };
 
-  if (authLoading) {
+  if (authLoading && !TEMP_OPEN_ACCESS) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -174,7 +177,7 @@ const AdminPage = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!TEMP_OPEN_ACCESS && !isAdmin) {
     return null;
   }
 
