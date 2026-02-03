@@ -148,6 +148,36 @@ serve(async (req) => {
 
     const telegramUser = parsedData.user;
 
+    // Try to get user's profile photo from Telegram Bot API
+    let photoUrl = telegramUser.photo_url;
+    if (!photoUrl) {
+      try {
+        const photosResponse = await fetch(
+          `https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${telegramUser.id}&limit=1`
+        );
+        const photosData = await photosResponse.json();
+        
+        if (photosData.ok && photosData.result?.photos?.length > 0) {
+          // Get the smallest photo (first in array)
+          const photo = photosData.result.photos[0];
+          const smallestPhoto = photo[0]; // smallest size
+          
+          // Get file path
+          const fileResponse = await fetch(
+            `https://api.telegram.org/bot${botToken}/getFile?file_id=${smallestPhoto.file_id}`
+          );
+          const fileData = await fileResponse.json();
+          
+          if (fileData.ok && fileData.result?.file_path) {
+            photoUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
+          }
+        }
+      } catch (photoError) {
+        console.log("Could not fetch profile photo:", photoError);
+        // Continue without photo - not critical
+      }
+    }
+
     const { data: profile, error: upsertError } = await supabase
       .from("profiles")
       .upsert(
@@ -156,7 +186,7 @@ serve(async (req) => {
           username: telegramUser.username,
           first_name: telegramUser.first_name,
           last_name: telegramUser.last_name,
-          photo_url: telegramUser.photo_url,
+          photo_url: photoUrl || null,
           language_code: telegramUser.language_code || "ru",
         },
         { onConflict: "telegram_id" }
