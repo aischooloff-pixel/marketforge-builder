@@ -1,48 +1,88 @@
 import { Link } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
-import { useUser } from '@/contexts/UserContext';
+import { useTelegram } from '@/contexts/TelegramContext';
+import { usePayment } from '@/hooks/usePayment';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, ShoppingBag, ArrowRight, AlertTriangle, Check } from 'lucide-react';
+import { Trash2, ShoppingBag, ArrowRight, AlertTriangle, Check, CreditCard, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 
 const CartPage = () => {
   const { items, removeItem, clearCart, total, itemCount } = useCart();
-  const { user, updateBalance, addOrder } = useUser();
+  const { user, webApp, hapticFeedback } = useTelegram();
+  const { payWithCryptoBot, payWithBalance, isProcessing } = usePayment();
+  
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
 
-  const handleCheckout = async () => {
+  const canPayWithBalance = user && user.balance >= total;
+
+  const handlePayWithCrypto = async () => {
     if (!agreedToTerms || !user) return;
 
-    if (user.balance < total) {
-      alert('Недостаточно средств на балансе. Пополните баланс в профиле.');
-      return;
+    hapticFeedback('medium');
+
+    const cartItems = items.map(item => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      price: item.product.price,
+      quantity: item.quantity,
+      options: {
+        country: item.selectedCountry,
+        services: item.selectedServices,
+      },
+    }));
+
+    const result = await payWithCryptoBot(cartItems, total);
+
+    if (result.success && result.invoiceUrl) {
+      hapticFeedback('success');
+      // Open CryptoBot payment in Telegram
+      if (webApp) {
+        webApp.openTelegramLink(result.invoiceUrl);
+      } else {
+        window.open(result.invoiceUrl, '_blank');
+      }
+      toast.success('Счёт создан! Оплатите в CryptoBot.');
+    } else {
+      hapticFeedback('error');
+      toast.error(result.error || 'Ошибка создания счёта');
     }
+  };
 
-    setIsProcessing(true);
-    
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
+  const handlePayWithBalance = async () => {
+    if (!agreedToTerms || !user || !canPayWithBalance) return;
 
-    // Create order
-    const order = {
-      id: `order-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
-      items: items.map(item => ({ name: item.product.name, price: item.product.price * item.quantity })),
-      total,
-      status: 'completed' as const
-    };
+    hapticFeedback('medium');
 
-    addOrder(order);
-    updateBalance(-total);
-    clearCart();
-    setIsProcessing(false);
-    setOrderComplete(true);
+    const cartItems = items.map(item => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      price: item.product.price,
+      quantity: item.quantity,
+      options: {
+        country: item.selectedCountry,
+        services: item.selectedServices,
+      },
+    }));
+
+    const result = await payWithBalance(cartItems, total);
+
+    if (result.success) {
+      hapticFeedback('success');
+      setCompletedOrderId(result.orderId || null);
+      clearCart();
+      setOrderComplete(true);
+      toast.success('Заказ оплачен!');
+    } else {
+      hapticFeedback('error');
+      toast.error(result.error || 'Ошибка оплаты');
+    }
   };
 
   if (orderComplete) {
@@ -64,9 +104,9 @@ const CartPage = () => {
               >
                 <Check className="h-10 w-10" />
               </motion.div>
-              <h1 className="text-2xl font-bold mb-4">Заказ оформлен!</h1>
+              <h1 className="text-2xl font-bold mb-4">Заказ оплачен!</h1>
               <p className="text-muted-foreground mb-8">
-                Спасибо за покупку. Информация о заказе доступна в вашем профиле.
+                Товары выданы автоматически. Посмотреть их можно в профиле.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/profile">
@@ -183,14 +223,14 @@ const CartPage = () => {
                     <div className="mb-6 p-3 rounded-lg bg-secondary text-sm">
                       <div className="flex justify-between">
                         <span>Ваш баланс</span>
-                        <span className={user.balance < total ? 'text-destructive' : ''}>
+                        <span className={!canPayWithBalance ? 'text-destructive' : 'text-green-500'}>
                           {user.balance.toLocaleString('ru-RU')} ₽
                         </span>
                       </div>
-                      {user.balance < total && (
-                        <Link to="/profile" className="text-xs underline mt-2 inline-block">
-                          Пополнить баланс
-                        </Link>
+                      {!canPayWithBalance && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Недостаточно средств. Пополните баланс или оплатите через CryptoBot.
+                        </p>
                       )}
                     </div>
                   )}
@@ -208,21 +248,43 @@ const CartPage = () => {
                     </label>
                   </div>
 
-                  <Button
-                    size="lg"
-                    className="w-full gap-2"
-                    disabled={!agreedToTerms || isProcessing || (user && user.balance < total)}
-                    onClick={handleCheckout}
-                  >
-                    {isProcessing ? (
-                      <>Обработка...</>
-                    ) : (
-                      <>
-                        Оформить заказ
-                        <ArrowRight className="h-4 w-4" />
-                      </>
+                  {/* Payment Buttons */}
+                  <div className="space-y-3">
+                    {canPayWithBalance && (
+                      <Button
+                        size="lg"
+                        className="w-full gap-2"
+                        disabled={!agreedToTerms || isProcessing}
+                        onClick={handlePayWithBalance}
+                      >
+                        {isProcessing ? (
+                          'Обработка...'
+                        ) : (
+                          <>
+                            <Wallet className="h-4 w-4" />
+                            Оплатить с баланса
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
+
+                    <Button
+                      size="lg"
+                      variant={canPayWithBalance ? 'outline' : 'default'}
+                      className="w-full gap-2"
+                      disabled={!agreedToTerms || isProcessing}
+                      onClick={handlePayWithCrypto}
+                    >
+                      {isProcessing ? (
+                        'Обработка...'
+                      ) : (
+                        <>
+                          <CreditCard className="h-4 w-4" />
+                          Оплатить через CryptoBot
+                        </>
+                      )}
+                    </Button>
+                  </div>
 
                   <div className="flex items-start gap-2 mt-4 text-xs text-muted-foreground">
                     <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />

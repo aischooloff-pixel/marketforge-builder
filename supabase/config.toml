@@ -1,1 +1,16 @@
 project_id = "obbvgbsjvfvsbhpbyiwz"
+
+[functions.telegram-auth]
+verify_jwt = false
+
+[functions.cryptobot-webhook]
+verify_jwt = false
+
+[functions.cryptobot-create-invoice]
+verify_jwt = false
+
+[functions.admin-api]
+verify_jwt = false
+
+[functions.process-order]
+verify_jwt = false
