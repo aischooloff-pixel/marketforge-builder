@@ -160,8 +160,8 @@ export const TelegramProvider = ({ children }: { children: ReactNode }) => {
       // Authenticate user
       authenticateUser();
     } else {
-      // Development mode - simulate user
-      console.log('Development mode: simulating Telegram user');
+      // Development mode - simulate regular user (NO admin rights for security)
+      console.log('Development mode: simulating Telegram user (no admin access)');
       setUser({
         id: 'dev-user-id',
         telegram_id: 123456789,
@@ -169,7 +169,7 @@ export const TelegramProvider = ({ children }: { children: ReactNode }) => {
         first_name: 'Developer',
         balance: 5000,
         is_banned: false,
-        roles: ['admin'], // Admin in dev mode for testing
+        roles: ['user'], // Regular user - admin requires real DB role
         created_at: new Date().toISOString(),
       });
       setIsLoading(false);
