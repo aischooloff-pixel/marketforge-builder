@@ -77,7 +77,7 @@ const Index = () => {
             }, {
               icon: Users,
               title: 'Для профи',
-              desc: 'Инструменты для арбитражников и маркетологов'
+              desc: 'Инструменты для мастеров своих дел'
             }].map((feature, index) => <motion.div key={feature.title} initial={{
               opacity: 0,
               y: 20
