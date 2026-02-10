@@ -189,7 +189,7 @@ serve(async (req) => {
             reply_markup: { inline_keyboard: [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }]] },
           });
         } else {
-          console.error("[Bot] Failed to insert review:", await insertRes.text());
+          console.error("[Bot] Failed to insert review:", reviewErr);
           await tg(botToken, "sendMessage", { chat_id: chatId, text: "❌ Не удалось сохранить отзыв. Попробуйте позже." });
         }
       } else {
