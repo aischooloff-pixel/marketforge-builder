@@ -54,10 +54,17 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
         <div className={`h-full p-3 md:p-4 rounded-xl md:rounded-2xl border bg-card shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col ${isOutOfStock ? 'opacity-60' : ''}`}>
           {/* Product Image/Icon Area */}
           <div className="relative aspect-square md:aspect-[4/3] rounded-lg md:rounded-xl bg-secondary/80 flex items-center justify-center mb-2 md:mb-4 overflow-hidden">
-            {/* Category Icon as placeholder */}
-            <span className="text-4xl md:text-7xl opacity-60 group-hover:scale-110 transition-transform duration-300">
-              {categoryIcon}
-            </span>
+            {product.media_urls && product.media_urls.length > 0 ? (
+              /\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ? (
+                <video src={product.media_urls[0]} className="w-full h-full object-cover" muted />
+              ) : (
+                <img src={product.media_urls[0]} alt={product.name} className="w-full h-full object-cover" />
+              )
+            ) : (
+              <span className="text-4xl md:text-7xl opacity-60 group-hover:scale-110 transition-transform duration-300">
+                {categoryIcon}
+              </span>
+            )}
             
             {/* Quick Add Button - appears on hover */}
             {!isOutOfStock && (

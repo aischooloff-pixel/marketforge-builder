@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,7 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ImagePlus, X, Film } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const productSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
@@ -60,6 +62,7 @@ interface Product {
   is_active: boolean;
   is_popular: boolean;
   tags?: string[];
+  media_urls?: string[];
 }
 
 interface ProductFormDialogProps {
@@ -80,6 +83,9 @@ export const ProductFormDialog = ({
   isLoading,
 }: ProductFormDialogProps) => {
   const isEditing = !!product;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -109,6 +115,7 @@ export const ProductFormDialog = ({
         is_popular: product.is_popular,
         tags: product.tags?.join(', ') || '',
       });
+      setMediaUrls(product.media_urls || []);
     } else {
       form.reset({
         name: '',
@@ -121,8 +128,62 @@ export const ProductFormDialog = ({
         is_popular: false,
         tags: '',
       });
+      setMediaUrls([]);
     }
   }, [product, open, form]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const newUrls: string[] = [];
+
+    for (const file of Array.from(files)) {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      if (!isImage && !isVideo) {
+        toast.error(`${file.name}: только изображения и видео`);
+        continue;
+      }
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(`${file.name}: макс. размер 50 МБ`);
+        continue;
+      }
+
+      const ext = file.name.split('.').pop();
+      const path = `${crypto.randomUUID()}.${ext}`;
+
+      const { error } = await supabase.storage
+        .from('product-media')
+        .upload(path, file);
+
+      if (error) {
+        toast.error(`Ошибка загрузки ${file.name}`);
+        console.error(error);
+        continue;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('product-media')
+        .getPublicUrl(path);
+
+      newUrls.push(urlData.publicUrl);
+    }
+
+    setMediaUrls(prev => [...prev, ...newUrls]);
+    if (newUrls.length > 0) toast.success(`Загружено: ${newUrls.length} файл(ов)`);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeMedia = (url: string) => {
+    setMediaUrls(prev => prev.filter(u => u !== url));
+  };
+
+  const isVideoUrl = (url: string) => {
+    return /\.(mp4|webm|mov|avi)$/i.test(url);
+  };
 
   const handleSubmit = async (data: ProductFormData) => {
     const productData: Partial<Product> = {
@@ -135,6 +196,7 @@ export const ProductFormDialog = ({
       is_active: data.is_active,
       is_popular: data.is_popular,
       tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      media_urls: mediaUrls,
     };
 
     await onSubmit(productData);
@@ -197,6 +259,58 @@ export const ProductFormDialog = ({
                 </FormItem>
               )}
             />
+
+            {/* Media Upload */}
+            <div>
+              <FormLabel>Медиа (фото / видео)</FormLabel>
+              <div className="mt-2 space-y-2">
+                {mediaUrls.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {mediaUrls.map((url, i) => (
+                      <div key={i} className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
+                        {isVideoUrl(url) ? (
+                          <div className="w-full h-full flex items-center justify-center bg-secondary">
+                            <Film className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        ) : (
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeMedia(url)}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ImagePlus className="h-4 w-4 mr-2" />
+                  )}
+                  {uploading ? 'Загрузка...' : 'Добавить медиа'}
+                </Button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
