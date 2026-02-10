@@ -22,6 +22,7 @@ const CartPage = () => {
   
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [useBalance, setUseBalance] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoId, setPromoId] = useState<string | null>(null);
@@ -29,6 +30,10 @@ const CartPage = () => {
   const [promoError, setPromoError] = useState('');
 
   const discountedTotal = promoDiscount > 0 ? Math.round(total * (1 - promoDiscount / 100)) : total;
+  const userBalance = user?.balance || 0;
+  const canPayWithBalance = userBalance >= discountedTotal && discountedTotal > 0;
+  const balanceToUse = useBalance ? Math.min(userBalance, discountedTotal) : 0;
+  const cryptoAmount = discountedTotal - balanceToUse;
 
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
@@ -61,7 +66,7 @@ const CartPage = () => {
       options: { country: item.selectedCountry, services: item.selectedServices },
     }));
 
-    const result = await payWithCryptoBot(cartItems, discountedTotal);
+    const result = await payWithCryptoBot(cartItems, discountedTotal, balanceToUse);
 
     if (result.success && result.invoiceUrl) {
       hapticFeedback('success');
@@ -102,7 +107,7 @@ const CartPage = () => {
     }
   };
 
-  const canPayWithBalance = user && user.balance >= discountedTotal && discountedTotal > 0;
+  
 
   if (orderComplete) {
     return (
@@ -250,6 +255,40 @@ const CartPage = () => {
                     </div>
                   </div>
 
+                  {/* Use Balance Toggle */}
+                  {userBalance > 0 && discountedTotal > 0 && (
+                    <div className="mb-4 p-3 rounded-lg border bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="use-balance"
+                            checked={useBalance}
+                            onCheckedChange={(checked) => setUseBalance(checked as boolean)}
+                          />
+                          <label htmlFor="use-balance" className="text-sm cursor-pointer">
+                            <Wallet className="h-4 w-4 inline mr-1" />
+                            Списать с баланса
+                          </label>
+                        </div>
+                        <span className="text-sm font-medium">{userBalance.toLocaleString('ru-RU')} ₽</span>
+                      </div>
+                      {useBalance && (
+                        <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                          <div className="flex justify-between">
+                            <span>Списание с баланса</span>
+                            <span>−{balanceToUse.toLocaleString('ru-RU')} ₽</span>
+                          </div>
+                          {cryptoAmount > 0 && (
+                            <div className="flex justify-between font-medium text-foreground">
+                              <span>Доплата через CryptoBot</span>
+                              <span>{cryptoAmount.toLocaleString('ru-RU')} ₽</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Promo Code */}
                   <div className="mb-4">
                     <div className="flex gap-2">
@@ -286,8 +325,8 @@ const CartPage = () => {
                     </label>
                   </div>
 
-                  {/* Balance Payment Button */}
-                  {canPayWithBalance && (
+                  {/* Full Balance Payment */}
+                  {useBalance && canPayWithBalance && (
                     <Button
                       size="lg"
                       className="w-full gap-3 mb-3"
@@ -299,33 +338,37 @@ const CartPage = () => {
                       ) : (
                         <>
                           <Wallet className="h-5 w-5" />
-                          Оплатить с баланса ({user?.balance?.toLocaleString('ru-RU')} ₽)
+                          Оплатить с баланса ({discountedTotal.toLocaleString('ru-RU')} ₽)
                         </>
                       )}
                     </Button>
                   )}
 
-                  {/* CryptoBot Payment Button */}
-                  <Button
-                    size="lg"
-                    variant={canPayWithBalance ? 'outline' : 'default'}
-                    className="w-full gap-3"
-                    disabled={!agreedToTerms || isProcessing}
-                    onClick={handlePayWithCrypto}
-                  >
-                    {isProcessing ? (
-                      'Создание счёта...'
-                    ) : (
-                      <>
-                        <img 
-                          src={cryptoBotLogo} 
-                          alt="CryptoBot" 
-                          className="w-5 h-5 rounded-full"
-                        />
-                        Оплатить через CryptoBot
-                      </>
-                    )}
-                  </Button>
+                  {/* CryptoBot Payment (full or with balance deduction) */}
+                  {!(useBalance && canPayWithBalance) && (
+                    <Button
+                      size="lg"
+                      className="w-full gap-3"
+                      disabled={!agreedToTerms || isProcessing}
+                      onClick={handlePayWithCrypto}
+                    >
+                      {isProcessing ? (
+                        'Создание счёта...'
+                      ) : (
+                        <>
+                          <img 
+                            src={cryptoBotLogo} 
+                            alt="CryptoBot" 
+                            className="w-5 h-5 rounded-full"
+                          />
+                          {useBalance && balanceToUse > 0
+                            ? `Доплатить ${cryptoAmount.toLocaleString('ru-RU')} ₽ через CryptoBot`
+                            : `Оплатить ${discountedTotal.toLocaleString('ru-RU')} ₽ через CryptoBot`
+                          }
+                        </>
+                      )}
+                    </Button>
+                  )}
 
                   <div className="flex items-start gap-2 mt-4 text-xs text-muted-foreground">
                     <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
