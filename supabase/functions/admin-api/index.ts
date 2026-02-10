@@ -631,6 +631,165 @@ serve(async (req) => {
         });
       }
 
+      // ============ SEND MESSAGE TO USER ============
+      case path.startsWith("/users/") && path.endsWith("/message") && method === "POST": {
+        const targetUserId = path.split("/")[2];
+        const { text: msgText } = body;
+
+        if (!msgText) {
+          return new Response(JSON.stringify({ error: "Missing text" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Get user's telegram_id
+        const { data: profile, error: profileErr } = await supabase
+          .from("profiles")
+          .select("telegram_id")
+          .eq("id", targetUserId)
+          .single();
+
+        if (profileErr || !profile?.telegram_id) {
+          return new Response(JSON.stringify({ error: "User not found or no telegram_id" }), {
+            status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (!botToken) {
+          return new Response(JSON.stringify({ error: "Bot token not configured" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: profile.telegram_id,
+            text: msgText,
+            parse_mode: "Markdown",
+          }),
+        });
+
+        const tgData = await tgRes.json();
+        if (!tgData.ok) {
+          console.error("Telegram send error:", tgData);
+          return new Response(JSON.stringify({ error: "Failed to send message", details: tgData.description }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ============ DELIVER PRODUCT TO USER ============
+      case path.startsWith("/users/") && path.endsWith("/deliver") && method === "POST": {
+        const targetUserId = path.split("/")[2];
+        const { productId: deliverProductId, quantity: deliverQty } = body;
+
+        if (!deliverProductId) {
+          return new Response(JSON.stringify({ error: "Missing productId" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const qty = parseInt(String(deliverQty)) || 1;
+
+        // Get product info
+        const { data: product, error: productErr } = await supabase
+          .from("products")
+          .select("id, name, price")
+          .eq("id", deliverProductId)
+          .single();
+
+        if (productErr || !product) {
+          return new Response(JSON.stringify({ error: "Product not found" }), {
+            status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Create order
+        const { data: order, error: orderErr } = await supabase
+          .from("orders")
+          .insert({
+            user_id: targetUserId,
+            total: 0,
+            status: "completed",
+            payment_method: "admin_delivery",
+            completed_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (orderErr) throw orderErr;
+
+        // Create order item
+        await supabase.from("order_items").insert({
+          order_id: order.id,
+          product_id: product.id,
+          product_name: product.name,
+          price: 0,
+          quantity: qty,
+        });
+
+        // Claim product items
+        const claimedItems: string[] = [];
+        for (let i = 0; i < qty; i++) {
+          const { data: claimed } = await supabase.rpc("claim_product_item", {
+            p_product_id: deliverProductId,
+            p_user_id: targetUserId,
+            p_order_id: order.id,
+          });
+          if (claimed && claimed.length > 0) {
+            claimedItems.push(claimed[0].content);
+          }
+        }
+
+        // Update order with delivered content
+        if (claimedItems.length > 0) {
+          await supabase.from("orders").update({
+            delivered_content: claimedItems.join("\n---\n"),
+          }).eq("id", order.id);
+        }
+
+        // Send Telegram notification
+        const botToken2 = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (botToken2) {
+          const { data: userProfile } = await supabase
+            .from("profiles")
+            .select("telegram_id")
+            .eq("id", targetUserId)
+            .single();
+
+          if (userProfile?.telegram_id) {
+            const deliveryText = claimedItems.length > 0
+              ? `🎁 *Вам выдан товар!*\n\n*Товар:* ${product.name}\n*Количество:* ${qty}\n\n${claimedItems.join("\n---\n")}`
+              : `🎁 *Вам выдан товар!*\n\n*Товар:* ${product.name}\n*Количество:* ${qty}`;
+
+            await fetch(`https://api.telegram.org/bot${botToken2}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: userProfile.telegram_id,
+                text: deliveryText,
+                parse_mode: "Markdown",
+              }),
+            }).catch(e => console.error("TG delivery notify error:", e));
+          }
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          orderId: order.id,
+          claimedCount: claimedItems.length,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Not found" }),

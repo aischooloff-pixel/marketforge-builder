@@ -265,6 +265,22 @@ export const useAdmin = () => {
     return invokeAdminApi(`/users/${userId}/details`, 'GET');
   }, [invokeAdminApi]);
 
+  // Send message to user via Telegram bot
+  const sendMessageToUser = useCallback(async (userId: string, text: string) => {
+    const result = await invokeAdminApi<{ success: boolean }>(`/users/${userId}/message`, 'POST', { text });
+    if (result?.success) toast.success('Сообщение отправлено');
+    return result?.success || false;
+  }, [invokeAdminApi]);
+
+  // Deliver product to user
+  const deliverProductToUser = useCallback(async (userId: string, productId: string, quantity: number = 1) => {
+    const result = await invokeAdminApi<{ success: boolean; orderId: string; claimedCount: number }>(
+      `/users/${userId}/deliver`, 'POST', { productId, quantity }
+    );
+    if (result?.success) toast.success(`Товар выдан (${result.claimedCount} шт.)`);
+    return result;
+  }, [invokeAdminApi]);
+
   return {
     isLoading,
     error,
@@ -285,6 +301,8 @@ export const useAdmin = () => {
     updateUserRole,
     updateUserBalance,
     fetchUserDetails,
+    sendMessageToUser,
+    deliverProductToUser,
     // Product Items
     fetchProductItems,
     addProductItems,
