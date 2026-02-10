@@ -25,27 +25,34 @@ export const usePayment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Pay with CryptoBot
+  // Pay with CryptoBot (optionally using partial balance)
   const payWithCryptoBot = async (
     items: CartItem[],
-    total: number
+    total: number,
+    balanceToUse: number = 0
   ): Promise<PaymentResult> => {
     if (!user) {
       return { success: false, error: 'Пользователь не авторизован' };
     }
 
+    if (balanceToUse > user.balance) {
+      return { success: false, error: 'Недостаточно средств на балансе' };
+    }
+
+    const cryptoAmount = total - balanceToUse;
+
     setIsProcessing(true);
     setError(null);
 
     try {
-      // Create order first
+      // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: user.id,
           total,
           status: 'pending',
-          payment_method: 'cryptobot',
+          payment_method: balanceToUse > 0 ? 'balance+cryptobot' : 'cryptobot',
         })
         .select()
         .single();
@@ -72,15 +79,40 @@ export const usePayment = () => {
         console.error('Order items error:', itemsError);
       }
 
-      // Create CryptoBot invoice
+      // Deduct balance if using partial balance
+      if (balanceToUse > 0) {
+        const newBalance = user.balance - balanceToUse;
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ balance: newBalance })
+          .eq('id', user.id);
+
+        if (profileError) {
+          throw new Error('Ошибка списания баланса');
+        }
+
+        await supabase.from('transactions').insert({
+          user_id: user.id,
+          type: 'purchase' as const,
+          amount: -balanceToUse,
+          balance_after: newBalance,
+          order_id: order.id,
+          description: `Частичная оплата заказа #${order.id.substring(0, 8)} (баланс)`,
+        });
+
+        await refreshUser();
+      }
+
+      // Create CryptoBot invoice for the remaining amount
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke(
         'cryptobot-create-invoice',
         {
           body: {
             userId: user.id,
-            amount: total,
+            amount: cryptoAmount,
             orderId: order.id,
-            description: `Заказ #${order.id.substring(0, 8)}`,
+            description: `Заказ #${order.id.substring(0, 8)}${balanceToUse > 0 ? ` (баланс: ${balanceToUse}₽)` : ''}`,
           },
         }
       );
