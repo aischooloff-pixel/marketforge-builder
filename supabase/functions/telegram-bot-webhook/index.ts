@@ -101,13 +101,24 @@ serve(async (req) => {
         // Mark user as verified in profiles (set language_code to include verified flag)
         // We use a custom approach: check if profile exists, if not the user-data function will create it
         // For now, store verified state by creating a minimal profile entry
-        const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${callback.from?.id}&select=id`, {
+        // Mark user as bot_verified
+        await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${callback.from?.id}`, {
+          method: "PATCH",
+          headers: {
+            "apikey": supabaseKey,
+            "Authorization": `Bearer ${supabaseKey}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify({ bot_verified: true }),
+        });
+
+        // If no profile exists yet, create one
+        const checkRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${callback.from?.id}&select=id`, {
           headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
         });
-        const profiles = await profileRes.json();
-        
-        if (!profiles || profiles.length === 0) {
-          // Create a profile so we know they passed captcha
+        const checkProfiles = await checkRes.json();
+        if (!checkProfiles || checkProfiles.length === 0) {
           await fetch(`${supabaseUrl}/rest/v1/profiles`, {
             method: "POST",
             headers: {
@@ -120,6 +131,7 @@ serve(async (req) => {
               telegram_id: callback.from?.id,
               first_name: callback.from?.first_name || null,
               username: callback.from?.username || null,
+              bot_verified: true,
             }),
           });
         }
@@ -170,13 +182,13 @@ serve(async (req) => {
     const text = message.text?.trim();
 
     if (text === "/start" || text?.startsWith("/start ")) {
-      // Check if user already exists in profiles (= already passed captcha before)
-      const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id`, {
+      // Check if user already passed captcha (bot_verified = true)
+      const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id,bot_verified`, {
         headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
       });
       const profiles = await profileRes.json();
 
-      if (profiles && profiles.length > 0) {
+      if (profiles && profiles.length > 0 && profiles[0].bot_verified === true) {
         // Returning user — send welcome directly, no captcha
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: "POST",
