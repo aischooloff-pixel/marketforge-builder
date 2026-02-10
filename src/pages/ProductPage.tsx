@@ -240,7 +240,9 @@ const ProductPage = () => {
                   {!stockLoading && !isOutOfStock && (
                     <div className="mb-4">
                       <p className="text-sm text-muted-foreground">
-                        В наличии: <span className={stockCount <= 5 ? 'text-orange-500 font-medium' : 'font-medium'}>{stockCount} шт</span>
+                        В наличии: <span className={stockCount > 0 && stockCount <= 5 ? 'text-orange-500 font-medium' : 'font-medium'}>
+                          {stockCount === -1 ? '∞' : stockCount} шт
+                        </span>
                       </p>
                     </div>
                   )}

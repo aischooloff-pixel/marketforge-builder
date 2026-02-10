@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTelegram } from '@/contexts/TelegramContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface PaymentResult {
   success: boolean;
@@ -22,6 +23,7 @@ interface CartItem {
 
 export const usePayment = () => {
   const { user, refreshUser } = useTelegram();
+  const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +47,28 @@ export const usePayment = () => {
     setError(null);
 
     try {
+      // Check max_per_user limits before creating order
+      for (const item of items) {
+        const { data: productData } = await supabase
+          .from('products')
+          .select('max_per_user')
+          .eq('id', item.productId)
+          .single();
+
+        if (productData && productData.max_per_user > 0) {
+          const { count } = await supabase
+            .from('order_items')
+            .select('*, orders!inner(user_id, status)', { count: 'exact', head: true })
+            .eq('product_id', item.productId)
+            .eq('orders.user_id', user.id)
+            .in('orders.status', ['paid', 'completed']);
+
+          if ((count || 0) >= productData.max_per_user) {
+            setIsProcessing(false);
+            return { success: false, error: `Товар "${item.productName}" можно купить только ${productData.max_per_user} раз(а)` };
+          }
+        }
+      }
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -138,6 +162,28 @@ export const usePayment = () => {
     setError(null);
 
     try {
+      // Check max_per_user limits before creating order
+      for (const item of items) {
+        const { data: productData } = await supabase
+          .from('products')
+          .select('max_per_user')
+          .eq('id', item.productId)
+          .single();
+
+        if (productData && productData.max_per_user > 0) {
+          const { count } = await supabase
+            .from('order_items')
+            .select('*, orders!inner(user_id, status)', { count: 'exact', head: true })
+            .eq('product_id', item.productId)
+            .eq('orders.user_id', user.id)
+            .in('orders.status', ['paid', 'completed']);
+
+          if ((count || 0) >= productData.max_per_user) {
+            setIsProcessing(false);
+            return { success: false, error: `Товар "${item.productName}" можно купить только ${productData.max_per_user} раз(а)` };
+          }
+        }
+      }
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -195,6 +241,10 @@ export const usePayment = () => {
 
       // Refresh user to update balance
       await refreshUser();
+
+      // Invalidate stock queries so UI updates
+      queryClient.invalidateQueries({ queryKey: ['product-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
 
       return {
         success: true,

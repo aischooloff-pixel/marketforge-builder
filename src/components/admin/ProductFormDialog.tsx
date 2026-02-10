@@ -41,6 +41,7 @@ const productSchema = z.object({
   is_active: z.boolean().default(true),
   is_popular: z.boolean().default(false),
   tags: z.string().optional(),
+  max_per_user: z.coerce.number().min(0).default(0),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -63,6 +64,7 @@ interface Product {
   is_popular: boolean;
   tags?: string[];
   media_urls?: string[];
+  max_per_user?: number;
 }
 
 interface ProductFormDialogProps {
@@ -99,6 +101,7 @@ export const ProductFormDialog = ({
       is_active: true,
       is_popular: false,
       tags: '',
+      max_per_user: 0,
     },
   });
 
@@ -114,6 +117,7 @@ export const ProductFormDialog = ({
         is_active: product.is_active,
         is_popular: product.is_popular,
         tags: product.tags?.join(', ') || '',
+        max_per_user: product.max_per_user ?? 0,
       });
       setMediaUrls(product.media_urls || []);
     } else {
@@ -127,6 +131,7 @@ export const ProductFormDialog = ({
         is_active: true,
         is_popular: false,
         tags: '',
+        max_per_user: 0,
       });
       setMediaUrls([]);
     }
@@ -197,6 +202,7 @@ export const ProductFormDialog = ({
       is_popular: data.is_popular,
       tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       media_urls: mediaUrls,
+      max_per_user: data.max_per_user,
     };
 
     await onSubmit(productData);
@@ -369,6 +375,31 @@ export const ProductFormDialog = ({
                     <SelectContent>
                       <SelectItem value="one-time">Разовая покупка</SelectItem>
                       <SelectItem value="subscription">Подписка</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="max_per_user"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Лимит покупок на пользователя</FormLabel>
+                  <Select onValueChange={(v) => field.onChange(parseInt(v))} value={String(field.value)}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="0">Без ограничений</SelectItem>
+                      <SelectItem value="1">Только 1 раз</SelectItem>
+                      <SelectItem value="2">Макс. 2 раза</SelectItem>
+                      <SelectItem value="3">Макс. 3 раза</SelectItem>
+                      <SelectItem value="5">Макс. 5 раз</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
