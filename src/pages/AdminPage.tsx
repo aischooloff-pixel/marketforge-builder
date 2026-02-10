@@ -230,7 +230,7 @@ const AdminPage = () => {
     if (updated) setPromos(updated as PromoCode[]);
   };
 
-  if (authLoading && !TEMP_OPEN_ACCESS) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -238,8 +238,39 @@ const AdminPage = () => {
     );
   }
 
-  if (!TEMP_OPEN_ACCESS && !isAdmin) {
-    return null;
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-sm mx-4 p-6">
+          <div className="text-center mb-4">
+            <Shield className="h-10 w-10 mx-auto mb-2 text-primary" />
+            <h2 className="text-lg font-bold">Админ-панель</h2>
+            <p className="text-sm text-muted-foreground mt-1">Введите пароль для доступа</p>
+          </div>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            admin.loginWithPassword(passwordInput);
+          }} className="space-y-3">
+            <Input
+              type="password"
+              placeholder="Пароль"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              autoFocus
+            />
+            <Button type="submit" className="w-full" disabled={!passwordInput}>
+              Войти
+            </Button>
+          </form>
+          {admin.error && (
+            <p className="text-sm text-destructive text-center mt-2">{admin.error}</p>
+          )}
+          <Button variant="ghost" className="w-full mt-2" onClick={() => navigate('/')}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Назад
+          </Button>
+        </Card>
+      </div>
+    );
   }
 
   const filteredProducts = products.filter(p => 
