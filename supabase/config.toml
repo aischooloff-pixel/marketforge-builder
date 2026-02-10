@@ -1,1 +1,4 @@
 project_id = "lfttorfiwbwqrirztreo"
+
+[functions.px6-buy-proxy]
+verify_jwt = false
