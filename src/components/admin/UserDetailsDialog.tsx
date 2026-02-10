@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Ban, Shield, Wallet, ShoppingCart, Clock } from 'lucide-react';
+import { Loader2, Ban, Shield, Wallet, ShoppingCart, Clock, Send, Package } from 'lucide-react';
 
 interface UserDetailsDialogProps {
   open: boolean;
@@ -16,17 +17,26 @@ interface UserDetailsDialogProps {
   onUpdateRole: (userId: string, role: 'admin' | 'moderator' | 'user') => Promise<boolean>;
   onUpdateBalance: (userId: string, amount: number, action: 'add' | 'set') => Promise<any>;
   onFetchDetails: (userId: string) => Promise<any>;
+  onSendMessage: (userId: string, text: string) => Promise<boolean>;
+  onDeliverProduct: (userId: string, productId: string, quantity: number) => Promise<any>;
+  products: any[];
   isLoading: boolean;
 }
 
 export const UserDetailsDialog = ({
-  open, onOpenChange, user, onToggleBan, onUpdateRole, onUpdateBalance, onFetchDetails, isLoading
+  open, onOpenChange, user, onToggleBan, onUpdateRole, onUpdateBalance, onFetchDetails,
+  onSendMessage, onDeliverProduct, products, isLoading
 }: UserDetailsDialogProps) => {
   const [details, setDetails] = useState<any>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [balanceAmount, setBalanceAmount] = useState('');
   const [balanceAction, setBalanceAction] = useState<'add' | 'set'>('add');
   const [selectedRole, setSelectedRole] = useState('');
+  const [messageText, setMessageText] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [deliverProductId, setDeliverProductId] = useState('');
+  const [deliverQty, setDeliverQty] = useState('1');
+  const [delivering, setDelivering] = useState(false);
 
   useEffect(() => {
     if (open && user) {
@@ -56,6 +66,24 @@ export const UserDetailsDialog = ({
     await onUpdateRole(user.id, role as 'admin' | 'moderator' | 'user');
   };
 
+  const handleSendMessage = async () => {
+    if (!user || !messageText.trim()) return;
+    setSendingMessage(true);
+    await onSendMessage(user.id, messageText.trim());
+    setMessageText('');
+    setSendingMessage(false);
+  };
+
+  const handleDeliver = async () => {
+    if (!user || !deliverProductId) return;
+    setDelivering(true);
+    await onDeliverProduct(user.id, deliverProductId, parseInt(deliverQty) || 1);
+    setDeliverProductId('');
+    setDeliverQty('1');
+    setDelivering(false);
+    loadDetails();
+  };
+
   if (!user) return null;
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ru-RU', {
@@ -76,9 +104,11 @@ export const UserDetailsDialog = ({
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
         ) : (
           <Tabs defaultValue="info" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
               <TabsTrigger value="info" className="text-xs">Инфо</TabsTrigger>
               <TabsTrigger value="balance" className="text-xs">Баланс</TabsTrigger>
+              <TabsTrigger value="deliver" className="text-xs">Выдать</TabsTrigger>
+              <TabsTrigger value="message" className="text-xs">Написать</TabsTrigger>
               <TabsTrigger value="orders" className="text-xs">Заказы</TabsTrigger>
               <TabsTrigger value="history" className="text-xs">История</TabsTrigger>
             </TabsList>
@@ -99,7 +129,6 @@ export const UserDetailsDialog = ({
                 </div>
               </Card>
 
-              {/* Role */}
               <Card className="p-4 space-y-3">
                 <p className="text-sm font-medium flex items-center gap-2">
                   <Shield className="h-4 w-4" /> Роль
@@ -114,7 +143,6 @@ export const UserDetailsDialog = ({
                 </Select>
               </Card>
 
-              {/* Ban */}
               <Button
                 variant={user.is_banned ? 'default' : 'destructive'}
                 className="w-full gap-2"
@@ -160,6 +188,71 @@ export const UserDetailsDialog = ({
                 >
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Применить'}
                 </Button>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="deliver" className="space-y-4">
+              <Card className="p-4 space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Package className="h-4 w-4" /> Выдать товар
+                </p>
+                <Select value={deliverProductId} onValueChange={setDeliverProductId}>
+                  <SelectTrigger><SelectValue placeholder="Выберите товар" /></SelectTrigger>
+                  <SelectContent>
+                    {products.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} — {parseFloat(p.price).toLocaleString('ru-RU')} ₽
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">Кол-во:</span>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={deliverQty}
+                    onChange={(e) => setDeliverQty(e.target.value)}
+                    className="w-24"
+                  />
+                </div>
+                <Button
+                  className="w-full gap-2"
+                  disabled={!deliverProductId || delivering}
+                  onClick={handleDeliver}
+                >
+                  {delivering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+                  Выдать товар
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Товар будет выдан бесплатно. Пользователь получит уведомление в Telegram.
+                </p>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="message" className="space-y-4">
+              <Card className="p-4 space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Send className="h-4 w-4" /> Написать в ЛС бота
+                </p>
+                <Textarea
+                  placeholder="Текст сообщения... (поддерживается Markdown)"
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  rows={4}
+                  maxLength={2000}
+                />
+                <Button
+                  className="w-full gap-2"
+                  disabled={!messageText.trim() || sendingMessage}
+                  onClick={handleSendMessage}
+                >
+                  {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Отправить
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Сообщение будет отправлено от имени бота в личные сообщения пользователю.
+                </p>
               </Card>
             </TabsContent>
 

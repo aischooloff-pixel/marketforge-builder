@@ -701,6 +701,9 @@ const AdminPage = () => {
         onUpdateRole={admin.updateUserRole}
         onUpdateBalance={admin.updateUserBalance}
         onFetchDetails={admin.fetchUserDetails}
+        onSendMessage={admin.sendMessageToUser}
+        onDeliverProduct={admin.deliverProductToUser}
+        products={products}
         isLoading={admin.isLoading}
       />
     </div>
