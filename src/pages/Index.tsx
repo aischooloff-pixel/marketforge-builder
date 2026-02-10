@@ -83,7 +83,7 @@ const Index = () => {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
               {[
-                { icon: Shield, title: 'Легально', desc: 'Все товары проверены на соответствие законодательству' },
+                { icon: Shield, title: 'Надежно', desc: 'Все товары проверены на соответствие законодательству' },
                 { icon: Zap, title: 'Мгновенно', desc: 'Автоматическая доставка после оплаты' },
                 { icon: Users, title: 'Для профи', desc: 'Инструменты для мастеров своих дел' }
               ].map((feature, index) => (
