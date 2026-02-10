@@ -3,7 +3,7 @@ import { useTelegram } from '@/contexts/TelegramContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Star, MessageSquarePlus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -14,33 +14,12 @@ export const ReviewForm = () => {
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  const [open, setOpen] = useState(false);
 
   if (submitted) {
     return (
-      <Card className="p-4 md:p-6 text-center">
-        <p className="text-sm text-muted-foreground">✅ Спасибо! Ваш отзыв отправлен на модерацию.</p>
-      </Card>
-    );
-  }
-
-  if (!showForm) {
-    return (
       <div className="text-center">
-        <Button
-          variant="outline"
-          className="gap-2"
-          onClick={() => {
-            if (!isAuthenticated || !user) {
-              toast.error('Откройте магазин через Telegram для авторизации');
-              return;
-            }
-            setShowForm(true);
-          }}
-        >
-          <MessageSquarePlus className="h-4 w-4" />
-          Оставить отзыв
-        </Button>
+        <p className="text-sm text-muted-foreground">✅ Спасибо! Ваш отзыв отправлен на модерацию.</p>
       </div>
     );
   }
@@ -60,6 +39,7 @@ export const ReviewForm = () => {
       });
       if (error) throw error;
       setSubmitted(true);
+      setOpen(false);
       toast.success('Отзыв отправлен на модерацию');
     } catch {
       toast.error('Не удалось отправить отзыв');
@@ -69,42 +49,65 @@ export const ReviewForm = () => {
   };
 
   return (
-    <Card className="p-4 md:p-6">
-      <h3 className="font-semibold text-sm mb-3">Оставить отзыв</h3>
-      <div className="flex items-center gap-1 mb-3">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            onClick={() => setRating(star)}
-            onMouseEnter={() => setHoverRating(star)}
-            onMouseLeave={() => setHoverRating(0)}
-            className="p-0.5"
+    <div className="text-center">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={(e) => {
+              if (!isAuthenticated || !user) {
+                e.preventDefault();
+                toast.error('Откройте магазин через Telegram для авторизации');
+              }
+            }}
           >
-            <Star
-              className={`h-5 w-5 transition-colors ${
-                star <= (hoverRating || rating)
-                  ? 'fill-primary text-primary'
-                  : 'text-muted-foreground/30'
-              }`}
+            <MessageSquarePlus className="h-4 w-4" />
+            Оставить отзыв
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Оставить отзыв</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  className="p-0.5"
+                >
+                  <Star
+                    className={`h-6 w-6 transition-colors ${
+                      star <= (hoverRating || rating)
+                        ? 'fill-primary text-primary'
+                        : 'text-muted-foreground/30'
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Поделитесь впечатлениями..."
+              maxLength={500}
+              className="resize-none"
+              rows={4}
             />
-          </button>
-        ))}
-      </div>
-      <Textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Поделитесь впечатлениями..."
-        maxLength={500}
-        className="mb-3 resize-none"
-        rows={3}
-      />
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">{text.length}/500</span>
-        <Button size="sm" onClick={handleSubmit} disabled={submitting || !text.trim()}>
-          {submitting ? 'Отправка...' : 'Отправить'}
-        </Button>
-      </div>
-    </Card>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{text.length}/500</span>
+              <Button onClick={handleSubmit} disabled={submitting || !text.trim()}>
+                {submitting ? 'Отправка...' : 'Отправить'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
