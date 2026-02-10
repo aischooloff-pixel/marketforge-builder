@@ -35,8 +35,8 @@ const FloatingEmoji = ({ position, emoji, speed, floatIntensity, size, rotationD
           distanceFactor={8}
           style={{
             fontSize: `${size}px`,
-            opacity: 0.3,
-            filter: 'grayscale(40%)',
+            opacity: 0.18,
+            filter: 'grayscale(100%)',
             userSelect: 'none',
             pointerEvents: 'none',
           }}
