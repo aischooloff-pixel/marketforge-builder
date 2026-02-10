@@ -64,6 +64,11 @@ const Index = () => {
                     Информация
                   </Button>
                 </Link>
+                <a href="https://t.me/TemkaStoreNews" target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-sm md:text-base px-6 md:px-8 h-11 md:h-12">
+                    Телеграм канал
+                  </Button>
+                </a>
               </div>
             </motion.div>
           </div>
