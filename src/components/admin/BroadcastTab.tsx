@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,8 +6,9 @@ import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Send, Plus, Trash2, Image, Video, FileText, Loader2, Eye } from 'lucide-react';
+import { Send, Plus, Trash2, Image, Video, FileText, Loader2, Eye, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface InlineButton {
   text: string;
@@ -32,7 +33,9 @@ export const BroadcastTab = ({ onSend, totalUsers }: BroadcastTabProps) => {
   const [parseMode, setParseMode] = useState('HTML');
   const [buttons, setButtons] = useState<InlineButton[]>([]);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addButton = () => {
     setButtons([...buttons, { text: '', url: '' }]);
@@ -135,13 +138,64 @@ export const BroadcastTab = ({ onSend, totalUsers }: BroadcastTabProps) => {
           <Image className="h-4 w-4" />
           Медиа (необязательно)
         </Label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,.gif"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            // Auto-detect media type
+            if (file.type.startsWith('video/')) {
+              setMediaType('video');
+            } else if (file.type === 'image/gif') {
+              setMediaType('gif');
+            } else {
+              setMediaType('photo');
+            }
+
+            setUploading(true);
+            try {
+              const ext = file.name.split('.').pop();
+              const path = `broadcast/${Date.now()}.${ext}`;
+              const { error: uploadErr } = await supabase.storage
+                .from('product-media')
+                .upload(path, file, { upsert: true });
+
+              if (uploadErr) throw uploadErr;
+
+              const { data: urlData } = supabase.storage
+                .from('product-media')
+                .getPublicUrl(path);
+
+              setMediaUrl(urlData.publicUrl);
+              toast.success('Файл загружен');
+            } catch (err) {
+              console.error(err);
+              toast.error('Ошибка загрузки файла');
+            } finally {
+              setUploading(false);
+              e.target.value = '';
+            }
+          }}
+        />
         <div className="flex gap-2">
           <Input
             value={mediaUrl}
             onChange={(e) => setMediaUrl(e.target.value)}
-            placeholder="URL изображения или видео..."
+            placeholder="URL или загрузите файл..."
             className="flex-1"
           />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          </Button>
           <Select value={mediaType} onValueChange={setMediaType}>
             <SelectTrigger className="w-[120px]">
               <SelectValue />
@@ -163,6 +217,11 @@ export const BroadcastTab = ({ onSend, totalUsers }: BroadcastTabProps) => {
           <img src={mediaUrl} alt="preview" className="max-h-40 rounded-md object-cover" onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none';
           }} />
+        )}
+        {mediaUrl && (
+          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setMediaUrl('')}>
+            <Trash2 className="h-3 w-3 mr-1" /> Удалить медиа
+          </Button>
         )}
       </Card>
 
