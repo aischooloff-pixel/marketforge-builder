@@ -179,13 +179,30 @@ const ProductPage = () => {
               className="lg:sticky lg:top-24"
             >
               <div className="rounded-xl border bg-card overflow-hidden">
-                {/* Product Image - smaller on mobile */}
-                <div className="relative aspect-[2/1] md:aspect-[16/9] bg-secondary/50">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-5xl md:text-6xl">
-                      {categoryIcon}
+                {/* Product Media */}
+                <div className="relative aspect-[2/1] md:aspect-[16/9] bg-secondary/50 overflow-hidden">
+                  {product.media_urls && product.media_urls.length > 0 ? (
+                    /\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ? (
+                      <video
+                        src={product.media_urls[0]}
+                        className="w-full h-full object-cover"
+                        controls
+                        muted
+                      />
+                    ) : (
+                      <img
+                        src={product.media_urls[0]}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    )
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-5xl md:text-6xl">
+                        {categoryIcon}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   {product.is_popular && !isOutOfStock && (
                     <div className="absolute top-2 left-2 md:top-3 md:left-3">
                       <Badge className="bg-primary text-primary-foreground text-xs">
@@ -202,6 +219,21 @@ const ProductPage = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Additional media thumbnails */}
+                {product.media_urls && product.media_urls.length > 1 && (
+                  <div className="flex gap-2 p-3 overflow-x-auto">
+                    {product.media_urls.map((url, i) => (
+                      <div key={i} className="w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0 bg-muted">
+                        {/\.(mp4|webm|mov)$/i.test(url) ? (
+                          <video src={url} className="w-full h-full object-cover" muted />
+                        ) : (
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
                 <div className="p-4 md:p-6">
                   {/* Stock info */}

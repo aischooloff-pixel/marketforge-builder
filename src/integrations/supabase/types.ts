@@ -232,6 +232,7 @@ export type Database = {
           is_popular: boolean | null
           legal_note: string | null
           long_desc: string | null
+          media_urls: string[] | null
           name: string
           price: number
           services: string[] | null
@@ -251,6 +252,7 @@ export type Database = {
           is_popular?: boolean | null
           legal_note?: string | null
           long_desc?: string | null
+          media_urls?: string[] | null
           name: string
           price: number
           services?: string[] | null
@@ -270,6 +272,7 @@ export type Database = {
           is_popular?: boolean | null
           legal_note?: string | null
           long_desc?: string | null
+          media_urls?: string[] | null
           name?: string
           price?: number
           services?: string[] | null

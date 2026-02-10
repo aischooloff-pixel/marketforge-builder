@@ -48,6 +48,7 @@ interface Product {
   is_popular: boolean;
   category_id?: string;
   tags?: string[];
+  media_urls?: string[];
   categories?: { name: string; icon: string };
 }
 

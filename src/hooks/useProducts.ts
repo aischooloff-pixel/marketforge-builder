@@ -16,6 +16,7 @@ export interface Product {
   countries: string[] | null;
   services: string[] | null;
   stock: number | null;
+  media_urls: string[] | null;
   sort_order: number | null;
   created_at: string | null;
   categories?: {
