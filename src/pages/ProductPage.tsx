@@ -236,7 +236,7 @@ const ProductPage = () => {
                   {/* Warning */}
                   {!isOutOfStock && <div className="flex items-start gap-2 text-xs text-muted-foreground">
                       <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      
+                      <span>Возврат и замена товара возможна через Тех.поддержку</span>
                     </div>}
                 </div>
               </div>
