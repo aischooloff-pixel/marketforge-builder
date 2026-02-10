@@ -178,6 +178,7 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          file_url: string | null
           id: string
           is_sold: boolean | null
           order_id: string | null
@@ -188,6 +189,7 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string | null
+          file_url?: string | null
           id?: string
           is_sold?: boolean | null
           order_id?: string | null
@@ -198,6 +200,7 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string | null
+          file_url?: string | null
           id?: string
           is_sold?: boolean | null
           order_id?: string | null

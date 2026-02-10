@@ -371,19 +371,47 @@ serve(async (req) => {
 
       // ============ PRODUCT ITEMS ============
       case path === "/product-items" && method === "POST": {
-        const { items, productId } = body;
-        const insertData = items.map((content: string) => ({
-          product_id: productId,
-          content,
-        }));
+        const { items, productId, fileItems } = body;
+        
+        // Text items (legacy)
+        if (items && items.length > 0) {
+          const insertData = items.map((content: string) => ({
+            product_id: productId,
+            content,
+          }));
 
-        const { data, error } = await supabase
-          .from("product_items")
-          .insert(insertData)
-          .select();
+          const { data, error } = await supabase
+            .from("product_items")
+            .insert(insertData)
+            .select();
 
-        if (error) throw error;
-        return new Response(JSON.stringify(data), {
+          if (error) throw error;
+          return new Response(JSON.stringify(data), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // File items
+        if (fileItems && fileItems.length > 0) {
+          const insertData = fileItems.map((item: { content: string; file_url: string }) => ({
+            product_id: productId,
+            content: item.content,
+            file_url: item.file_url,
+          }));
+
+          const { data, error } = await supabase
+            .from("product_items")
+            .insert(insertData)
+            .select();
+
+          if (error) throw error;
+          return new Response(JSON.stringify(data), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ error: "No items provided" }), {
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

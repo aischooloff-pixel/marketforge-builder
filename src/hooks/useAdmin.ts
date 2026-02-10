@@ -185,6 +185,15 @@ export const useAdmin = () => {
     return !!result;
   }, [invokeAdminApi]);
 
+  const addFileItems = useCallback(async (productId: string, fileItems: Array<{ content: string; file_url: string }>): Promise<boolean> => {
+    const result = await invokeAdminApi<unknown[]>('/product-items', 'POST', {
+      productId,
+      fileItems,
+    });
+    if (result) toast.success(`Добавлено ${fileItems.length} файлов`);
+    return !!result;
+  }, [invokeAdminApi]);
+
   // Categories
   const fetchCategories = useCallback(async () => {
     return invokeAdminApi('/categories', 'GET');
@@ -238,6 +247,7 @@ export const useAdmin = () => {
     // Product Items
     fetchProductItems,
     addProductItems,
+    addFileItems,
     // Categories
     fetchCategories,
     createCategory,
