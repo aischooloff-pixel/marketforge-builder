@@ -629,6 +629,7 @@ const AdminPage = () => {
         product={selectedProductForItems}
         onFetchItems={admin.fetchProductItems}
         onAddItems={admin.addProductItems}
+        onAddFileItems={admin.addFileItems}
         isLoading={admin.isLoading}
       />
 
