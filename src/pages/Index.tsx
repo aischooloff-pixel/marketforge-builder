@@ -356,7 +356,7 @@ const Index = () => {
                         <Quote className="h-5 w-5 text-muted-foreground/30 mb-2" />
                         <p className="text-sm md:text-base text-foreground mb-4">{review.text}</p>
                         <div className="mt-auto">
-                          <p className="font-medium text-sm">Пользователь</p>
+                          <p className="font-medium text-sm">{review.author_name || 'Пользователь'}</p>
                         </div>
                       </Card>
                     </motion.div>)}

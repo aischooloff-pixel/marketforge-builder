@@ -8,16 +8,16 @@ export interface Review {
   rating: number;
   status: string;
   created_at: string;
+  author_name: string | null;
 }
 
 export const useApprovedReviews = () => {
   return useQuery({
     queryKey: ['reviews', 'approved'],
     queryFn: async () => {
-      // profiles table is RLS-blocked; fetch reviews without join
       const { data, error } = await supabase
         .from('reviews')
-        .select('id, user_id, text, rating, status, created_at')
+        .select('id, user_id, text, rating, status, created_at, author_name')
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
       if (error) throw error;
