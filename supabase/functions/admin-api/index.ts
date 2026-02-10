@@ -258,6 +258,117 @@ serve(async (req) => {
         });
       }
 
+      // ============ PROMO CODES ============
+      case path === "/promos" && method === "GET": {
+        const { data, error } = await supabase
+          .from("promo_codes")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data || []), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path === "/promos" && method === "POST": {
+        const promoData = body.promo || body;
+        if (!promoData?.code || !promoData?.discount_percent) {
+          return new Response(
+            JSON.stringify({ error: "Missing code or discount_percent" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data, error } = await supabase
+          .from("promo_codes")
+          .insert({
+            code: promoData.code,
+            discount_percent: promoData.discount_percent,
+            max_uses: promoData.max_uses || 1,
+            expires_at: promoData.expires_at || null,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/promos/") && method === "DELETE": {
+        const promoId = path.split("/")[2];
+        const { error } = await supabase
+          .from("promo_codes")
+          .update({ is_active: false })
+          .eq("id", promoId);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Validate promo code (public-facing)
+      case path === "/promos/validate" && method === "POST": {
+        const { code: promoCode, userId: promoUserId } = body;
+        if (!promoCode) {
+          return new Response(JSON.stringify({ valid: false, error: "No code" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data: promo, error: promoErr } = await supabase
+          .from("promo_codes")
+          .select("*")
+          .eq("code", promoCode.toUpperCase())
+          .eq("is_active", true)
+          .single();
+
+        if (promoErr || !promo) {
+          return new Response(JSON.stringify({ valid: false, error: "Промокод не найден" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (promo.used_count >= promo.max_uses) {
+          return new Response(JSON.stringify({ valid: false, error: "Промокод исчерпан" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+          return new Response(JSON.stringify({ valid: false, error: "Промокод истёк" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Check if user already used
+        if (promoUserId) {
+          const { data: existing } = await supabase
+            .from("promo_uses")
+            .select("id")
+            .eq("promo_id", promo.id)
+            .eq("user_id", promoUserId)
+            .maybeSingle();
+
+          if (existing) {
+            return new Response(JSON.stringify({ valid: false, error: "Вы уже использовали этот промокод" }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
+
+        return new Response(JSON.stringify({
+          valid: true,
+          discount_percent: promo.discount_percent,
+          promo_id: promo.id,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // ============ PRODUCT ITEMS ============
       case path === "/product-items" && method === "POST": {
         const { items, productId } = body;

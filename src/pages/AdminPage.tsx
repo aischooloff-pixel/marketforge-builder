@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { ProductFormDialog } from '@/components/admin/ProductFormDialog';
 import { ProductItemsDialog } from '@/components/admin/ProductItemsDialog';
 import { CategoryFormDialog } from '@/components/admin/CategoryFormDialog';
+import { PromoFormDialog } from '@/components/admin/PromoFormDialog';
 import { StatsCharts } from '@/components/admin/StatsCharts';
 import { 
   LayoutDashboard, 
@@ -23,6 +24,8 @@ import {
   ArrowLeft,
   Search,
   Loader2,
+  Ticket,
+  Trash2,
   Upload,
   FolderOpen
 } from 'lucide-react';
@@ -53,6 +56,17 @@ interface Category {
   name: string;
   icon?: string;
   slug: string;
+}
+
+interface PromoCode {
+  id: string;
+  code: string;
+  discount_percent: number;
+  max_uses: number;
+  used_count: number;
+  is_active: boolean;
+  expires_at?: string;
+  created_at: string;
 }
 
 interface Order {
@@ -87,6 +101,7 @@ const AdminPage = () => {
   const [stats, setStats] = useState<Stats>({ users: 0, orders: 0, revenue: 0, products: 0 });
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [promos, setPromos] = useState<PromoCode[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,7 +113,7 @@ const AdminPage = () => {
   const [productItemsOpen, setProductItemsOpen] = useState(false);
   const [selectedProductForItems, setSelectedProductForItems] = useState<Product | null>(null);
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
-
+  const [promoFormOpen, setPromoFormOpen] = useState(false);
   // Redirect if not admin (disabled temporarily)
   useEffect(() => {
     if (!TEMP_OPEN_ACCESS && !authLoading && !isAdmin) {
@@ -116,12 +131,13 @@ const AdminPage = () => {
   const loadAllData = async () => {
     setDataLoading(true);
     
-    const [statsData, productsData, ordersData, usersData, categoriesData] = await Promise.all([
+    const [statsData, productsData, ordersData, usersData, categoriesData, promosData] = await Promise.all([
       admin.fetchStats(),
       admin.fetchProducts(),
       admin.fetchOrders(),
       admin.fetchUsers(),
       admin.fetchCategories(),
+      admin.fetchPromos(),
     ]);
 
     if (statsData) setStats(statsData);
@@ -129,6 +145,7 @@ const AdminPage = () => {
     if (ordersData) setOrders(ordersData);
     if (usersData) setUsers(usersData);
     if (categoriesData) setCategories(categoriesData as Category[]);
+    if (promosData) setPromos(promosData as PromoCode[]);
     
     setDataLoading(false);
   };
@@ -178,6 +195,18 @@ const AdminPage = () => {
     if (updated) setCategories(updated as Category[]);
   };
 
+  const handlePromoSubmit = async (promoData: { code: string; discount_percent: number; max_uses: number; expires_at?: string }) => {
+    await admin.createPromo(promoData);
+    const updated = await admin.fetchPromos();
+    if (updated) setPromos(updated as PromoCode[]);
+  };
+
+  const handleDeletePromo = async (promoId: string) => {
+    await admin.deletePromo(promoId);
+    const updated = await admin.fetchPromos();
+    if (updated) setPromos(updated as PromoCode[]);
+  };
+
   if (authLoading && !TEMP_OPEN_ACCESS) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -220,7 +249,7 @@ const AdminPage = () => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsList className="grid w-full grid-cols-6 mb-6">
             <TabsTrigger value="dashboard" className="text-xs">
               <LayoutDashboard className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Обзор</span>
@@ -232,6 +261,10 @@ const AdminPage = () => {
             <TabsTrigger value="categories" className="text-xs">
               <FolderOpen className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Категории</span>
+            </TabsTrigger>
+            <TabsTrigger value="promos" className="text-xs">
+              <Ticket className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Промо</span>
             </TabsTrigger>
             <TabsTrigger value="orders" className="text-xs">
               <ShoppingCart className="h-4 w-4 mr-1" />
@@ -420,6 +453,59 @@ const AdminPage = () => {
                 </div>
               </TabsContent>
 
+              {/* Promo Codes */}
+              <TabsContent value="promos">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-semibold">Промокоды ({promos.length})</h2>
+                    <Button size="sm" onClick={() => setPromoFormOpen(true)}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Создать
+                    </Button>
+                  </div>
+
+                  {promos.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Ticket className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Промокодов пока нет</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {promos.map((promo) => (
+                        <Card key={promo.id} className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-mono font-bold">{promo.code}</p>
+                                {!promo.is_active && (
+                                  <Badge variant="secondary" className="text-xs">Неактивен</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                -{promo.discount_percent}% · Использовано {promo.used_count}/{promo.max_uses}
+                              </p>
+                              {promo.expires_at && (
+                                <p className="text-xs text-muted-foreground">
+                                  До: {new Date(promo.expires_at).toLocaleDateString('ru-RU')}
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeletePromo(promo.id)}
+                              disabled={admin.isLoading || !promo.is_active}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
               {/* Orders */}
               <TabsContent value="orders">
                 <div className="space-y-2">
@@ -549,6 +635,13 @@ const AdminPage = () => {
         open={categoryFormOpen}
         onOpenChange={setCategoryFormOpen}
         onSubmit={handleCategorySubmit}
+        isLoading={admin.isLoading}
+      />
+
+      <PromoFormDialog
+        open={promoFormOpen}
+        onOpenChange={setPromoFormOpen}
+        onSubmit={handlePromoSubmit}
         isLoading={admin.isLoading}
       />
     </div>

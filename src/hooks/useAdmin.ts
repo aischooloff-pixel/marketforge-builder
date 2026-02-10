@@ -196,6 +196,27 @@ export const useAdmin = () => {
     return result;
   }, [invokeAdminApi]);
 
+  // Promo Codes
+  const fetchPromos = useCallback(async () => {
+    return invokeAdminApi('/promos', 'GET');
+  }, [invokeAdminApi]);
+
+  const createPromo = useCallback(async (promo: { code: string; discount_percent: number; max_uses: number; expires_at?: string }) => {
+    const result = await invokeAdminApi('/promos', 'POST', { promo });
+    if (result) toast.success('Промокод создан');
+    return result;
+  }, [invokeAdminApi]);
+
+  const deletePromo = useCallback(async (promoId: string) => {
+    const result = await invokeAdminApi<{ success: boolean }>(`/promos/${promoId}`, 'DELETE');
+    if (result?.success) toast.success('Промокод деактивирован');
+    return result?.success || false;
+  }, [invokeAdminApi]);
+
+  const validatePromo = useCallback(async (code: string, userId?: string) => {
+    return invokeAdminApi<{ valid: boolean; discount_percent?: number; promo_id?: string; error?: string }>('/promos/validate', 'POST', { code, userId });
+  }, [invokeAdminApi]);
+
   return {
     isLoading,
     error,
@@ -220,5 +241,10 @@ export const useAdmin = () => {
     // Categories
     fetchCategories,
     createCategory,
+    // Promo Codes
+    fetchPromos,
+    createPromo,
+    deletePromo,
+    validatePromo,
   };
 };

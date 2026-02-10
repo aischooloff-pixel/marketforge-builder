@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
 import { useTelegram } from '@/contexts/TelegramContext';
 import { usePayment } from '@/hooks/usePayment';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, ShoppingBag, AlertTriangle, Check } from 'lucide-react';
+import { Trash2, ShoppingBag, AlertTriangle, Check, Ticket, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -16,9 +18,36 @@ const CartPage = () => {
   const { items, removeItem, clearCart, total, itemCount } = useCart();
   const { user, webApp, hapticFeedback } = useTelegram();
   const { payWithCryptoBot, isProcessing } = usePayment();
+  const { validatePromo } = useAdmin();
   
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoId, setPromoId] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState('');
+
+  const discountedTotal = promoDiscount > 0 ? Math.round(total * (1 - promoDiscount / 100)) : total;
+
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoError('');
+    const result = await validatePromo(promoCode, user?.id);
+    if (result?.valid) {
+      setPromoDiscount(result.discount_percent || 0);
+      setPromoId(result.promo_id || null);
+      toast.success(`Промокод применён: -${result.discount_percent}%`);
+      hapticFeedback('success');
+    } else {
+      setPromoError(result?.error || 'Неверный промокод');
+      setPromoDiscount(0);
+      setPromoId(null);
+      hapticFeedback('error');
+    }
+    setPromoLoading(false);
+  };
 
   const handlePayWithCrypto = async () => {
     if (!agreedToTerms || !user) return;
@@ -36,7 +65,7 @@ const CartPage = () => {
       },
     }));
 
-    const result = await payWithCryptoBot(cartItems, total);
+    const result = await payWithCryptoBot(cartItems, discountedTotal);
 
     if (result.success && result.invoiceUrl) {
       hapticFeedback('success');
@@ -176,15 +205,50 @@ const CartPage = () => {
                 <div className="sticky top-24 p-6 rounded-xl border bg-card">
                   <h2 className="font-semibold text-lg mb-4">Итого</h2>
                   
-                  <div className="space-y-3 mb-6">
+                  <div className="space-y-3 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Товаров</span>
                       <span>{itemCount}</span>
                     </div>
+                    {promoDiscount > 0 && (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Сумма</span>
+                          <span className="line-through text-muted-foreground">{total.toLocaleString('ru-RU')} ₽</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-green-500">
+                          <span>Скидка ({promoDiscount}%)</span>
+                          <span>-{(total - discountedTotal).toLocaleString('ru-RU')} ₽</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between text-lg font-bold pt-3 border-t">
                       <span>К оплате</span>
-                      <span>{total.toLocaleString('ru-RU')} ₽</span>
+                      <span>{discountedTotal.toLocaleString('ru-RU')} ₽</span>
                     </div>
+                  </div>
+
+                  {/* Promo Code */}
+                  <div className="mb-4">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Промокод"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                        disabled={promoDiscount > 0}
+                        className="font-mono"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={promoDiscount > 0 ? () => { setPromoDiscount(0); setPromoId(null); setPromoCode(''); setPromoError(''); } : handleApplyPromo}
+                        disabled={promoLoading || (!promoCode.trim() && promoDiscount === 0)}
+                      >
+                        {promoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : promoDiscount > 0 ? '✕' : <Ticket className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    {promoError && <p className="text-xs text-destructive mt-1">{promoError}</p>}
+                    {promoDiscount > 0 && <p className="text-xs text-green-500 mt-1">Промокод применён: -{promoDiscount}%</p>}
                   </div>
 
                   {/* Terms Agreement */}
