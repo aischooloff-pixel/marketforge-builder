@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Upload, Package, CheckCircle2, XCircle, FileUp, File, Trash2 } from 'lucide-react';
+import { Loader2, Upload, Package, CheckCircle2, XCircle, FileUp, File, Trash2, FilePlus2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -56,6 +56,10 @@ export const ProductItemsDialog = ({
   const [activeTab, setActiveTab] = useState('available');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const comboFileInputRef = useRef<HTMLInputElement>(null);
+  const [comboText, setComboText] = useState('');
+  const [comboFile, setComboFile] = useState<globalThis.File | null>(null);
+  const [comboUploading, setComboUploading] = useState(false);
 
   useEffect(() => {
     if (open && product) {
@@ -160,6 +164,58 @@ export const ProductItemsDialog = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleComboUpload = async () => {
+    if (!product || !comboText.trim() || !comboFile) return;
+
+    if (comboFile.size > 50 * 1024 * 1024) {
+      toast.error('Макс. размер файла 50 МБ');
+      return;
+    }
+
+    setComboUploading(true);
+    try {
+      const ext = comboFile.name.split('.').pop();
+      const path = `${product.id}/${crypto.randomUUID()}.${ext}`;
+
+      const { error } = await supabase.storage
+        .from('delivery-files')
+        .upload(path, comboFile);
+
+      if (error) {
+        toast.error('Ошибка загрузки файла');
+        console.error(error);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('delivery-files')
+        .getPublicUrl(path);
+
+      const fileItems = [{
+        content: comboText.trim(),
+        file_url: urlData.publicUrl,
+      }];
+
+      if (onAddFileItems) {
+        const success = await onAddFileItems(product.id, fileItems);
+        if (success) {
+          toast.success('Позиция (текст + файл) добавлена');
+          setComboText('');
+          setComboFile(null);
+          if (comboFileInputRef.current) comboFileInputRef.current.value = '';
+          const data = await onFetchItems(product.id);
+          if (Array.isArray(data)) setItems(data as ProductItem[]);
+          setActiveTab('available');
+        }
+      }
+    } catch (e) {
+      console.error('Combo upload error:', e);
+      toast.error('Ошибка при добавлении');
+    } finally {
+      setComboUploading(false);
+    }
+  };
+
   const handleDeleteItem = async (itemId: string) => {
     if (!onDeleteItem || !product) return;
     const success = await onDeleteItem(itemId);
@@ -185,22 +241,26 @@ export const ProductItemsDialog = ({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="available" className="text-xs">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="available" className="text-xs px-1">
+              <CheckCircle2 className="h-3 w-3 mr-0.5" />
               ({availableItems.length})
             </TabsTrigger>
-            <TabsTrigger value="sold" className="text-xs">
-              <XCircle className="h-3 w-3 mr-1" />
+            <TabsTrigger value="sold" className="text-xs px-1">
+              <XCircle className="h-3 w-3 mr-0.5" />
               ({soldItems.length})
             </TabsTrigger>
-            <TabsTrigger value="add" className="text-xs">
-              <Upload className="h-3 w-3 mr-1" />
+            <TabsTrigger value="add" className="text-xs px-1">
+              <Upload className="h-3 w-3 mr-0.5" />
               Текст
             </TabsTrigger>
-            <TabsTrigger value="files" className="text-xs">
-              <FileUp className="h-3 w-3 mr-1" />
+            <TabsTrigger value="files" className="text-xs px-1">
+              <FileUp className="h-3 w-3 mr-0.5" />
               Файлы
+            </TabsTrigger>
+            <TabsTrigger value="combo" className="text-xs px-1">
+              <FilePlus2 className="h-3 w-3 mr-0.5" />
+              Комбо
             </TabsTrigger>
           </TabsList>
 
@@ -344,6 +404,64 @@ export const ProductItemsDialog = ({
                   <p>• Поддерживаются любые типы файлов</p>
                   <p>• Файлы будут отправлены покупателю в ЛС Telegram-бота</p>
                   <p>• Каждый загруженный файл = 1 единица товара</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="combo" className="flex-1 mt-4 space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Создайте позицию с текстом и файлом — покупатель получит и текстовое сообщение, и файл.
+                  </p>
+                  <Textarea
+                    placeholder={`Текст для выдачи, например:\nЛогин: user123\nПароль: pass456\nСсылка: https://...`}
+                    value={comboText}
+                    onChange={(e) => setComboText(e.target.value)}
+                    rows={5}
+                    className="font-mono text-sm"
+                  />
+                </div>
+
+                <div>
+                  <input
+                    ref={comboFileInputRef}
+                    type="file"
+                    onChange={(e) => setComboFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full h-20 border-dashed flex flex-col gap-1"
+                    onClick={() => comboFileInputRef.current?.click()}
+                  >
+                    {comboFile ? (
+                      <div className="flex items-center gap-2">
+                        <File className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm truncate max-w-[200px]">{comboFile.name}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {(comboFile.size / 1024).toFixed(0)} КБ
+                        </Badge>
+                      </div>
+                    ) : (
+                      <>
+                        <FileUp className="h-6 w-6 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Прикрепить файл (макс. 50 МБ)</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">
+                    <p>1 текст + 1 файл = 1 позиция</p>
+                  </div>
+                  <Button
+                    onClick={handleComboUpload}
+                    disabled={comboUploading || !comboText.trim() || !comboFile}
+                  >
+                    {comboUploading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <FilePlus2 className="h-4 w-4 mr-2" />
+                    Добавить
+                  </Button>
                 </div>
               </TabsContent>
             </>
