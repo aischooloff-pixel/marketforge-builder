@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { ArrowRight, Zap, Users, Star, Quote, Info, Send, Award } from 'lucide-react';
+import { ArrowRight, Zap, Users, Star, Quote, Info, Send, Award, Shield } from 'lucide-react';
 const Index = () => {
   const {
     data: popularProducts = [],
