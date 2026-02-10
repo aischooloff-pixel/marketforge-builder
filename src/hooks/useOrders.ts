@@ -23,94 +23,59 @@ export interface Order {
 }
 
 export const useOrders = () => {
-  const { user, isAuthenticated } = useTelegram();
+  const { user, isAuthenticated, webApp } = useTelegram();
 
   return useQuery({
     queryKey: ['orders', user?.id],
     queryFn: async (): Promise<Order[]> => {
-      if (!user?.id) return [];
+      if (!user?.id || !webApp?.initData) return [];
 
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          status,
-          total,
-          payment_method,
-          payment_id,
-          delivered_content,
-          created_at,
-          completed_at,
-          order_items (
-            id,
-            product_name,
-            price,
-            quantity,
-            options
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.functions.invoke('user-data', {
+        body: { initData: webApp.initData, path: '/orders' },
+      });
 
       if (error) {
         console.error('Error fetching orders:', error);
         throw error;
       }
 
-      return (data || []).map(order => ({
+      return (data || []).map((order: any) => ({
         ...order,
         order_items: order.order_items || [],
       })) as Order[];
     },
     enabled: isAuthenticated && !!user?.id,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 2,
   });
 };
 
 export const useOrder = (orderId: string | undefined) => {
-  const { user, isAuthenticated } = useTelegram();
+  const { user, isAuthenticated, webApp } = useTelegram();
 
   return useQuery({
     queryKey: ['order', orderId],
     queryFn: async (): Promise<Order | null> => {
-      if (!orderId || !user?.id) return null;
+      if (!orderId || !user?.id || !webApp?.initData) return null;
 
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          status,
-          total,
-          payment_method,
-          payment_id,
-          delivered_content,
-          created_at,
-          completed_at,
-          order_items (
-            id,
-            product_name,
-            price,
-            quantity,
-            options
-          )
-        `)
-        .eq('id', orderId)
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke('user-data', {
+        body: { initData: webApp.initData, path: '/orders' },
+      });
 
       if (error) {
         console.error('Error fetching order:', error);
         throw error;
       }
 
-      if (!data) return null;
+      const orders = data || [];
+      const order = orders.find((o: any) => o.id === orderId);
+      if (!order) return null;
 
       return {
-        ...data,
-        order_items: data.order_items || [],
+        ...order,
+        order_items: order.order_items || [],
       } as Order;
     },
     enabled: isAuthenticated && !!orderId && !!user?.id,
-    staleTime: 1000 * 30, // 30 seconds
+    staleTime: 1000 * 30,
   });
 };

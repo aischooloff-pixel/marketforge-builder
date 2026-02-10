@@ -14,18 +14,16 @@ export interface Transaction {
 }
 
 export const useTransactions = () => {
-  const { user, isAuthenticated } = useTelegram();
+  const { user, isAuthenticated, webApp } = useTelegram();
 
   return useQuery({
     queryKey: ['transactions', user?.id],
     queryFn: async (): Promise<Transaction[]> => {
-      if (!user?.id) return [];
+      if (!user?.id || !webApp?.initData) return [];
 
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.functions.invoke('user-data', {
+        body: { initData: webApp.initData, path: '/transactions' },
+      });
 
       if (error) {
         console.error('Error fetching transactions:', error);
@@ -35,7 +33,7 @@ export const useTransactions = () => {
       return (data || []) as Transaction[];
     },
     enabled: isAuthenticated && !!user?.id,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 2,
   });
 };
 
