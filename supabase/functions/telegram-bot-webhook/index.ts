@@ -1,29 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-const WELCOME_MESSAGE = `👋 Добро пожаловать в <b>Temka Store</b>!
-
-🛒 Удобный магазин цифровых товаров в Telegram.
-
-📢 Подписывайся на канал:
-👉 @TemkaStoreNews
-
-Жми кнопку ниже, чтобы открыть магазин 👇`;
-
-const CAPTCHA_ITEMS: [string, string][] = [
-  ["🍎", "Яблоко"], ["🚗", "Машину"], ["🎒", "Рюкзак"], ["⭐", "Звезду"],
-  ["🎸", "Гитару"], ["🌻", "Подсолнух"], ["🍕", "Пиццу"], ["🏀", "Мяч"],
-  ["🎧", "Наушники"], ["🐱", "Кота"], ["🌈", "Радугу"], ["🔑", "Ключ"],
-  ["🎂", "Торт"], ["☂️", "Зонт"], ["💎", "Алмаз"], ["🦋", "Бабочку"],
-  ["🍉", "Арбуз"], ["🎯", "Мишень"],
-];
-
-// In-memory store for pending reviews (rating chosen, waiting for text)
-const pendingReviews = new Map<number, { rating: number; orderId: string }>();
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 function buildCaptcha() {
   const shuffled = [...CAPTCHA_ITEMS].sort(() => Math.random() - 0.5);
