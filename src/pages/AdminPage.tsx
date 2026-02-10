@@ -630,6 +630,7 @@ const AdminPage = () => {
         onFetchItems={admin.fetchProductItems}
         onAddItems={admin.addProductItems}
         onAddFileItems={admin.addFileItems}
+        onDeleteItem={admin.deleteProductItem}
         isLoading={admin.isLoading}
       />
 

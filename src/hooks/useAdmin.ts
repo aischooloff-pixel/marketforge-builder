@@ -194,6 +194,12 @@ export const useAdmin = () => {
     return !!result;
   }, [invokeAdminApi]);
 
+  const deleteProductItem = useCallback(async (itemId: string): Promise<boolean> => {
+    const result = await invokeAdminApi<{ success: boolean }>(`/product-items/${itemId}`, 'DELETE');
+    if (result?.success) toast.success('Позиция удалена');
+    return result?.success || false;
+  }, [invokeAdminApi]);
+
   // Categories
   const fetchCategories = useCallback(async () => {
     return invokeAdminApi('/categories', 'GET');
@@ -248,6 +254,7 @@ export const useAdmin = () => {
     fetchProductItems,
     addProductItems,
     addFileItems,
+    deleteProductItem,
     // Categories
     fetchCategories,
     createCategory,
