@@ -68,8 +68,6 @@ serve(async (req) => {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-    return new Response("ok", { headers: corsHeaders });
-  }
 
   try {
     const { initData, path } = await req.json();
