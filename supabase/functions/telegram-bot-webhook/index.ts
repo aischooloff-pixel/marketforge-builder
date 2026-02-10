@@ -186,9 +186,20 @@ serve(async (req) => {
       const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id,bot_verified`, {
         headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
       });
-      const profiles = await profileRes.json();
+      const profileText = await profileRes.text();
+      console.log("[Bot] Profile lookup for", telegramId, ":", profileRes.status, profileText);
+      
+      let isVerified = false;
+      try {
+        const profiles = JSON.parse(profileText);
+        if (profiles && profiles.length > 0 && profiles[0].bot_verified === true) {
+          isVerified = true;
+        }
+      } catch (e) {
+        console.error("[Bot] Failed to parse profiles:", e);
+      }
 
-      if (profiles && profiles.length > 0 && profiles[0].bot_verified === true) {
+      if (isVerified) {
         // Returning user — send welcome directly, no captcha
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: "POST",
