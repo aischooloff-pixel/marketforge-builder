@@ -877,6 +877,109 @@ serve(async (req) => {
         });
       }
 
+      // ============ BROADCAST ============
+      case path === "/broadcast" && method === "POST": {
+        const { text: broadcastText, media_url, media_type, parse_mode, buttons } = body;
+
+        if (!broadcastText && !media_url) {
+          return new Response(JSON.stringify({ error: "Нужен текст или медиа" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (!botToken) {
+          return new Response(JSON.stringify({ error: "Bot token not configured" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Get all user telegram_ids
+        const { data: allProfiles, error: profilesErr } = await supabase
+          .from("profiles")
+          .select("telegram_id")
+          .eq("is_banned", false);
+
+        if (profilesErr) throw profilesErr;
+
+        const telegramIds = allProfiles?.map(p => p.telegram_id).filter(Boolean) || [];
+
+        // Build inline keyboard if buttons provided
+        let reply_markup: Record<string, unknown> | undefined;
+        if (buttons && Array.isArray(buttons) && buttons.length > 0) {
+          reply_markup = {
+            inline_keyboard: buttons.map((btn: { text: string; url: string }) => [
+              { text: btn.text, url: btn.url },
+            ]),
+          };
+        }
+
+        let sent = 0;
+        let failed = 0;
+
+        for (const chatId of telegramIds) {
+          try {
+            let apiMethod = "sendMessage";
+            const payload: Record<string, unknown> = {
+              chat_id: chatId,
+              parse_mode: parse_mode || "HTML",
+            };
+
+            if (reply_markup) {
+              payload.reply_markup = reply_markup;
+            }
+
+            if (media_url) {
+              // Determine method based on media type
+              if (media_type === "video") {
+                apiMethod = "sendVideo";
+                payload.video = media_url;
+                if (broadcastText) payload.caption = broadcastText;
+              } else if (media_type === "animation" || media_type === "gif") {
+                apiMethod = "sendAnimation";
+                payload.animation = media_url;
+                if (broadcastText) payload.caption = broadcastText;
+              } else {
+                // Default to photo
+                apiMethod = "sendPhoto";
+                payload.photo = media_url;
+                if (broadcastText) payload.caption = broadcastText;
+              }
+            } else {
+              payload.text = broadcastText;
+            }
+
+            const res = await fetch(`https://api.telegram.org/bot${botToken}/${apiMethod}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+
+            if (res.ok) {
+              sent++;
+            } else {
+              failed++;
+              const errBody = await res.text();
+              console.error(`Broadcast failed for ${chatId}:`, errBody);
+            }
+
+            // Rate limiting: 30 messages per second max for Telegram
+            if (sent % 25 === 0) {
+              await new Promise(r => setTimeout(r, 1000));
+            }
+          } catch (e) {
+            failed++;
+            console.error(`Broadcast error for ${chatId}:`, e);
+          }
+        }
+
+        console.log(`[Broadcast] Sent: ${sent}, Failed: ${failed}, Total: ${telegramIds.length}`);
+
+        return new Response(JSON.stringify({ success: true, sent, failed, total: telegramIds.length }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Not found" }),
