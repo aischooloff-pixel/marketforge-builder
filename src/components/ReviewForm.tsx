@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { Star } from 'lucide-react';
+import { Star, MessageSquarePlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const ReviewForm = () => {
@@ -14,8 +14,8 @@ export const ReviewForm = () => {
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  if (!isAuthenticated || !user) return null;
   if (submitted) {
     return (
       <Card className="p-4 md:p-6 text-center">
@@ -24,7 +24,29 @@ export const ReviewForm = () => {
     );
   }
 
+  if (!showForm) {
+    return (
+      <div className="text-center">
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => {
+            if (!isAuthenticated || !user) {
+              toast.error('Откройте магазин через Telegram для авторизации');
+              return;
+            }
+            setShowForm(true);
+          }}
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+          Оставить отзыв
+        </Button>
+      </div>
+    );
+  }
+
   const handleSubmit = async () => {
+    if (!user) return;
     if (!text.trim() || text.trim().length < 5) {
       toast.error('Напишите хотя бы 5 символов');
       return;
