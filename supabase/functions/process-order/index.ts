@@ -118,7 +118,7 @@ serve(async (req) => {
       try {
         // Send text content
         if (deliveredContent) {
-          const textMessage = `✅ Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}`;
+          const textMessage = `✅ Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}\n\n🙏 Спасибо за покупку! Будем рады видеть вас снова.\n⭐ Оставьте, пожалуйста, отзыв — нам важно ваше мнение!`;
           await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -126,6 +126,22 @@ serve(async (req) => {
               chat_id: telegramChatId,
               text: textMessage.substring(0, 4096),
               parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: "⭐ Оставить отзыв",
+                      url: "https://t.me/Temka_Store_Bot/app",
+                    },
+                  ],
+                  [
+                    {
+                      text: "🛍 Вернуться в магазин",
+                      url: "https://t.me/Temka_Store_Bot/app",
+                    },
+                  ],
+                ],
+              },
             }),
           });
         }
