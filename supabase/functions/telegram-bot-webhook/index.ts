@@ -121,8 +121,10 @@ serve(async (req) => {
         const orderId = parts[1];
         const rating = parseInt(parts[2], 10);
 
-        // Store pending review for this user
-        pendingReviews.set(fromId, { rating, orderId });
+        // Store pending review in DB (persistent across function invocations)
+        // Delete any old pending reviews for this user first
+        await supabase.from("pending_reviews").delete().eq("telegram_id", fromId);
+        await supabase.from("pending_reviews").insert({ telegram_id: fromId, rating, order_id: orderId });
 
         // Delete rating buttons
         await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
