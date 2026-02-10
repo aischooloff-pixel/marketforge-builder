@@ -131,7 +131,7 @@ serve(async (req) => {
                   [
                     {
                       text: "⭐ Оставить отзыв",
-                      url: "https://t.me/Temka_Store_Bot/app",
+                      callback_data: `review_start:${orderId.substring(0, 8)}`,
                     },
                   ],
                   [
