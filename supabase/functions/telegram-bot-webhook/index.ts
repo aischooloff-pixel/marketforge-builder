@@ -131,6 +131,7 @@ serve(async (req) => {
               telegram_id: callback.from?.id,
               first_name: callback.from?.first_name || null,
               username: callback.from?.username || null,
+              bot_verified: true,
             }),
           });
         }
