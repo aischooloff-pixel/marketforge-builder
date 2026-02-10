@@ -505,6 +505,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_product_item: {
+        Args: { p_order_id: string; p_product_id: string; p_user_id: string }
+        Returns: {
+          content: string
+          created_at: string | null
+          file_url: string | null
+          id: string
+          is_sold: boolean | null
+          order_id: string | null
+          product_id: string
+          sold_at: string | null
+          sold_to: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "product_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -70,40 +70,29 @@ serve(async (req) => {
     for (const item of order.order_items) {
       const quantity = item.quantity || 1;
 
-      // Get available product items
-      const { data: productItems, error: itemsError } = await supabase
-        .from("product_items")
-        .select("*")
-        .eq("product_id", item.product_id)
-        .eq("is_sold", false)
-        .limit(quantity);
+      for (let i = 0; i < quantity; i++) {
+        // Atomically claim one product item (prevents double-delivery)
+        const { data: claimed, error: claimError } = await supabase
+          .rpc("claim_product_item", {
+            p_product_id: item.product_id,
+            p_user_id: order.user_id,
+            p_order_id: orderId,
+          });
 
-      if (itemsError) {
-        console.error(`Error fetching items for product ${item.product_id}:`, itemsError);
-        continue;
-      }
+        if (claimError) {
+          console.error(`Error claiming item for product ${item.product_id}:`, claimError);
+          continue;
+        }
 
-      if (!productItems || productItems.length < quantity) {
-        console.warn(`Insufficient stock for product ${item.product_id}: need ${quantity}, have ${productItems?.length || 0}`);
-      }
+        const claimedItem = Array.isArray(claimed) ? claimed[0] : claimed;
+        if (!claimedItem) {
+          console.warn(`No available items for product ${item.product_id} (needed ${quantity}, got ${i})`);
+          break;
+        }
 
-      // Mark items as sold and collect content
-      for (const productItem of productItems || []) {
-        const { error: updateError } = await supabase
-          .from("product_items")
-          .update({
-            is_sold: true,
-            sold_at: new Date().toISOString(),
-            sold_to: order.user_id,
-            order_id: orderId,
-          })
-          .eq("id", productItem.id);
-
-        if (!updateError) {
-          deliveredItems.push(`📦 ${item.product_name}:\n${productItem.content}`);
-          if (productItem.file_url) {
-            fileUrls.push(productItem.file_url);
-          }
+        deliveredItems.push(`📦 ${item.product_name}:\n${claimedItem.content}`);
+        if (claimedItem.file_url) {
+          fileUrls.push(claimedItem.file_url);
         }
       }
     }
