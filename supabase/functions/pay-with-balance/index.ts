@@ -6,6 +6,59 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ============ TELEGRAM IDENTITY VERIFICATION ============
+
+function arrayBufferToHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function verifyTelegramInitData(
+  initDataString: string,
+  botToken: string
+): Promise<{ valid: boolean; telegramId?: number }> {
+  try {
+    const params = new URLSearchParams(initDataString);
+    const hash = params.get("hash");
+    const authDate = params.get("auth_date");
+    const userStr = params.get("user");
+    if (!hash || !authDate) return { valid: false };
+
+    // Check expiry (1 hour)
+    const now = Math.floor(Date.now() / 1000);
+    if (now - parseInt(authDate) > 3600) return { valid: false };
+
+    params.delete("hash");
+    const sortedParams = Array.from(params.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join("\n");
+
+    const encoder = new TextEncoder();
+    const webAppDataKey = await crypto.subtle.importKey(
+      "raw", encoder.encode("WebAppData"),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const secretKeyBuffer = await crypto.subtle.sign("HMAC", webAppDataKey, encoder.encode(botToken));
+    const secretKey = await crypto.subtle.importKey(
+      "raw", secretKeyBuffer,
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const hashBuffer = await crypto.subtle.sign("HMAC", secretKey, encoder.encode(sortedParams));
+    const calculatedHash = arrayBufferToHex(hashBuffer);
+
+    if (calculatedHash !== hash) return { valid: false };
+
+    const user = userStr ? JSON.parse(decodeURIComponent(userStr)) : null;
+    return { valid: true, telegramId: user?.id };
+  } catch {
+    return { valid: false };
+  }
+}
+
+// ============ MAIN HANDLER ============
+
 interface CartItem {
   productId: string;
   productName: string;
@@ -20,12 +73,30 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, items, total } = await req.json();
+    const body = await req.json();
+    const { initData, items, total } = body;
 
-    if (!userId || !items || !total) {
+    // SECURITY: Require Telegram initData for identity verification
+    if (!initData || !items || !total) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    if (!botToken) {
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const verification = await verifyTelegramInitData(initData, botToken);
+    if (!verification.valid || !verification.telegramId) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -33,11 +104,11 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Verify user exists and has sufficient balance
+    // Resolve userId from verified telegramId (NOT from client)
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("id, balance")
-      .eq("id", userId)
+      .eq("telegram_id", verification.telegramId)
       .single();
 
     if (profileError || !profile) {
@@ -47,7 +118,9 @@ serve(async (req) => {
       );
     }
 
+    const userId = profile.id;
     const currentBalance = parseFloat(String(profile.balance)) || 0;
+
     if (currentBalance < total) {
       return new Response(
         JSON.stringify({ error: "Недостаточно средств на балансе" }),
@@ -55,9 +128,8 @@ serve(async (req) => {
       );
     }
 
-    // 2. Check stock availability and max_per_user limits
+    // Check stock availability and max_per_user limits
     for (const item of items as CartItem[]) {
-      // Check for file-based (unlimited) items
       const { count: fileCount } = await supabase
         .from("product_items")
         .select("*", { count: "exact", head: true })
@@ -81,7 +153,6 @@ serve(async (req) => {
         }
       }
 
-      // Check max_per_user
       const { data: productData } = await supabase
         .from("products")
         .select("max_per_user")
@@ -105,7 +176,7 @@ serve(async (req) => {
       }
     }
 
-    // 3. Create order
+    // Create order
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -125,7 +196,7 @@ serve(async (req) => {
       );
     }
 
-    // 4. Create order items
+    // Create order items
     const orderItems = (items as CartItem[]).map((item) => ({
       order_id: order.id,
       product_id: item.productId,
@@ -137,7 +208,7 @@ serve(async (req) => {
 
     await supabase.from("order_items").insert(orderItems);
 
-    // 5. Deduct balance
+    // Deduct balance
     const newBalance = currentBalance - total;
     const { error: updateError } = await supabase
       .from("profiles")
@@ -152,7 +223,7 @@ serve(async (req) => {
       );
     }
 
-    // 6. Create transaction record
+    // Create transaction record
     await supabase.from("transactions").insert({
       user_id: userId,
       type: "purchase",
@@ -162,19 +233,15 @@ serve(async (req) => {
       description: `Оплата заказа #${order.id.substring(0, 8)}`,
     });
 
-    // 7. Trigger auto-delivery
-    const { data: deliveryData } = await supabase.functions.invoke("process-order", {
+    // Trigger auto-delivery
+    await supabase.functions.invoke("process-order", {
       body: { orderId: order.id },
     });
 
     console.log(`[PayWithBalance] Order ${order.id} completed for user ${userId}, balance: ${currentBalance} -> ${newBalance}`);
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        orderId: order.id,
-        newBalance,
-      }),
+      JSON.stringify({ success: true, orderId: order.id, newBalance }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

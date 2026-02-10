@@ -6,8 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const CRYPTOBOT_API_URL = "https://pay.crypt.bot/api";
-
 // ============ TELEGRAM IDENTITY VERIFICATION ============
 
 function arrayBufferToHex(buffer: ArrayBuffer): string {
@@ -65,10 +63,16 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  try {
-    const { initData, amount, orderId, description, balanceToUse } = await req.json();
+  const json = (data: unknown, status = 200) =>
+    new Response(JSON.stringify(data), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 
-    if (!initData || !amount) {
+  try {
+    const { initData, path } = await req.json();
+
+    if (!initData || !path) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -76,16 +80,13 @@ serve(async (req) => {
     }
 
     const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-    const cryptoBotToken = Deno.env.get("CRYPTOBOT_API_TOKEN");
-
-    if (!botToken || !cryptoBotToken) {
+    if (!botToken) {
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // SECURITY: Verify Telegram identity
     const verification = await verifyTelegramInitData(initData, botToken);
     if (!verification.valid || !verification.telegramId) {
       return new Response(
@@ -113,75 +114,71 @@ serve(async (req) => {
     }
 
     const userId = profile.id;
-    const webhookUrl = `${supabaseUrl}/functions/v1/cryptobot-webhook`;
 
-    // Create invoice via CryptoBot API
-    const invoiceResponse = await fetch(`${CRYPTOBOT_API_URL}/createInvoice`, {
-      method: "POST",
-      headers: {
-        "Crypto-Pay-API-Token": cryptoBotToken,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        asset: "USDT",
-        amount: (amount / 90).toFixed(2),
-        description: description || `Пополнение баланса TEMKA.STORE`,
-        hidden_message: `Спасибо за пополнение! Баланс обновлён.`,
-        paid_btn_name: "callback",
-        paid_btn_url: webhookUrl,
-        payload: JSON.stringify({ userId, orderId, amountRub: amount, balanceToUse: balanceToUse || 0 }),
-        allow_comments: false,
-        allow_anonymous: false,
-        expires_in: 3600,
-      }),
-    });
-
-    const invoiceData = await invoiceResponse.json();
-
-    if (!invoiceData.ok) {
-      console.error("CryptoBot error:", invoiceData);
-      return new Response(
-        JSON.stringify({ error: "Failed to create invoice" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const invoice = invoiceData.result;
-
-    // Create or update order with payment_id
-    if (!orderId) {
-      await supabase.from("orders").insert({
-        user_id: userId,
-        status: "pending",
-        total: amount,
-        payment_method: "cryptobot",
-        payment_id: invoice.invoice_id.toString(),
-      });
-    } else {
-      await supabase
+    // Route to handler
+    if (path === "/orders") {
+      const { data, error } = await supabase
         .from("orders")
-        .update({ payment_id: invoice.invoice_id.toString() })
-        .eq("id", orderId)
-        .eq("user_id", userId); // SECURITY: ensure order belongs to user
+        .select(`
+          id, status, total, payment_method, payment_id,
+          delivered_content, created_at, completed_at,
+          order_items (id, product_name, price, quantity, options)
+        `)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return new Response(JSON.stringify(data || []), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log(`Invoice created: ${invoice.invoice_id} for user ${userId}`);
+    if (path === "/transactions") {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        invoiceId: invoice.invoice_id,
-        payUrl: invoice.pay_url,
-        miniAppUrl: invoice.mini_app_invoice_url,
-        expiresAt: invoice.expiration_date,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+      if (error) throw error;
+      return new Response(JSON.stringify(data || []), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Submit a review
+    if (path === "/reviews" && body.method === "POST") {
+      const { text, rating } = body;
+      if (!text || !rating || typeof rating !== "number" || rating < 1 || rating > 5) {
+        return json({ error: "Invalid review data" }, 400);
+      }
+      const sanitizedText = String(text).trim().slice(0, 500);
+      if (sanitizedText.length < 5) {
+        return json({ error: "Напишите хотя бы 5 символов" }, 400);
+      }
+      const { error } = await supabase.from("reviews").insert({
+        user_id: userId,
+        text: sanitizedText,
+        rating,
+      });
+      if (error) throw error;
+      return json({ success: true });
+    }
+
+    // Get user's support tickets
+    if (path === "/support-tickets") {
+      const { data, error } = await supabase
+        .from("support_tickets")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return json(data || []);
+    }
+
+    return json({ error: "Unknown path" }, 404);
   } catch (error) {
-    console.error("Invoice creation error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("User data API error:", error);
+    return json({ error: "Internal server error" }, 500);
   }
 });

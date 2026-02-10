@@ -158,29 +158,22 @@ export const useProductStock = (productId: string | undefined) => {
     queryFn: async (): Promise<number> => {
       if (!productId) return 0;
 
-      // Check if product has any file-based (reusable) items
-      const { count: fileCount } = await supabase
-        .from('product_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('product_id', productId)
-        .not('file_url', 'is', null);
+      // Stock is now read from the products table (stock column)
+      // product_items is locked by RLS; stock is maintained server-side
+      const { data, error } = await supabase
+        .from('products')
+        .select('stock')
+        .eq('id', productId)
+        .eq('is_active', true)
+        .maybeSingle();
 
-      if (fileCount && fileCount > 0) {
-        return -1; // -1 means unlimited stock
-      }
-
-      const { count, error } = await supabase
-        .from('product_items')
-        .select('*', { count: 'exact', head: true })
-        .eq('product_id', productId)
-        .eq('is_sold', false);
-
-      if (error) {
+      if (error || !data) {
         console.error('Error fetching stock:', error);
         return 0;
       }
 
-      return count || 0;
+      // stock = -1 means unlimited (file-based products)
+      return data.stock ?? 0;
     },
     enabled: !!productId,
     staleTime: 1000 * 30,
