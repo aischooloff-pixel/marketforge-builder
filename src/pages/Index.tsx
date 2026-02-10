@@ -64,7 +64,7 @@ const Index = () => {
               </motion.div>
               
               <h1 className="text-3xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 md:mb-6">
-                {storeData.store_meta.name}
+                TEMKA<span style={{ color: '#8c8c8c' }}>.STORE</span>
               </h1>
               
               <p className="text-base md:text-2xl text-muted-foreground mb-6 md:mb-10 max-w-2xl mx-auto px-2">
