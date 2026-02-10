@@ -118,6 +118,29 @@ export const ProductCatalog = () => {
           </Button>
         </div>
 
+        {/* Category Chips */}
+        <div className="flex flex-wrap gap-2 mb-4 md:mb-6">
+          <Button
+            variant={selectedCategory === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => handleCategoryChange('all')}
+            className="rounded-full h-8 text-xs md:text-sm"
+          >
+            Все
+          </Button>
+          {categories.map(cat => (
+            <Button
+              key={cat.id}
+              variant={selectedCategory === cat.slug ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleCategoryChange(cat.slug)}
+              className="rounded-full h-8 text-xs md:text-sm"
+            >
+              {cat.icon} {cat.name}
+            </Button>
+          ))}
+        </div>
+
         <div className="flex flex-col md:flex-row gap-4 md:gap-8">
           {/* Filters Sidebar - Mobile Sheet / Desktop Sticky */}
           <AnimatePresence>
@@ -141,23 +164,6 @@ export const ProductCatalog = () => {
                     )}
                   </div>
 
-                  {/* Category Filter */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium">Категория</label>
-                    <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Все категории" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Все категории</SelectItem>
-                        {categories.map(cat => (
-                          <SelectItem key={cat.id} value={cat.slug}>
-                            {cat.icon} {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
                   {/* Type Filter */}
                   <div className="space-y-2">
@@ -208,27 +214,6 @@ export const ProductCatalog = () => {
                 )}
               </div>
 
-              {/* Category Filter */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Категория</label>
-                {categoriesLoading ? (
-                  <Skeleton className="h-10 w-full" />
-                ) : (
-                  <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Все категории" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все категории</SelectItem>
-                      {categories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.slug}>
-                          {cat.icon} {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
 
               {/* Type Filter */}
               <div className="space-y-3">
