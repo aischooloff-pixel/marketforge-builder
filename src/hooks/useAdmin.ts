@@ -47,13 +47,27 @@ export const useAdmin = () => {
   const { user } = useTelegram();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [adminPassword, setAdminPassword] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('admin_password');
+    }
+    return null;
+  });
+
+  const loginWithPassword = useCallback((password: string) => {
+    sessionStorage.setItem('admin_password', password);
+    setAdminPassword(password);
+  }, []);
+
+  const isPasswordAuthed = !!adminPassword;
 
   const invokeAdminApi = useCallback(async <T>(
     path: string,
     method: string = 'GET',
     body?: Record<string, unknown>
   ): Promise<T | null> => {
-    if (!user?.id) {
+    // Need either user id (Telegram) or admin password (browser)
+    if (!user?.id && !adminPassword) {
       setError('User not authenticated');
       toast.error('Требуется авторизация');
       return null;
@@ -65,7 +79,8 @@ export const useAdmin = () => {
     try {
       const { data, error: fnError } = await supabase.functions.invoke('admin-api', {
         body: {
-          userId: user.id,
+          userId: user?.id || null,
+          adminPassword: adminPassword || undefined,
           path,
           method,
           ...body,
@@ -86,7 +101,10 @@ export const useAdmin = () => {
       setError(message);
       
       if (message === 'Unauthorized') {
-        toast.error('Нет прав доступа');
+        // Clear bad password
+        sessionStorage.removeItem('admin_password');
+        setAdminPassword(null);
+        toast.error('Неверный пароль или нет прав доступа');
       } else {
         toast.error(message);
       }
@@ -95,7 +113,7 @@ export const useAdmin = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, adminPassword]);
 
   // Stats
   const fetchStats = useCallback(async (): Promise<Stats | null> => {
@@ -302,6 +320,9 @@ export const useAdmin = () => {
   return {
     isLoading,
     error,
+    // Auth
+    loginWithPassword,
+    isPasswordAuthed,
     // Stats
     fetchStats,
     // Products

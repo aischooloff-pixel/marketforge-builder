@@ -16,45 +16,51 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { userId, path: requestPath, method: requestMethod, ...body } = await req.json().catch(() => ({}));
+    const { userId, path: requestPath, method: requestMethod, adminPassword, ...body } = await req.json().catch(() => ({}));
     
     // Use path from body if provided (for unified routing), otherwise parse from URL
     const url = new URL(req.url);
     const path = requestPath || url.pathname.replace("/admin-api", "") || "/";
     const method = requestMethod || req.method;
 
-    // CRITICAL: Always verify admin role - no userId = no access
-    if (!userId) {
-      console.log("Admin API: Missing userId");
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Auth: either admin password OR user role check
+    const configuredPassword = Deno.env.get("ADMIN_PASSWORD");
+    const isPasswordAuth = adminPassword && configuredPassword && adminPassword === configuredPassword;
+
+    if (!isPasswordAuth) {
+      // Fallback to role-based auth (for Telegram users with admin role)
+      if (!userId) {
+        console.log("Admin API: Missing userId and no valid password");
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      if (rolesError) {
+        console.error("Admin API: Role check error:", rolesError);
+        return new Response(
+          JSON.stringify({ error: "Authorization failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const isAdmin = roles?.some((r) => r.role === "admin" || r.role === "moderator");
+      if (!isAdmin) {
+        console.log(`Admin API: User ${userId} is not admin. Roles:`, roles);
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
-    const { data: roles, error: rolesError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-
-    if (rolesError) {
-      console.error("Admin API: Role check error:", rolesError);
-      return new Response(
-        JSON.stringify({ error: "Authorization failed" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const isAdmin = roles?.some((r) => r.role === "admin" || r.role === "moderator");
-    if (!isAdmin) {
-      console.log(`Admin API: User ${userId} is not admin. Roles:`, roles);
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Admin API: ${method} ${path} by user ${userId}`);
+    console.log(`Admin API: ${method} ${path} (auth: ${isPasswordAuth ? "password" : "role"})`);
 
     // Route handling
     switch (true) {

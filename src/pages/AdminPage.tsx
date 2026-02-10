@@ -103,9 +103,6 @@ const AdminPage = () => {
   const navigate = useNavigate();
   const admin = useAdmin();
   
-  // ВРЕМЕННО: открытый доступ к админке
-  const TEMP_OPEN_ACCESS = true;
-  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState<Stats>({ users: 0, orders: 0, revenue: 0, products: 0 });
   const [products, setProducts] = useState<Product[]>([]);
@@ -118,6 +115,7 @@ const AdminPage = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [userDetailsOpen, setUserDetailsOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
 
   // Dialogs state
   const [productFormOpen, setProductFormOpen] = useState(false);
@@ -126,16 +124,20 @@ const AdminPage = () => {
   const [selectedProductForItems, setSelectedProductForItems] = useState<Product | null>(null);
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
   const [promoFormOpen, setPromoFormOpen] = useState(false);
-  // Redirect if not admin (disabled temporarily)
+
+  // Check access: either admin role (Telegram) or password auth
+  const hasAccess = isAdmin || admin.isPasswordAuthed;
+
+  // Redirect if no access and not loading
   useEffect(() => {
-    if (!TEMP_OPEN_ACCESS && !authLoading && !isAdmin) {
-      navigate('/');
+    if (!authLoading && !hasAccess && !admin.isPasswordAuthed) {
+      // Don't redirect — show password form instead
     }
-  }, [isAdmin, authLoading, navigate]);
+  }, [isAdmin, authLoading, hasAccess, admin.isPasswordAuthed]);
 
   // Load data via admin-api
   useEffect(() => {
-    if (TEMP_OPEN_ACCESS || isAdmin) {
+    if (hasAccess) {
       loadAllData();
     }
   }, [isAdmin]);
@@ -228,7 +230,7 @@ const AdminPage = () => {
     if (updated) setPromos(updated as PromoCode[]);
   };
 
-  if (authLoading && !TEMP_OPEN_ACCESS) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -236,8 +238,39 @@ const AdminPage = () => {
     );
   }
 
-  if (!TEMP_OPEN_ACCESS && !isAdmin) {
-    return null;
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-sm mx-4 p-6">
+          <div className="text-center mb-4">
+            <Shield className="h-10 w-10 mx-auto mb-2 text-primary" />
+            <h2 className="text-lg font-bold">Админ-панель</h2>
+            <p className="text-sm text-muted-foreground mt-1">Введите пароль для доступа</p>
+          </div>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            admin.loginWithPassword(passwordInput);
+          }} className="space-y-3">
+            <Input
+              type="password"
+              placeholder="Пароль"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              autoFocus
+            />
+            <Button type="submit" className="w-full" disabled={!passwordInput}>
+              Войти
+            </Button>
+          </form>
+          {admin.error && (
+            <p className="text-sm text-destructive text-center mt-2">{admin.error}</p>
+          )}
+          <Button variant="ghost" className="w-full mt-2" onClick={() => navigate('/')}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Назад
+          </Button>
+        </Card>
+      </div>
+    );
   }
 
   const filteredProducts = products.filter(p => 
