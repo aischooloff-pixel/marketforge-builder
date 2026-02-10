@@ -64,11 +64,16 @@ export const ProductItemsDialog = ({
   const loadItems = async () => {
     if (!product) return;
     setLoading(true);
-    const data = await onFetchItems(product.id);
-    if (data) {
-      setItems(data as ProductItem[]);
+    try {
+      const data = await onFetchItems(product.id);
+      if (Array.isArray(data)) {
+        setItems(data as ProductItem[]);
+      }
+    } catch (e) {
+      console.error('Failed to load items:', e);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleAddItems = async () => {
@@ -82,12 +87,22 @@ export const ProductItemsDialog = ({
     if (lines.length === 0) return;
 
     setLoading(true);
-    const success = await onAddItems(product.id, lines);
-    if (success) {
-      setNewItemsText('');
-      await loadItems();
+    try {
+      const success = await onAddItems(product.id, lines);
+      if (success) {
+        setNewItemsText('');
+        // Reload items after successful add
+        const data = await onFetchItems(product.id);
+        if (Array.isArray(data)) {
+          setItems(data as ProductItem[]);
+        }
+        setActiveTab('available');
+      }
+    } catch (e) {
+      console.error('Failed to add items:', e);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,7 +145,12 @@ export const ProductItemsDialog = ({
       const success = await onAddFileItems(product.id, fileItems);
       if (success) {
         toast.success(`Загружено файлов: ${fileItems.length}`);
-        await loadItems();
+        // Reload items after successful upload
+        const data = await onFetchItems(product.id);
+        if (Array.isArray(data)) {
+          setItems(data as ProductItem[]);
+        }
+        setActiveTab('available');
       }
     }
 
