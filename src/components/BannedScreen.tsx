@@ -1,6 +1,6 @@
 import { ShieldX } from 'lucide-react';
 
-export const BannedScreen = ({ reason }: { reason?: string }) => {
+export const BannedScreen = () => {
   return (
     <div className="fixed inset-0 z-[9999] bg-background flex items-center justify-center p-6">
       <div className="text-center max-w-sm space-y-4">
@@ -10,7 +10,6 @@ export const BannedScreen = ({ reason }: { reason?: string }) => {
         <h1 className="text-xl font-bold">Аккаунт заблокирован</h1>
         <p className="text-muted-foreground text-sm">
           Ваш аккаунт был заблокирован администрацией.
-          {reason && <> Причина: <span className="text-foreground font-medium">{reason}</span></>}
         </p>
         <p className="text-muted-foreground text-xs">
           Если вы считаете, что это ошибка, обратитесь в поддержку.

@@ -23,7 +23,7 @@ const AppContent = () => {
   const { user, isLoading } = useTelegram();
 
   if (!isLoading && user?.is_banned) {
-    return <BannedScreen reason={(user as any).ban_reason} />;
+    return <BannedScreen />;
   }
 
   return (
