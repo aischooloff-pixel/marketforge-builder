@@ -852,12 +852,16 @@ serve(async (req) => {
         const reviewId = path.split("/")[2];
         const { status: newStatus } = body;
 
+        // Validate userId is a real UUID before using as moderated_by
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const moderatedBy = userId && uuidRegex.test(userId) ? userId : null;
+
         const { error } = await supabase
           .from("reviews")
           .update({
             status: newStatus,
             moderated_at: new Date().toISOString(),
-            moderated_by: userId || null,
+            moderated_by: moderatedBy,
           })
           .eq("id", reviewId);
 
