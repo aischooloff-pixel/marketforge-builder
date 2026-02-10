@@ -122,7 +122,7 @@ serve(async (req) => {
           `Логин: ${p.user}`,
           `Пароль: ${p.pass}`,
           `Тип: ${versionLabel} (${p.type})`,
-          `Страна: ${p.country.toUpperCase()}`,
+          `Страна: ${(p.country || country || "—").toUpperCase()}`,
           `Активен до: ${p.date_end}`,
         ].join("\n");
       });
