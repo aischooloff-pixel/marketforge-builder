@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { ArrowRight, Shield, Zap, Users, Star, Quote } from 'lucide-react';
+import { ArrowRight, Shield, Zap, Users, Star, Quote, Info, Send } from 'lucide-react';
 
 
 const Index = () => {
@@ -59,16 +59,20 @@ const Index = () => {
                     <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
                   </Button>
                 </Link>
-                <Link to="/info">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-sm md:text-base px-6 md:px-8 h-11 md:h-12">
-                    Информация
-                  </Button>
-                </Link>
-                <a href="https://t.me/TemkaStoreNews" target="_blank" rel="noopener noreferrer">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-sm md:text-base px-6 md:px-8 h-11 md:h-12">
-                    Телеграм канал
-                  </Button>
-                </a>
+                <div className="flex flex-row gap-2 justify-center">
+                  <Link to="/info">
+                    <Button size="sm" variant="outline" className="gap-1.5 text-xs px-4 h-9">
+                      <Info className="h-3.5 w-3.5" />
+                      Информация
+                    </Button>
+                  </Link>
+                  <a href="https://t.me/TemkaStoreNews" target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="outline" className="gap-1.5 text-xs px-4 h-9">
+                      <Send className="h-3.5 w-3.5" />
+                      Телеграм канал
+                    </Button>
+                  </a>
+                </div>
               </div>
             </motion.div>
           </div>
