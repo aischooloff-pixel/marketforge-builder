@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { ArrowRight, Shield, Zap, Users, Star, Quote, Info, Send } from 'lucide-react';
+import { ArrowRight, Zap, Users, Star, Quote, Info, Send, Award } from 'lucide-react';
 const Index = () => {
   const {
     data: popularProducts = [],
@@ -54,7 +54,7 @@ const Index = () => {
             }} transition={{
               delay: 0.2
             }} className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-secondary text-xs md:text-sm font-medium mb-4 md:mb-8">
-                <Shield className="h-3 w-3 md:h-4 md:w-4" />
+                <Award className="h-3 w-3 md:h-4 md:w-4" />
                 ​Первый магазин с приложением         
               </motion.div>
               
