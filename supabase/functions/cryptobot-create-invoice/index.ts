@@ -8,32 +8,111 @@ const corsHeaders = {
 
 const CRYPTOBOT_API_URL = "https://pay.crypt.bot/api";
 
+// ============ TELEGRAM IDENTITY VERIFICATION ============
+
+function arrayBufferToHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function verifyTelegramInitData(
+  initDataString: string,
+  botToken: string
+): Promise<{ valid: boolean; telegramId?: number }> {
+  try {
+    const params = new URLSearchParams(initDataString);
+    const hash = params.get("hash");
+    const authDate = params.get("auth_date");
+    const userStr = params.get("user");
+    if (!hash || !authDate) return { valid: false };
+
+    const now = Math.floor(Date.now() / 1000);
+    if (now - parseInt(authDate) > 3600) return { valid: false };
+
+    params.delete("hash");
+    const sortedParams = Array.from(params.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join("\n");
+
+    const encoder = new TextEncoder();
+    const webAppDataKey = await crypto.subtle.importKey(
+      "raw", encoder.encode("WebAppData"),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const secretKeyBuffer = await crypto.subtle.sign("HMAC", webAppDataKey, encoder.encode(botToken));
+    const secretKey = await crypto.subtle.importKey(
+      "raw", secretKeyBuffer,
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const hashBuffer = await crypto.subtle.sign("HMAC", secretKey, encoder.encode(sortedParams));
+    const calculatedHash = arrayBufferToHex(hashBuffer);
+
+    if (calculatedHash !== hash) return { valid: false };
+
+    const user = userStr ? JSON.parse(decodeURIComponent(userStr)) : null;
+    return { valid: true, telegramId: user?.id };
+  } catch {
+    return { valid: false };
+  }
+}
+
+// ============ MAIN HANDLER ============
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { userId, amount, orderId, description, balanceToUse } = await req.json();
+    const { initData, amount, orderId, description, balanceToUse } = await req.json();
 
-    if (!userId || !amount) {
+    if (!initData || !amount) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
     const cryptoBotToken = Deno.env.get("CRYPTOBOT_API_TOKEN");
-    if (!cryptoBotToken) {
-      console.error("CRYPTOBOT_API_TOKEN not configured");
+
+    if (!botToken || !cryptoBotToken) {
       return new Response(
-        JSON.stringify({ error: "Payment service not configured" }),
+        JSON.stringify({ error: "Server configuration error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get app URL for callback
+    // SECURITY: Verify Telegram identity
+    const verification = await verifyTelegramInitData(initData, botToken);
+    if (!verification.valid || !verification.telegramId) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Resolve userId from verified telegramId
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("telegram_id", verification.telegramId)
+      .single();
+
+    if (!profile) {
+      return new Response(
+        JSON.stringify({ error: "User not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = profile.id;
     const webhookUrl = `${supabaseUrl}/functions/v1/cryptobot-webhook`;
 
     // Create invoice via CryptoBot API
@@ -44,8 +123,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        asset: "USDT", // Primary currency
-        amount: (amount / 90).toFixed(2), // Convert RUB to USDT (approximate rate)
+        asset: "USDT",
+        amount: (amount / 90).toFixed(2),
         description: description || `Пополнение баланса TEMKA.STORE`,
         hidden_message: `Спасибо за пополнение! Баланс обновлён.`,
         paid_btn_name: "callback",
@@ -53,7 +132,7 @@ serve(async (req) => {
         payload: JSON.stringify({ userId, orderId, amountRub: amount, balanceToUse: balanceToUse || 0 }),
         allow_comments: false,
         allow_anonymous: false,
-        expires_in: 3600, // 1 hour
+        expires_in: 3600,
       }),
     });
 
@@ -69,35 +148,21 @@ serve(async (req) => {
 
     const invoice = invoiceData.result;
 
-    // Store transaction as pending
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Create pending order if not exists
+    // Create or update order with payment_id
     if (!orderId) {
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          user_id: userId,
-          status: "pending",
-          total: amount,
-          payment_method: "cryptobot",
-          payment_id: invoice.invoice_id.toString(),
-        })
-        .select()
-        .single();
-
-      if (orderError) {
-        console.error("Order creation error:", orderError);
-      }
-    }
-
-    // Update order with payment_id if orderId was provided
-    if (orderId) {
+      await supabase.from("orders").insert({
+        user_id: userId,
+        status: "pending",
+        total: amount,
+        payment_method: "cryptobot",
+        payment_id: invoice.invoice_id.toString(),
+      });
+    } else {
       await supabase
         .from("orders")
         .update({ payment_id: invoice.invoice_id.toString() })
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .eq("user_id", userId); // SECURITY: ensure order belongs to user
     }
 
     console.log(`Invoice created: ${invoice.invoice_id} for user ${userId}`);
