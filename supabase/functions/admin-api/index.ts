@@ -492,7 +492,7 @@ serve(async (req) => {
       }
 
       case path === "/support-tickets" && method === "POST": {
-        const { userId: ticketUserId, subject, message: ticketMessage } = body;
+        const { ticketUserId, subject, message: ticketMessage } = body;
         if (!ticketUserId || !subject || !ticketMessage) {
           return new Response(JSON.stringify({ error: "Missing fields" }), {
             status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
