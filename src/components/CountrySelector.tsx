@@ -21,7 +21,7 @@ export const CountrySelector = ({
   const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
 
   const filteredCountries = availableCountries 
-    ? countries.filter(c => availableCountries.includes(c.code))
+    ? countries.filter(c => availableCountries.map(ac => ac.toUpperCase()).includes(c.code.toUpperCase()))
     : countries;
 
   return (
