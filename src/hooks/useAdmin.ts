@@ -281,6 +281,17 @@ export const useAdmin = () => {
     return result;
   }, [invokeAdminApi]);
 
+  // Broadcast
+  const sendBroadcast = useCallback(async (data: {
+    text: string;
+    media_url?: string;
+    media_type?: string;
+    parse_mode: string;
+    buttons?: Array<{ text: string; url: string }>;
+  }) => {
+    return invokeAdminApi<{ success: boolean; sent: number; failed: number; total: number }>('/broadcast', 'POST', data);
+  }, [invokeAdminApi]);
+
   // Reviews
   const fetchReviews = useCallback(async () => {
     return invokeAdminApi('/reviews', 'GET');
@@ -335,5 +346,7 @@ export const useAdmin = () => {
     // Reviews
     fetchReviews,
     moderateReview,
+    // Broadcast
+    sendBroadcast,
   };
 };

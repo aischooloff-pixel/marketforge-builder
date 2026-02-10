@@ -14,6 +14,7 @@ import { PromoFormDialog } from '@/components/admin/PromoFormDialog';
 import { StatsCharts } from '@/components/admin/StatsCharts';
 import { SupportTicketsTab } from '@/components/admin/SupportTicketsTab';
 import { ReviewsTab } from '@/components/admin/ReviewsTab';
+import { BroadcastTab } from '@/components/admin/BroadcastTab';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
 import { 
   LayoutDashboard, 
@@ -33,7 +34,8 @@ import {
   FolderOpen,
   MessageCircle,
   Eye,
-  Star
+  Star,
+  Send
 } from 'lucide-react';
 
 interface Stats {
@@ -268,7 +270,7 @@ const AdminPage = () => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-8 mb-6">
+          <TabsList className="grid w-full grid-cols-9 mb-6">
             <TabsTrigger value="dashboard" className="text-xs">
               <LayoutDashboard className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Обзор</span>
@@ -305,6 +307,10 @@ const AdminPage = () => {
                   {tickets.filter(t => t.status === 'open').length}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="broadcast" className="text-xs">
+              <Send className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Рассылка</span>
             </TabsTrigger>
           </TabsList>
 
@@ -673,6 +679,14 @@ const AdminPage = () => {
                     const data = await admin.fetchTickets();
                     if (data) setTickets(data as any[]);
                   }}
+                />
+              </TabsContent>
+
+              {/* Broadcast */}
+              <TabsContent value="broadcast">
+                <BroadcastTab
+                  onSend={admin.sendBroadcast}
+                  totalUsers={users.filter(u => !u.is_banned).length}
                 />
               </TabsContent>
             </>
