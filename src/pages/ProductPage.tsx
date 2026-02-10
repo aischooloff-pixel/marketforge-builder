@@ -8,8 +8,9 @@ import { CountrySelector, ServiceSelector } from '@/components/CountrySelector';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
-import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2 } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2, Clock } from 'lucide-react';
 const ProductPage = () => {
   const {
     id
@@ -30,6 +31,7 @@ const ProductPage = () => {
   } = useCart();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('30');
   if (isLoading) {
     return <div className="min-h-screen flex flex-col">
         <Header />
@@ -63,8 +65,21 @@ const ProductPage = () => {
         </div>
       </div>;
   }
+  const isApiProduct = product.tags?.some(t => t.startsWith('api:'));
+  const needsPeriodSelector = isApiProduct;
+
+  const periodOptions = [
+    { value: '3', label: '3 дня' },
+    { value: '7', label: '1 неделя' },
+    { value: '14', label: '2 недели' },
+    { value: '30', label: '1 месяц' },
+    { value: '60', label: '2 месяца' },
+    { value: '90', label: '3 месяца' },
+  ];
+
   const handleAddToCart = () => {
     if (isOutOfStock) return;
+    if (needsCountrySelector && !selectedCountry) return;
     addItem({
       id: product.id,
       name: product.name,
@@ -80,7 +95,8 @@ const ProductPage = () => {
       services: product.services || undefined
     }, {
       country: selectedCountry || undefined,
-      services: selectedServices.length > 0 ? selectedServices : undefined
+      services: selectedServices.length > 0 ? selectedServices : undefined,
+      period: needsPeriodSelector ? parseInt(selectedPeriod) : undefined,
     });
   };
   const toggleService = (serviceId: string) => {
@@ -206,6 +222,26 @@ const ProductPage = () => {
                       <CountrySelector selectedCountry={selectedCountry} onSelect={setSelectedCountry} availableCountries={product.countries} />
                     </div>}
 
+                  {/* Period Selector for API products */}
+                  {needsPeriodSelector && !isOutOfStock && <div className="mb-6">
+                      <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Период
+                      </label>
+                      <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {periodOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>}
+
                   {/* Service Selector for Virtual Numbers */}
                   {needsServiceSelector && !isOutOfStock && <div className="mb-6">
                       <ServiceSelector selectedServices={selectedServices} onToggle={toggleService} availableServices={product.services?.map(s => s.toLowerCase())} />
@@ -223,7 +259,7 @@ const ProductPage = () => {
                   </div>
 
                   {/* Add to Cart */}
-                  <Button size="lg" className="w-full gap-2 mb-4" onClick={handleAddToCart} disabled={isOutOfStock}>
+                  <Button size="lg" className="w-full gap-2 mb-4" onClick={handleAddToCart} disabled={isOutOfStock || (needsCountrySelector && !selectedCountry)}>
                     {isOutOfStock ? <>
                         <PackageX className="h-5 w-5" />
                         Нет в наличии

@@ -18,11 +18,13 @@ serve(async (req) => {
       throw new Error("PX6_API_KEY is not configured");
     }
 
-    const { action, country, period, count } = await req.json();
+    const { action, country, period, count, version } = await req.json();
+    // version: 6=IPv6, 4=IPv4, 3=IPv4 Shared
+    const proxyVersion = version || 3;
 
-    // Action: getcountry — list available countries for IPv6
+    // Action: getcountry — list available countries
     if (action === "getcountry") {
-      const res = await fetch(`${PX6_BASE}/${apiKey}/getcountry?version=6`);
+      const res = await fetch(`${PX6_BASE}/${apiKey}/getcountry?version=${proxyVersion}`);
       const data = await res.json();
       if (data.status !== "yes") {
         throw new Error(`px6 getcountry failed: ${JSON.stringify(data)}`);
@@ -36,7 +38,7 @@ serve(async (req) => {
     // Action: getcount — check available proxy count for a country
     if (action === "getcount") {
       if (!country) throw new Error("country is required");
-      const res = await fetch(`${PX6_BASE}/${apiKey}/getcount?country=${country}&version=6`);
+      const res = await fetch(`${PX6_BASE}/${apiKey}/getcount?country=${country}&version=${proxyVersion}`);
       const data = await res.json();
       if (data.status !== "yes") {
         throw new Error(`px6 getcount failed: ${JSON.stringify(data)}`);
@@ -53,10 +55,10 @@ serve(async (req) => {
       const proxyCount = count || 1;
       const proxyPeriod = period || 30; // days
 
-      console.log(`[px6] Buying ${proxyCount} IPv6 proxy for ${country}, period: ${proxyPeriod} days`);
+      console.log(`[px6] Buying ${proxyCount} v${proxyVersion} proxy for ${country}, period: ${proxyPeriod} days`);
 
       const res = await fetch(
-        `${PX6_BASE}/${apiKey}/buy?count=${proxyCount}&period=${proxyPeriod}&country=${country}&version=6&type=http`
+        `${PX6_BASE}/${apiKey}/buy?count=${proxyCount}&period=${proxyPeriod}&country=${country}&version=${proxyVersion}&type=http`
       );
       const data = await res.json();
 
@@ -83,13 +85,14 @@ serve(async (req) => {
       console.log(`[px6] Purchased ${proxies.length} proxies successfully`);
 
       // Format proxy details for delivery
+      const versionLabel = proxyVersion === 6 ? "IPv6" : proxyVersion === 4 ? "IPv4" : "IPv4 Shared";
       const proxyDetails = proxies.map((p, i) => {
         return [
           `🌐 Прокси #${i + 1}`,
           `IP: ${p.host}:${p.port}`,
           `Логин: ${p.user}`,
           `Пароль: ${p.pass}`,
-          `Тип: IPv6 (${p.type})`,
+          `Тип: ${versionLabel} (${p.type})`,
           `Страна: ${p.country.toUpperCase()}`,
           `Активен до: ${p.date_end}`,
         ].join("\n");
