@@ -158,6 +158,17 @@ export const useProductStock = (productId: string | undefined) => {
     queryFn: async (): Promise<number> => {
       if (!productId) return 0;
 
+      // Check if product has any file-based (reusable) items
+      const { count: fileCount } = await supabase
+        .from('product_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('product_id', productId)
+        .not('file_url', 'is', null);
+
+      if (fileCount && fileCount > 0) {
+        return -1; // -1 means unlimited stock
+      }
+
       const { count, error } = await supabase
         .from('product_items')
         .select('*', { count: 'exact', head: true })
@@ -172,7 +183,7 @@ export const useProductStock = (productId: string | undefined) => {
       return count || 0;
     },
     enabled: !!productId,
-    staleTime: 1000 * 30, // 30 seconds - stock changes more frequently
+    staleTime: 1000 * 30,
   });
 };
 

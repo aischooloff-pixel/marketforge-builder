@@ -19,7 +19,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+    // stockCount: -1 = unlimited (file-based), 0 = out of stock, >0 = limited
     if (stockCount === 0) return;
     
     // Convert DB product to cart format
@@ -127,6 +127,11 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             {!isOutOfStock && stockCount > 0 && stockCount <= 5 && (
               <p className="text-xs text-orange-500 mb-1">
                 Осталось: {stockCount} шт
+              </p>
+            )}
+            {stockCount === -1 && (
+              <p className="text-xs text-green-500 mb-1">
+                ∞ В наличии
               </p>
             )}
 
