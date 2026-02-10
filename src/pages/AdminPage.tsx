@@ -103,9 +103,6 @@ const AdminPage = () => {
   const navigate = useNavigate();
   const admin = useAdmin();
   
-  // ВРЕМЕННО: открытый доступ к админке
-  const TEMP_OPEN_ACCESS = true;
-  
   const [activeTab, setActiveTab] = useState('dashboard');
   const [stats, setStats] = useState<Stats>({ users: 0, orders: 0, revenue: 0, products: 0 });
   const [products, setProducts] = useState<Product[]>([]);
@@ -118,6 +115,7 @@ const AdminPage = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [userDetailsOpen, setUserDetailsOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
 
   // Dialogs state
   const [productFormOpen, setProductFormOpen] = useState(false);
@@ -126,16 +124,20 @@ const AdminPage = () => {
   const [selectedProductForItems, setSelectedProductForItems] = useState<Product | null>(null);
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
   const [promoFormOpen, setPromoFormOpen] = useState(false);
-  // Redirect if not admin (disabled temporarily)
+
+  // Check access: either admin role (Telegram) or password auth
+  const hasAccess = isAdmin || admin.isPasswordAuthed;
+
+  // Redirect if no access and not loading
   useEffect(() => {
-    if (!TEMP_OPEN_ACCESS && !authLoading && !isAdmin) {
-      navigate('/');
+    if (!authLoading && !hasAccess && !admin.isPasswordAuthed) {
+      // Don't redirect — show password form instead
     }
-  }, [isAdmin, authLoading, navigate]);
+  }, [isAdmin, authLoading, hasAccess, admin.isPasswordAuthed]);
 
   // Load data via admin-api
   useEffect(() => {
-    if (TEMP_OPEN_ACCESS || isAdmin) {
+    if (hasAccess) {
       loadAllData();
     }
   }, [isAdmin]);

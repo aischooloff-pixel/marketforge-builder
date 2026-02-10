@@ -320,6 +320,9 @@ export const useAdmin = () => {
   return {
     isLoading,
     error,
+    // Auth
+    loginWithPassword,
+    isPasswordAuthed,
     // Stats
     fetchStats,
     // Products
