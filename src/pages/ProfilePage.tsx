@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { User, Wallet, Package, Clock, Loader2, Copy, Check, Eye, EyeOff } from 'lucide-react';
+import SupportDialog from '@/components/SupportDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
@@ -257,6 +258,11 @@ const ProfilePage = () => {
               </Dialog>
             </div>
           </motion.div>
+
+          {/* Support Button */}
+          <div className="mb-6">
+            <SupportDialog />
+          </div>
 
           {/* Tabs */}
           <Tabs defaultValue="orders" className="space-y-4 md:space-y-6">

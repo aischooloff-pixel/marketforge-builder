@@ -12,6 +12,8 @@ import { ProductItemsDialog } from '@/components/admin/ProductItemsDialog';
 import { CategoryFormDialog } from '@/components/admin/CategoryFormDialog';
 import { PromoFormDialog } from '@/components/admin/PromoFormDialog';
 import { StatsCharts } from '@/components/admin/StatsCharts';
+import { SupportTicketsTab } from '@/components/admin/SupportTicketsTab';
+import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
 import { 
   LayoutDashboard, 
   Package, 
@@ -27,7 +29,9 @@ import {
   Ticket,
   Trash2,
   Upload,
-  FolderOpen
+  FolderOpen,
+  MessageCircle,
+  Eye
 } from 'lucide-react';
 
 interface Stats {
@@ -107,6 +111,9 @@ const AdminPage = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [userDetailsOpen, setUserDetailsOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Dialogs state
   const [productFormOpen, setProductFormOpen] = useState(false);
@@ -132,13 +139,14 @@ const AdminPage = () => {
   const loadAllData = async () => {
     setDataLoading(true);
     
-    const [statsData, productsData, ordersData, usersData, categoriesData, promosData] = await Promise.all([
+    const [statsData, productsData, ordersData, usersData, categoriesData, promosData, ticketsData] = await Promise.all([
       admin.fetchStats(),
       admin.fetchProducts(),
       admin.fetchOrders(),
       admin.fetchUsers(),
       admin.fetchCategories(),
       admin.fetchPromos(),
+      admin.fetchTickets(),
     ]);
 
     if (statsData) setStats(statsData);
@@ -147,6 +155,7 @@ const AdminPage = () => {
     if (usersData) setUsers(usersData);
     if (categoriesData) setCategories(categoriesData as Category[]);
     if (promosData) setPromos(promosData as PromoCode[]);
+    if (ticketsData) setTickets(ticketsData as any[]);
     
     setDataLoading(false);
   };
@@ -250,7 +259,7 @@ const AdminPage = () => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6 mb-6">
+          <TabsList className="grid w-full grid-cols-7 mb-6">
             <TabsTrigger value="dashboard" className="text-xs">
               <LayoutDashboard className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Обзор</span>
@@ -274,6 +283,15 @@ const AdminPage = () => {
             <TabsTrigger value="users" className="text-xs">
               <Users className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Юзеры</span>
+            </TabsTrigger>
+            <TabsTrigger value="support" className="text-xs relative">
+              <MessageCircle className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Тикеты</span>
+              {tickets.filter(t => t.status === 'open').length > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center">
+                  {tickets.filter(t => t.status === 'open').length}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -579,7 +597,7 @@ const AdminPage = () => {
                     {filteredUsers.map((u) => (
                       <Card key={u.id} className="p-4">
                         <div className="flex items-center justify-between">
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="font-medium">
                                 {u.username ? `@${u.username}` : u.first_name}
@@ -590,23 +608,50 @@ const AdminPage = () => {
                               {u.user_roles?.some(r => r.role === 'admin') && (
                                 <Badge className="text-xs">Админ</Badge>
                               )}
+                              {u.user_roles?.some(r => r.role === 'moderator') && (
+                                <Badge variant="secondary" className="text-xs">Модератор</Badge>
+                              )}
                             </div>
                             <p className="text-xs text-muted-foreground">ID: {u.telegram_id}</p>
                             <p className="text-sm">Баланс: {parseFloat(String(u.balance)).toLocaleString('ru-RU')} ₽</p>
                           </div>
-                          <Button
-                            variant={u.is_banned ? 'default' : 'destructive'}
-                            size="sm"
-                            onClick={() => handleToggleUserBan(u.id, u.is_banned)}
-                            disabled={admin.isLoading}
-                          >
-                            {u.is_banned ? 'Разбанить' : 'Забанить'}
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => { setSelectedUser(u); setUserDetailsOpen(true); }}
+                              title="Подробнее"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant={u.is_banned ? 'default' : 'destructive'}
+                              size="sm"
+                              onClick={() => handleToggleUserBan(u.id, u.is_banned)}
+                              disabled={admin.isLoading}
+                            >
+                              {u.is_banned ? 'Разбанить' : 'Забанить'}
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     ))}
                   </div>
                 </div>
+              </TabsContent>
+
+              {/* Support Tickets */}
+              <TabsContent value="support">
+                <SupportTicketsTab
+                  tickets={tickets}
+                  onReply={admin.replyToTicket}
+                  onUpdateStatus={admin.updateTicketStatus}
+                  isLoading={admin.isLoading}
+                  onRefresh={async () => {
+                    const data = await admin.fetchTickets();
+                    if (data) setTickets(data as any[]);
+                  }}
+                />
               </TabsContent>
             </>
           )}
@@ -645,6 +690,17 @@ const AdminPage = () => {
         open={promoFormOpen}
         onOpenChange={setPromoFormOpen}
         onSubmit={handlePromoSubmit}
+        isLoading={admin.isLoading}
+      />
+
+      <UserDetailsDialog
+        open={userDetailsOpen}
+        onOpenChange={setUserDetailsOpen}
+        user={selectedUser}
+        onToggleBan={handleToggleUserBan}
+        onUpdateRole={admin.updateUserRole}
+        onUpdateBalance={admin.updateUserBalance}
+        onFetchDetails={admin.fetchUserDetails}
         isLoading={admin.isLoading}
       />
     </div>

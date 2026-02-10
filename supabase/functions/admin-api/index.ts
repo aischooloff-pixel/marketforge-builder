@@ -477,6 +477,160 @@ serve(async (req) => {
         });
       }
 
+      // ============ SUPPORT TICKETS ============
+      case path === "/support-tickets" && method === "GET": {
+        const { data, error } = await supabase
+          .from("support_tickets")
+          .select("*, profiles:user_id(username, first_name, telegram_id)")
+          .order("created_at", { ascending: false })
+          .limit(100);
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path === "/support-tickets" && method === "POST": {
+        const { userId: ticketUserId, subject, message: ticketMessage } = body;
+        if (!ticketUserId || !subject || !ticketMessage) {
+          return new Response(JSON.stringify({ error: "Missing fields" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const { data, error } = await supabase
+          .from("support_tickets")
+          .insert({ user_id: ticketUserId, subject, message: ticketMessage })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/support-tickets/") && path.endsWith("/reply") && method === "POST": {
+        const ticketId = path.split("/")[2];
+        const { reply, adminId } = body;
+
+        // Update ticket
+        const { data: ticket, error: updateErr } = await supabase
+          .from("support_tickets")
+          .update({
+            admin_reply: reply,
+            status: "answered",
+            replied_at: new Date().toISOString(),
+            replied_by: adminId || null,
+          })
+          .eq("id", ticketId)
+          .select("*, profiles:user_id(telegram_id, username, first_name)")
+          .single();
+
+        if (updateErr) throw updateErr;
+
+        // Send Telegram message
+        const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        if (botToken && ticket?.profiles?.telegram_id) {
+          try {
+            const text = `💬 *Ответ от поддержки*\n\n*Тема:* ${ticket.subject}\n*Ответ:* ${reply}`;
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: ticket.profiles.telegram_id,
+                text,
+                parse_mode: "Markdown",
+              }),
+            });
+
+            await supabase
+              .from("support_tickets")
+              .update({ telegram_sent: true })
+              .eq("id", ticketId);
+          } catch (tgErr) {
+            console.error("Telegram send error:", tgErr);
+          }
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/support-tickets/") && method === "PUT": {
+        const ticketId = path.split("/")[2];
+        const { error } = await supabase
+          .from("support_tickets")
+          .update({ status: body.status })
+          .eq("id", ticketId);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // ============ USER MANAGEMENT (extended) ============
+      case path.startsWith("/users/") && path.endsWith("/balance") && method === "POST": {
+        const targetUserId = path.split("/")[2];
+        const { amount: balanceAmount, action } = body;
+
+        // Get current balance
+        const { data: profile, error: profileErr } = await supabase
+          .from("profiles")
+          .select("balance")
+          .eq("id", targetUserId)
+          .single();
+
+        if (profileErr) throw profileErr;
+
+        const currentBalance = parseFloat(profile.balance) || 0;
+        const changeAmount = parseFloat(balanceAmount) || 0;
+        const newBalance = action === "set" ? changeAmount : currentBalance + changeAmount;
+
+        const { error: updateErr } = await supabase
+          .from("profiles")
+          .update({ balance: newBalance })
+          .eq("id", targetUserId);
+
+        if (updateErr) throw updateErr;
+
+        // Record transaction
+        await supabase.from("transactions").insert({
+          user_id: targetUserId,
+          type: changeAmount >= 0 ? "bonus" : "purchase",
+          amount: Math.abs(action === "set" ? newBalance - currentBalance : changeAmount),
+          balance_after: newBalance,
+          description: action === "set" 
+            ? `Баланс установлен админом: ${newBalance}₽` 
+            : `Изменение баланса админом: ${changeAmount >= 0 ? "+" : ""}${changeAmount}₽`,
+        });
+
+        return new Response(JSON.stringify({ success: true, balance: newBalance }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/users/") && path.endsWith("/details") && method === "GET": {
+        const targetUserId = path.split("/")[2];
+
+        const [profileRes, ordersRes, transactionsRes] = await Promise.all([
+          supabase.from("profiles").select("*, user_roles(role)").eq("id", targetUserId).single(),
+          supabase.from("orders").select("*, order_items(*)").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(50),
+          supabase.from("transactions").select("*").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(50),
+        ]);
+
+        return new Response(JSON.stringify({
+          profile: profileRes.data,
+          orders: ordersRes.data || [],
+          transactions: transactionsRes.data || [],
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Not found" }),
