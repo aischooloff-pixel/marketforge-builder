@@ -10,18 +10,28 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2 } from 'lucide-react';
-
 const ProductPage = () => {
-  const { id } = useParams<{ id: string }>();
-  const { data: product, isLoading, error } = useProduct(id);
-  const { data: stockCount = 0, isLoading: stockLoading } = useProductStock(id);
-  const { addItem } = useCart();
+  const {
+    id
+  } = useParams<{
+    id: string;
+  }>();
+  const {
+    data: product,
+    isLoading,
+    error
+  } = useProduct(id);
+  const {
+    data: stockCount = 0,
+    isLoading: stockLoading
+  } = useProductStock(id);
+  const {
+    addItem
+  } = useCart();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col">
+    return <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 pt-20">
           <div className="container mx-auto px-4 py-8">
@@ -41,26 +51,20 @@ const ProductPage = () => {
           </div>
         </main>
         <Footer />
-      </div>
-    );
+      </div>;
   }
-
   if (error || !product) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Товар не найден</h1>
           <Link to="/catalog">
             <Button>Вернуться в каталог</Button>
           </Link>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   const handleAddToCart = () => {
     if (isOutOfStock) return;
-    
     addItem({
       id: product.id,
       name: product.name,
@@ -73,61 +77,49 @@ const ProductPage = () => {
       legalNote: product.legal_note || '',
       popular: product.is_popular || false,
       countries: product.countries || undefined,
-      services: product.services || undefined,
+      services: product.services || undefined
     }, {
       country: selectedCountry || undefined,
       services: selectedServices.length > 0 ? selectedServices : undefined
     });
   };
-
   const toggleService = (serviceId: string) => {
-    setSelectedServices(prev =>
-      prev.includes(serviceId)
-        ? prev.filter(s => s !== serviceId)
-        : [...prev, serviceId]
-    );
+    setSelectedServices(prev => prev.includes(serviceId) ? prev.filter(s => s !== serviceId) : [...prev, serviceId]);
   };
-
   const needsCountrySelector = product.countries && product.countries.length > 0;
   const needsServiceSelector = product.services && product.services.length > 0;
   const isOutOfStock = stockCount === 0;
   const categoryIcon = product.categories?.icon || '📦';
-
-  return (
-    <div className="min-h-screen flex flex-col">
+  return <div className="min-h-screen flex flex-col">
       <Header />
       
       <main className="flex-1 pt-16 md:pt-20 pb-20 md:pb-0">
         <div className="container mx-auto px-4 py-4 md:py-8">
           {/* Back Link */}
-          <Link 
-            to="/catalog" 
-            className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 md:mb-8 transition-colors text-sm"
-          >
+          <Link to="/catalog" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 md:mb-8 transition-colors text-sm">
             <ArrowLeft className="h-4 w-4" />
             Назад в каталог
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12">
             {/* Product Info */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-            >
+            <motion.div initial={{
+            opacity: 0,
+            x: -20
+          }} animate={{
+            opacity: 1,
+            x: 0
+          }}>
               {/* Badges */}
               <div className="flex flex-wrap gap-2 mb-4">
                 <Badge variant={product.type === 'subscription' ? 'default' : 'secondary'}>
                   {product.type === 'subscription' ? 'Подписка' : 'Разовый платёж'}
                 </Badge>
-                {product.is_popular && (
-                  <Badge variant="outline">Популярное</Badge>
-                )}
-                {isOutOfStock && (
-                  <Badge variant="destructive" className="gap-1">
+                {product.is_popular && <Badge variant="outline">Популярное</Badge>}
+                {isOutOfStock && <Badge variant="destructive" className="gap-1">
                     <PackageX className="h-3 w-3" />
                     Нет в наличии
-                  </Badge>
-                )}
+                  </Badge>}
               </div>
 
               <h1 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4">
@@ -143,22 +135,14 @@ const ProductPage = () => {
               </p>
 
               {/* Tags */}
-              {product.tags && product.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-8">
-                  {product.tags.map(tag => (
-                    <span 
-                      key={tag}
-                      className="px-3 py-1 rounded-full bg-secondary text-sm"
-                    >
+              {product.tags && product.tags.length > 0 && <div className="flex flex-wrap gap-2 mb-8">
+                  {product.tags.map(tag => <span key={tag} className="px-3 py-1 rounded-full bg-secondary text-sm">
                       {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+                    </span>)}
+                </div>}
 
               {/* Legal Note */}
-              {product.legal_note && (
-                <div className="p-4 rounded-xl bg-secondary/50 border mb-8">
+              {product.legal_note && <div className="p-4 rounded-xl bg-secondary/50 border mb-8">
                   <div className="flex items-start gap-3">
                     <Shield className="h-5 w-5 mt-0.5 text-muted-foreground" />
                     <div>
@@ -168,106 +152,64 @@ const ProductPage = () => {
                       </p>
                     </div>
                   </div>
-                </div>
-              )}
+                </div>}
             </motion.div>
 
             {/* Purchase Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="lg:sticky lg:top-24"
-            >
+            <motion.div initial={{
+            opacity: 0,
+            y: 20
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} className="lg:sticky lg:top-24">
               <div className="rounded-xl border bg-card overflow-hidden">
                 {/* Product Media */}
                 <div className="relative aspect-[2/1] md:aspect-[16/9] bg-secondary/50 overflow-hidden">
-                  {product.media_urls && product.media_urls.length > 0 ? (
-                    /\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ? (
-                      <video
-                        src={product.media_urls[0]}
-                        className="w-full h-full object-cover"
-                        controls
-                        muted
-                      />
-                    ) : (
-                      <img
-                        src={product.media_urls[0]}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    )
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
+                  {product.media_urls && product.media_urls.length > 0 ? /\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ? <video src={product.media_urls[0]} className="w-full h-full object-cover" controls muted /> : <img src={product.media_urls[0]} alt={product.name} className="w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-5xl md:text-6xl">
                         {categoryIcon}
                       </div>
-                    </div>
-                  )}
-                  {product.is_popular && !isOutOfStock && (
-                    <div className="absolute top-2 left-2 md:top-3 md:left-3">
+                    </div>}
+                  {product.is_popular && !isOutOfStock && <div className="absolute top-2 left-2 md:top-3 md:left-3">
                       <Badge className="bg-primary text-primary-foreground text-xs">
                         Популярное
                       </Badge>
-                    </div>
-                  )}
-                  {isOutOfStock && (
-                    <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                    </div>}
+                  {isOutOfStock && <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
                       <Badge variant="destructive" className="text-sm md:text-lg py-1.5 px-3 md:py-2 md:px-4 gap-1.5 md:gap-2">
                         <PackageX className="h-4 w-4 md:h-5 md:w-5" />
                         Нет в наличии
                       </Badge>
-                    </div>
-                  )}
+                    </div>}
                 </div>
 
                 {/* Additional media thumbnails */}
-                {product.media_urls && product.media_urls.length > 1 && (
-                  <div className="flex gap-2 p-3 overflow-x-auto">
-                    {product.media_urls.map((url, i) => (
-                      <div key={i} className="w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0 bg-muted">
-                        {/\.(mp4|webm|mov)$/i.test(url) ? (
-                          <video src={url} className="w-full h-full object-cover" muted />
-                        ) : (
-                          <img src={url} alt="" className="w-full h-full object-cover" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {product.media_urls && product.media_urls.length > 1 && <div className="flex gap-2 p-3 overflow-x-auto">
+                    {product.media_urls.map((url, i) => <div key={i} className="w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0 bg-muted">
+                        {/\.(mp4|webm|mov)$/i.test(url) ? <video src={url} className="w-full h-full object-cover" muted /> : <img src={url} alt="" className="w-full h-full object-cover" />}
+                      </div>)}
+                  </div>}
                 
                 <div className="p-4 md:p-6">
                   {/* Stock info */}
-                  {!stockLoading && !isOutOfStock && (
-                    <div className="mb-4">
+                  {!stockLoading && !isOutOfStock && <div className="mb-4">
                       <p className="text-sm text-muted-foreground">
                         В наличии: <span className={stockCount > 0 && stockCount <= 5 ? 'text-orange-500 font-medium' : 'font-medium'}>
                           {stockCount === -1 ? '∞' : stockCount} шт
                         </span>
                       </p>
-                    </div>
-                  )}
+                    </div>}
 
                   {/* Country Selector for Proxy/VPS */}
-                  {needsCountrySelector && !isOutOfStock && (
-                    <div className="mb-6">
-                      <CountrySelector
-                        selectedCountry={selectedCountry}
-                        onSelect={setSelectedCountry}
-                        availableCountries={product.countries}
-                      />
-                    </div>
-                  )}
+                  {needsCountrySelector && !isOutOfStock && <div className="mb-6">
+                      <CountrySelector selectedCountry={selectedCountry} onSelect={setSelectedCountry} availableCountries={product.countries} />
+                    </div>}
 
                   {/* Service Selector for Virtual Numbers */}
-                  {needsServiceSelector && !isOutOfStock && (
-                    <div className="mb-6">
-                      <ServiceSelector
-                        selectedServices={selectedServices}
-                        onToggle={toggleService}
-                        availableServices={product.services?.map(s => s.toLowerCase())}
-                      />
-                    </div>
-                  )}
+                  {needsServiceSelector && !isOutOfStock && <div className="mb-6">
+                      <ServiceSelector selectedServices={selectedServices} onToggle={toggleService} availableServices={product.services?.map(s => s.toLowerCase())} />
+                    </div>}
 
                   {/* Price */}
                   <div className="mb-4 md:mb-6">
@@ -276,42 +218,26 @@ const ProductPage = () => {
                         {product.price.toLocaleString('ru-RU')}
                       </span>
                       <span className="text-lg md:text-xl text-muted-foreground">₽</span>
-                      {product.type === 'subscription' && (
-                        <span className="text-muted-foreground text-sm">/мес</span>
-                      )}
+                      {product.type === 'subscription' && <span className="text-muted-foreground text-sm">/мес</span>}
                     </div>
                   </div>
 
                   {/* Add to Cart */}
-                  <Button 
-                    size="lg" 
-                    className="w-full gap-2 mb-4"
-                    onClick={handleAddToCart}
-                    disabled={isOutOfStock}
-                  >
-                    {isOutOfStock ? (
-                      <>
+                  <Button size="lg" className="w-full gap-2 mb-4" onClick={handleAddToCart} disabled={isOutOfStock}>
+                    {isOutOfStock ? <>
                         <PackageX className="h-5 w-5" />
                         Нет в наличии
-                      </>
-                    ) : (
-                      <>
+                      </> : <>
                         <ShoppingCart className="h-5 w-5" />
                         Добавить в корзину
-                      </>
-                    )}
+                      </>}
                   </Button>
 
                   {/* Warning */}
-                  {!isOutOfStock && (
-                    <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  {!isOutOfStock && <div className="flex items-start gap-2 text-xs text-muted-foreground">
                       <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <p>
-                        Оформляя заказ, вы подтверждаете, что будете использовать 
-                        продукт в соответствии с законодательством и правилами магазина.
-                      </p>
-                    </div>
-                  )}
+                      
+                    </div>}
                 </div>
               </div>
             </motion.div>
@@ -320,8 +246,6 @@ const ProductPage = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default ProductPage;
