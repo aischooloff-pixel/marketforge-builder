@@ -1,29 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-const WELCOME_MESSAGE = `👋 Добро пожаловать в <b>Temka Store</b>!
-
-🛒 Удобный магазин цифровых товаров в Telegram.
-
-📢 Подписывайся на канал:
-👉 @TemkaStoreNews
-
-Жми кнопку ниже, чтобы открыть магазин 👇`;
-
-const CAPTCHA_ITEMS: [string, string][] = [
-  ["🍎", "Яблоко"], ["🚗", "Машину"], ["🎒", "Рюкзак"], ["⭐", "Звезду"],
-  ["🎸", "Гитару"], ["🌻", "Подсолнух"], ["🍕", "Пиццу"], ["🏀", "Мяч"],
-  ["🎧", "Наушники"], ["🐱", "Кота"], ["🌈", "Радугу"], ["🔑", "Ключ"],
-  ["🎂", "Торт"], ["☂️", "Зонт"], ["💎", "Алмаз"], ["🦋", "Бабочку"],
-  ["🍉", "Арбуз"], ["🎯", "Мишень"],
-];
-
-// In-memory store for pending reviews (rating chosen, waiting for text)
-const pendingReviews = new Map<number, { rating: number; orderId: string }>();
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 function buildCaptcha() {
   const shuffled = [...CAPTCHA_ITEMS].sort(() => Math.random() - 0.5);
@@ -70,6 +46,8 @@ serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const supabase = createClient(supabaseUrl, supabaseKey);
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
   try {
@@ -143,8 +121,10 @@ serve(async (req) => {
         const orderId = parts[1];
         const rating = parseInt(parts[2], 10);
 
-        // Store pending review for this user
-        pendingReviews.set(fromId, { rating, orderId });
+        // Store pending review in DB (persistent across function invocations)
+        // Delete any old pending reviews for this user first
+        await supabase.from("pending_reviews").delete().eq("telegram_id", fromId);
+        await supabase.from("pending_reviews").insert({ telegram_id: fromId, rating, order_id: orderId });
 
         // Delete rating buttons
         await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
@@ -169,39 +149,47 @@ serve(async (req) => {
     const telegramId = message.from?.id;
     const text = message.text?.trim();
 
-    // --- Check for pending review text ---
-    if (telegramId && pendingReviews.has(telegramId) && text && !text.startsWith("/")) {
-      const pending = pendingReviews.get(telegramId)!;
-      pendingReviews.delete(telegramId);
+    // --- Check for pending review text (from DB) ---
+    const { data: pendingArr } = await supabase
+      .from("pending_reviews")
+      .select("*")
+      .eq("telegram_id", telegramId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const pending = pendingArr?.[0];
+
+    if (telegramId && pending && text && !text.startsWith("/")) {
+      // Delete the pending review record
+      await supabase.from("pending_reviews").delete().eq("id", pending.id);
 
       // Get user profile id
-      const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id`, {
-        headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
-      });
-      const profiles = await profileRes.json();
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("telegram_id", telegramId)
+        .limit(1);
       const userId = profiles?.[0]?.id;
 
       if (userId) {
         // Insert review with status=pending
-        const insertRes = await fetch(`${supabaseUrl}/rest/v1/reviews`, {
-          method: "POST",
-          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-          body: JSON.stringify({
+        const { error: reviewErr } = await supabase
+          .from("reviews")
+          .insert({
             user_id: userId,
             rating: pending.rating,
             text: text.substring(0, 1000),
             status: "pending",
-          }),
-        });
+          });
 
-        if (insertRes.ok) {
+        if (!reviewErr) {
           await tg(botToken, "sendMessage", {
             chat_id: chatId,
             text: "✅ Спасибо за отзыв! Он отправлен на модерацию и будет опубликован после проверки.",
             reply_markup: { inline_keyboard: [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }]] },
           });
         } else {
-          console.error("[Bot] Failed to insert review:", await insertRes.text());
+          console.error("[Bot] Failed to insert review:", reviewErr);
           await tg(botToken, "sendMessage", { chat_id: chatId, text: "❌ Не удалось сохранить отзыв. Попробуйте позже." });
         }
       } else {

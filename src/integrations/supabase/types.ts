@@ -195,6 +195,30 @@ export type Database = {
           },
         ]
       }
+      pending_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          rating: number
+          telegram_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          rating: number
+          telegram_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          rating?: number
+          telegram_id?: number
+        }
+        Relationships: []
+      }
       product_items: {
         Row: {
           content: string
