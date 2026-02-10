@@ -982,6 +982,12 @@ serve(async (req) => {
                 chat_id: chatId,
                 text: deliveryText,
                 parse_mode: "Markdown",
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: "⭐ Оставить отзыв", callback_data: `review_start:${order.id.substring(0, 8)}` }],
+                    [{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+                  ],
+                },
               }),
             }).catch(e => console.error("TG delivery notify error:", e));
 
