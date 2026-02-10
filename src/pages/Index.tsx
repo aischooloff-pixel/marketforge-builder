@@ -53,7 +53,7 @@ const Index = () => {
               scale: 1
             }} transition={{
               delay: 0.2
-            }} className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-secondary text-xs md:text-sm font-medium mb-4 md:mb-8">
+            }} className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-accent/15 text-accent text-xs md:text-sm font-medium mb-4 md:mb-8">
                 <Award className="h-3 w-3 md:h-4 md:w-4" />
                 ​Первый магазин с приложением         
               </motion.div>
