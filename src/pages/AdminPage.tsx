@@ -13,6 +13,7 @@ import { CategoryFormDialog } from '@/components/admin/CategoryFormDialog';
 import { PromoFormDialog } from '@/components/admin/PromoFormDialog';
 import { StatsCharts } from '@/components/admin/StatsCharts';
 import { SupportTicketsTab } from '@/components/admin/SupportTicketsTab';
+import { ReviewsTab } from '@/components/admin/ReviewsTab';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
 import { 
   LayoutDashboard, 
@@ -31,7 +32,8 @@ import {
   Upload,
   FolderOpen,
   MessageCircle,
-  Eye
+  Eye,
+  Star
 } from 'lucide-react';
 
 interface Stats {
@@ -266,7 +268,7 @@ const AdminPage = () => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-7 mb-6">
+          <TabsList className="grid w-full grid-cols-8 mb-6">
             <TabsTrigger value="dashboard" className="text-xs">
               <LayoutDashboard className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Обзор</span>
@@ -290,6 +292,10 @@ const AdminPage = () => {
             <TabsTrigger value="users" className="text-xs">
               <Users className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Юзеры</span>
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="text-xs">
+              <Star className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Отзывы</span>
             </TabsTrigger>
             <TabsTrigger value="support" className="text-xs relative">
               <MessageCircle className="h-4 w-4 mr-1" />
@@ -645,6 +651,15 @@ const AdminPage = () => {
                     ))}
                   </div>
                 </div>
+              </TabsContent>
+
+              {/* Reviews */}
+              <TabsContent value="reviews">
+                <ReviewsTab
+                  onFetch={admin.fetchReviews as any}
+                  onModerate={admin.moderateReview}
+                  isLoading={admin.isLoading}
+                />
               </TabsContent>
 
               {/* Support Tickets */}

@@ -423,6 +423,54 @@ export type Database = {
           },
         ]
       }
+      reviews: {
+        Row: {
+          created_at: string
+          id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          rating: number
+          status: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          rating: number
+          status?: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          rating?: number
+          status?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           admin_reply: string | null
