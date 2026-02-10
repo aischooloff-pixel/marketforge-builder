@@ -12,36 +12,50 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { ArrowRight, Shield, Zap, Users, Star, Quote, Info, Send } from 'lucide-react';
-
-
 const Index = () => {
-  const { data: popularProducts = [], isLoading: productsLoading } = usePopularProducts(6);
-  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
-  const { data: reviews = [], isLoading: reviewsLoading } = useApprovedReviews();
-  const { average, count } = useAverageRating(reviews);
-
-  return (
-    <div className="min-h-screen flex flex-col">
+  const {
+    data: popularProducts = [],
+    isLoading: productsLoading
+  } = usePopularProducts(6);
+  const {
+    data: categories = [],
+    isLoading: categoriesLoading
+  } = useCategories();
+  const {
+    data: reviews = [],
+    isLoading: reviewsLoading
+  } = useApprovedReviews();
+  const {
+    average,
+    count
+  } = useAverageRating(reviews);
+  return <div className="min-h-screen flex flex-col">
       <Header />
       
       <main className="flex-1">
         {/* Hero Section */}
         <section className="pt-24 pb-12 md:pt-40 md:pb-32">
           <div className="container mx-auto px-4">
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              transition={{ duration: 0.6 }} 
-              className="max-w-4xl mx-auto text-center"
-            >
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }} 
-                animate={{ opacity: 1, scale: 1 }} 
-                transition={{ delay: 0.2 }} 
-                className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-secondary text-xs md:text-sm font-medium mb-4 md:mb-8"
-              >
+            <motion.div initial={{
+            opacity: 0,
+            y: 30
+          }} animate={{
+            opacity: 1,
+            y: 0
+          }} transition={{
+            duration: 0.6
+          }} className="max-w-4xl mx-auto text-center">
+              <motion.div initial={{
+              opacity: 0,
+              scale: 0.9
+            }} animate={{
+              opacity: 1,
+              scale: 1
+            }} transition={{
+              delay: 0.2
+            }} className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full bg-secondary text-xs md:text-sm font-medium mb-4 md:mb-8">
                 <Shield className="h-3 w-3 md:h-4 md:w-4" />
-                Только легальные инструменты
+                ​Первый магазин с приложением         
               </motion.div>
               
               <h1 className="text-3xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 md:mb-6">
@@ -82,19 +96,29 @@ const Index = () => {
         <section className="py-8 md:py-16 border-y bg-secondary/30">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
-              {[
-                { icon: Shield, title: 'Надежно', desc: 'Лучшие поставщики и проверенные временем товары' },
-                { icon: Zap, title: 'Мгновенно', desc: 'Автоматическая доставка после оплаты' },
-                { icon: Users, title: 'Для профи', desc: 'Инструменты для мастеров своих дел' }
-              ].map((feature, index) => (
-                <motion.div 
-                  key={feature.title} 
-                  initial={{ opacity: 0, y: 20 }} 
-                  whileInView={{ opacity: 1, y: 0 }} 
-                  transition={{ delay: index * 0.1 }} 
-                  viewport={{ once: true }} 
-                  className="flex items-start gap-3 md:gap-4 p-4 md:p-6"
-                >
+              {[{
+              icon: Shield,
+              title: 'Надежно',
+              desc: 'Лучшие поставщики и проверенные временем товары'
+            }, {
+              icon: Zap,
+              title: 'Мгновенно',
+              desc: 'Автоматическая доставка после оплаты'
+            }, {
+              icon: Users,
+              title: 'Для профи',
+              desc: 'Инструменты для мастеров своих дел'
+            }].map((feature, index) => <motion.div key={feature.title} initial={{
+              opacity: 0,
+              y: 20
+            }} whileInView={{
+              opacity: 1,
+              y: 0
+            }} transition={{
+              delay: index * 0.1
+            }} viewport={{
+              once: true
+            }} className="flex items-start gap-3 md:gap-4 p-4 md:p-6">
                   <div className="p-2 md:p-3 rounded-lg md:rounded-xl bg-foreground text-background">
                     <feature.icon className="h-5 w-5 md:h-6 md:w-6" />
                   </div>
@@ -102,8 +126,7 @@ const Index = () => {
                     <h3 className="font-semibold text-base md:text-lg mb-0.5 md:mb-1">{feature.title}</h3>
                     <p className="text-sm text-muted-foreground">{feature.desc}</p>
                   </div>
-                </motion.div>
-              ))}
+                </motion.div>)}
             </div>
           </div>
         </section>
@@ -111,12 +134,13 @@ const Index = () => {
         {/* Popular Products */}
         <section className="py-10 md:py-20">
           <div className="container mx-auto px-4">
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              whileInView={{ opacity: 1 }} 
-              viewport={{ once: true }} 
-              className="flex justify-between items-center gap-4 mb-6 md:mb-10"
-            >
+            <motion.div initial={{
+            opacity: 0
+          }} whileInView={{
+            opacity: 1
+          }} viewport={{
+            once: true
+          }} className="flex justify-between items-center gap-4 mb-6 md:mb-10">
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold mb-1">Популярное</h2>
                 <p className="text-sm md:text-base text-muted-foreground">Самые востребованные товары</p>
@@ -130,90 +154,75 @@ const Index = () => {
             </motion.div>
 
             {/* Loading state */}
-            {productsLoading ? (
-              <>
+            {productsLoading ? <>
                 <div className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
                   <div className="flex gap-3">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="w-[85vw] flex-shrink-0">
+                    {[...Array(3)].map((_, i) => <div key={i} className="w-[85vw] flex-shrink-0">
                         <div className="p-3 rounded-xl border bg-card">
                           <Skeleton className="aspect-square rounded-lg mb-2" />
                           <Skeleton className="h-5 w-3/4 mb-2" />
                           <Skeleton className="h-4 w-1/2" />
                         </div>
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
                 </div>
                 <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="p-4 rounded-2xl border bg-card">
+                  {[...Array(6)].map((_, i) => <div key={i} className="p-4 rounded-2xl border bg-card">
                       <Skeleton className="aspect-[4/3] rounded-xl mb-4" />
                       <Skeleton className="h-6 w-3/4 mb-2" />
                       <Skeleton className="h-4 w-1/2" />
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
-              </>
-            ) : popularProducts.length > 0 ? (
-              <>
+              </> : popularProducts.length > 0 ? <>
                 {/* Horizontal scroll on Mobile, Grid on Desktop */}
                 <div className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
                   <div className="flex gap-3 snap-x snap-mandatory">
-                    {popularProducts.map((product, index) => (
-                      <div key={product.id} className="w-[85vw] flex-shrink-0 snap-center">
+                    {popularProducts.map((product, index) => <div key={product.id} className="w-[85vw] flex-shrink-0 snap-center">
                         <ProductCard product={product} index={index} />
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
                 </div>
                 <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {popularProducts.map((product, index) => (
-                    <ProductCard key={product.id} product={product} index={index} />
-                  ))}
+                  {popularProducts.map((product, index) => <ProductCard key={product.id} product={product} index={index} />)}
                 </div>
-              </>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
+              </> : <div className="text-center py-12 text-muted-foreground">
                 <p>Популярные товары скоро появятся</p>
-              </div>
-            )}
+              </div>}
           </div>
         </section>
 
         {/* Categories */}
         <section className="py-10 md:py-20 bg-secondary/30">
           <div className="container mx-auto px-4">
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              whileInView={{ opacity: 1 }} 
-              viewport={{ once: true }} 
-              className="text-center mb-6 md:mb-12"
-            >
+            <motion.div initial={{
+            opacity: 0
+          }} whileInView={{
+            opacity: 1
+          }} viewport={{
+            once: true
+          }} className="text-center mb-6 md:mb-12">
               <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">Категории</h2>
               <p className="text-sm md:text-base text-muted-foreground">Найдите нужный инструмент</p>
             </motion.div>
 
-            {categoriesLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="p-4 md:p-6 rounded-lg md:rounded-xl border bg-card">
+            {categoriesLoading ? <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+                {[...Array(8)].map((_, i) => <div key={i} className="p-4 md:p-6 rounded-lg md:rounded-xl border bg-card">
                     <Skeleton className="h-10 w-10 mx-auto mb-2 rounded" />
                     <Skeleton className="h-4 w-3/4 mx-auto mb-1" />
                     <Skeleton className="h-3 w-1/2 mx-auto hidden md:block" />
-                  </div>
-                ))}
-              </div>
-            ) : categories.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
-                {categories.map((category, index) => (
-                  <motion.div 
-                    key={category.id} 
-                    initial={{ opacity: 0, scale: 0.9 }} 
-                    whileInView={{ opacity: 1, scale: 1 }} 
-                    transition={{ delay: index * 0.05 }} 
-                    viewport={{ once: true }}
-                  >
+                  </div>)}
+              </div> : categories.length > 0 ? <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
+                {categories.map((category, index) => <motion.div key={category.id} initial={{
+              opacity: 0,
+              scale: 0.9
+            }} whileInView={{
+              opacity: 1,
+              scale: 1
+            }} transition={{
+              delay: index * 0.05
+            }} viewport={{
+              once: true
+            }}>
                     <Link to={`/catalog?category=${category.slug}`}>
                       <div className="p-4 md:p-6 rounded-lg md:rounded-xl border bg-card hover:shadow-lg hover:-translate-y-1 transition-all text-center group">
                         <div className="text-3xl md:text-4xl mb-2 md:mb-3">{category.icon}</div>
@@ -225,70 +234,64 @@ const Index = () => {
                         </p>
                       </div>
                     </Link>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
+                  </motion.div>)}
+              </div> : <div className="text-center py-12 text-muted-foreground">
                 <p>Категории скоро появятся</p>
-              </div>
-            )}
+              </div>}
           </div>
         </section>
 
         {/* Reviews */}
         <section className="py-10 md:py-20">
           <div className="container mx-auto px-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="text-center mb-6 md:mb-10"
-            >
+            <motion.div initial={{
+            opacity: 0
+          }} whileInView={{
+            opacity: 1
+          }} viewport={{
+            once: true
+          }} className="text-center mb-6 md:mb-10">
               <h2 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">Отзывы</h2>
-              {count > 0 && (
-                <div className="flex items-center justify-center gap-2 mt-1">
+              {count > 0 && <div className="flex items-center justify-center gap-2 mt-1">
                   <div className="flex items-center gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < Math.round(average) ? 'fill-primary text-primary' : 'text-muted-foreground/30'}`} />
-                    ))}
+                    {Array.from({
+                  length: 5
+                }).map((_, i) => <Star key={i} className={`h-4 w-4 ${i < Math.round(average) ? 'fill-primary text-primary' : 'text-muted-foreground/30'}`} />)}
                   </div>
                   <span className="text-sm font-medium">{average}</span>
                   <span className="text-sm text-muted-foreground">({count} отзывов)</span>
-                </div>
-              )}
+                </div>}
               <p className="text-sm md:text-base text-muted-foreground mt-1">Что говорят наши клиенты</p>
             </motion.div>
 
-            {reviewsLoading ? (
-              <div className="flex gap-4 overflow-hidden pb-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="w-[280px] md:w-[320px] flex-shrink-0">
+            {reviewsLoading ? <div className="flex gap-4 overflow-hidden pb-4">
+                {[...Array(3)].map((_, i) => <div key={i} className="w-[280px] md:w-[320px] flex-shrink-0">
                     <div className="p-4 rounded-xl border bg-card">
                       <Skeleton className="h-4 w-20 mb-3" />
                       <Skeleton className="h-16 w-full mb-3" />
                       <Skeleton className="h-4 w-24" />
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : reviews.length > 0 ? (
-              <div className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
-                <div className="flex gap-4" style={{ width: 'max-content' }}>
-                  {reviews.map((review, index) => (
-                    <motion.div
-                      key={review.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      viewport={{ once: true }}
-                      className="w-[280px] md:w-[320px] flex-shrink-0"
-                    >
+                  </div>)}
+              </div> : reviews.length > 0 ? <div className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+                <div className="flex gap-4" style={{
+              width: 'max-content'
+            }}>
+                  {reviews.map((review, index) => <motion.div key={review.id} initial={{
+                opacity: 0,
+                y: 20
+              }} whileInView={{
+                opacity: 1,
+                y: 0
+              }} transition={{
+                delay: index * 0.05
+              }} viewport={{
+                once: true
+              }} className="w-[280px] md:w-[320px] flex-shrink-0">
                       <Card className="p-4 md:p-5 h-full">
                         <div className="flex items-center gap-1 mb-3">
-                          {Array.from({ length: review.rating }).map((_, i) => (
-                            <Star key={i} className="h-4 w-4 fill-primary text-primary" />
-                          ))}
+                          {Array.from({
+                      length: review.rating
+                    }).map((_, i) => <Star key={i} className="h-4 w-4 fill-primary text-primary" />)}
                         </div>
                         <Quote className="h-5 w-5 text-muted-foreground/30 mb-2" />
                         <p className="text-sm md:text-base text-foreground mb-4">{review.text}</p>
@@ -301,18 +304,12 @@ const Index = () => {
                           </p>
                         </div>
                       </Card>
-                    </motion.div>
-                  ))}
+                    </motion.div>)}
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
+              </div> : <div className="text-center py-8 text-muted-foreground">
                 <p>Отзывов пока нет. Будьте первым!</p>
-              </div>
-            )}
-            {reviews.length > 0 && (
-              <p className="text-center text-xs text-muted-foreground mt-2">← Листайте →</p>
-            )}
+              </div>}
+            {reviews.length > 0 && <p className="text-center text-xs text-muted-foreground mt-2">← Листайте →</p>}
 
             {/* Review Form */}
             <div className="mt-6 mb-20 max-w-md mx-auto">
@@ -324,8 +321,6 @@ const Index = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
