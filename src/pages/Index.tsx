@@ -12,7 +12,9 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { ArrowRight, Zap, Users, Star, Quote, Info, Send, Award, Shield } from 'lucide-react';
+import { useRef, useEffect, useCallback } from 'react';
 const Index = () => {
+  const scrollRef = useRef<HTMLDivElement>(null);
   const {
     data: popularProducts = [],
     isLoading: productsLoading
@@ -29,6 +31,25 @@ const Index = () => {
     average,
     count
   } = useAverageRating(reviews);
+
+  const scrollNext = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardWidth = el.firstElementChild?.firstElementChild?.clientWidth ?? 300;
+    const gap = 12;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (el.scrollLeft >= maxScroll - 10) {
+      el.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      el.scrollBy({ left: cardWidth + gap, behavior: 'smooth' });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (productsLoading || popularProducts.length === 0) return;
+    const id = setInterval(scrollNext, 3500);
+    return () => clearInterval(id);
+  }, [productsLoading, popularProducts.length, scrollNext]);
   return <div className="min-h-screen flex flex-col">
       <Header />
       
@@ -195,7 +216,7 @@ const Index = () => {
                 </div>
               </> : popularProducts.length > 0 ? <>
                 {/* Horizontal scroll on Mobile, Grid on Desktop */}
-                <div className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
+                <div ref={scrollRef} className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
                   <div className="flex gap-3 snap-x snap-mandatory">
                     {popularProducts.map((product, index) => <div key={product.id} className="w-[85vw] flex-shrink-0 snap-center">
                         <ProductCard product={product} index={index} />
