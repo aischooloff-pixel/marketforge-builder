@@ -588,7 +588,13 @@ serve(async (req) => {
 
         const currentBalance = parseFloat(profile.balance) || 0;
         const changeAmount = parseFloat(balanceAmount) || 0;
-        const newBalance = action === "set" ? changeAmount : currentBalance + changeAmount;
+        let newBalance = action === "set" ? changeAmount : currentBalance + changeAmount;
+
+        // Clamp to database precision limits (numeric 12,2 → max ~9999999999.99)
+        const MAX_BALANCE = 9999999999.99;
+        if (newBalance > MAX_BALANCE) newBalance = MAX_BALANCE;
+        if (newBalance < -MAX_BALANCE) newBalance = -MAX_BALANCE;
+        newBalance = Math.round(newBalance * 100) / 100;
 
         const { error: updateErr } = await supabase
           .from("profiles")
