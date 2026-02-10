@@ -8,14 +8,14 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, ShoppingBag, AlertTriangle, Check, Ticket, Loader2, Wallet } from 'lucide-react';
+import { Trash2, ShoppingBag, AlertTriangle, Check, Ticket, Loader2, Wallet, Plus, Minus } from 'lucide-react';
 import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
 
 const CartPage = () => {
-  const { items, removeItem, clearCart, total, itemCount } = useCart();
+  const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
   const { user, webApp, hapticFeedback } = useTelegram();
   const { payWithCryptoBot, payWithBalance, isProcessing } = usePayment();
   const { validatePromo } = useAdmin();
@@ -206,12 +206,34 @@ const CartPage = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-4">
+                        {/* Quantity controls */}
+                        <div className="flex items-center gap-1 border rounded-lg">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
                         <div className="text-right">
                           <p className="font-bold">
                             {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
                           </p>
-                          {item.product.type === 'subscription' && (
-                            <p className="text-xs text-muted-foreground">/мес</p>
+                          {item.quantity > 1 && (
+                            <p className="text-xs text-muted-foreground">
+                              {item.product.price.toLocaleString('ru-RU')} ₽ × {item.quantity}
+                            </p>
                           )}
                         </div>
                         <Button
