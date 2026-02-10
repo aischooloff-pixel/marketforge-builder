@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Upload, Package, CheckCircle2, XCircle, FileUp, File } from 'lucide-react';
+import { Loader2, Upload, Package, CheckCircle2, XCircle, FileUp, File, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -36,6 +36,7 @@ interface ProductItemsDialogProps {
   onFetchItems: (productId: string) => Promise<unknown>;
   onAddItems: (productId: string, items: string[]) => Promise<boolean>;
   onAddFileItems?: (productId: string, fileItems: Array<{ content: string; file_url: string }>) => Promise<boolean>;
+  onDeleteItem?: (itemId: string) => Promise<boolean>;
   isLoading?: boolean;
 }
 
@@ -46,6 +47,7 @@ export const ProductItemsDialog = ({
   onFetchItems,
   onAddItems,
   onAddFileItems,
+  onDeleteItem,
   isLoading,
 }: ProductItemsDialogProps) => {
   const [items, setItems] = useState<ProductItem[]>([]);
@@ -158,6 +160,14 @@ export const ProductItemsDialog = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleDeleteItem = async (itemId: string) => {
+    if (!onDeleteItem || !product) return;
+    const success = await onDeleteItem(itemId);
+    if (success) {
+      setItems(prev => prev.filter(i => i.id !== itemId));
+    }
+  };
+
   const availableItems = items.filter(item => !item.is_sold);
   const soldItems = items.filter(item => item.is_sold);
 
@@ -213,11 +223,19 @@ export const ProductItemsDialog = ({
                       {availableItems.map((item) => (
                         <div
                           key={item.id}
-                          className="p-3 rounded-lg border bg-muted/30 font-mono text-sm break-all"
+                          className="p-3 rounded-lg border bg-muted/30 font-mono text-sm break-all group"
                         >
                           <div className="flex items-center gap-2">
                             {item.file_url && <File className="h-4 w-4 flex-shrink-0 text-muted-foreground" />}
-                            <span>{item.content}</span>
+                            <span className="flex-1">{item.content}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteItem(item.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
                         </div>
                       ))}

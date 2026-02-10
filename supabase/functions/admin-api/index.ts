@@ -430,6 +430,52 @@ serve(async (req) => {
         });
       }
 
+      case path.startsWith("/product-items/") && method === "DELETE": {
+        const itemId = path.split("/")[2];
+        
+        // Check if item is sold — don't allow deleting sold items
+        const { data: item, error: fetchErr } = await supabase
+          .from("product_items")
+          .select("id, is_sold, file_url")
+          .eq("id", itemId)
+          .maybeSingle();
+
+        if (fetchErr) throw fetchErr;
+        if (!item) {
+          return new Response(JSON.stringify({ error: "Item not found" }), {
+            status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (item.is_sold) {
+          return new Response(JSON.stringify({ error: "Cannot delete sold item" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Delete file from storage if exists
+        if (item.file_url) {
+          try {
+            const url = new URL(item.file_url);
+            const storagePath = url.pathname.split('/storage/v1/object/public/delivery-files/')[1];
+            if (storagePath) {
+              await supabase.storage.from('delivery-files').remove([decodeURIComponent(storagePath)]);
+            }
+          } catch (e) {
+            console.error("Failed to delete file from storage:", e);
+          }
+        }
+
+        const { error: delErr } = await supabase
+          .from("product_items")
+          .delete()
+          .eq("id", itemId);
+
+        if (delErr) throw delErr;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Not found" }),
