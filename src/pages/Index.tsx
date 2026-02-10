@@ -306,7 +306,7 @@ const Index = () => {
             )}
 
             {/* Review Form */}
-            <div className="mt-6 max-w-md mx-auto">
+            <div className="mt-6 mb-20 max-w-md mx-auto">
               <ReviewForm />
             </div>
           </div>
