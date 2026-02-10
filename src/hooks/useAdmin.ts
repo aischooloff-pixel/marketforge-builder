@@ -237,8 +237,8 @@ export const useAdmin = () => {
     return invokeAdminApi('/support-tickets', 'GET');
   }, [invokeAdminApi]);
 
-  const createTicket = useCallback(async (userId: string, subject: string, message: string) => {
-    const result = await invokeAdminApi('/support-tickets', 'POST', { userId, subject, message });
+  const createTicket = useCallback(async (ticketUserId: string, subject: string, message: string) => {
+    const result = await invokeAdminApi('/support-tickets', 'POST', { ticketUserId, subject, message });
     if (result) toast.success('Обращение отправлено');
     return result;
   }, [invokeAdminApi]);
