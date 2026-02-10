@@ -232,6 +232,39 @@ export const useAdmin = () => {
     return invokeAdminApi<{ valid: boolean; discount_percent?: number; promo_id?: string; error?: string }>('/promos/validate', 'POST', { code, userId });
   }, [invokeAdminApi]);
 
+  // Support Tickets
+  const fetchTickets = useCallback(async () => {
+    return invokeAdminApi('/support-tickets', 'GET');
+  }, [invokeAdminApi]);
+
+  const createTicket = useCallback(async (userId: string, subject: string, message: string) => {
+    const result = await invokeAdminApi('/support-tickets', 'POST', { userId, subject, message });
+    if (result) toast.success('Обращение отправлено');
+    return result;
+  }, [invokeAdminApi]);
+
+  const replyToTicket = useCallback(async (ticketId: string, reply: string, adminId?: string) => {
+    const result = await invokeAdminApi<{ success: boolean }>(`/support-tickets/${ticketId}/reply`, 'POST', { reply, adminId });
+    if (result?.success) toast.success('Ответ отправлен');
+    return result?.success || false;
+  }, [invokeAdminApi]);
+
+  const updateTicketStatus = useCallback(async (ticketId: string, status: string) => {
+    return invokeAdminApi(`/support-tickets/${ticketId}`, 'PUT', { status });
+  }, [invokeAdminApi]);
+
+  // User balance management
+  const updateUserBalance = useCallback(async (userId: string, amount: number, action: 'add' | 'set') => {
+    const result = await invokeAdminApi<{ success: boolean; balance: number }>(`/users/${userId}/balance`, 'POST', { amount, action });
+    if (result?.success) toast.success('Баланс обновлён');
+    return result;
+  }, [invokeAdminApi]);
+
+  // User details
+  const fetchUserDetails = useCallback(async (userId: string) => {
+    return invokeAdminApi(`/users/${userId}/details`, 'GET');
+  }, [invokeAdminApi]);
+
   return {
     isLoading,
     error,
@@ -250,6 +283,8 @@ export const useAdmin = () => {
     fetchUsers,
     toggleUserBan,
     updateUserRole,
+    updateUserBalance,
+    fetchUserDetails,
     // Product Items
     fetchProductItems,
     addProductItems,
@@ -263,5 +298,10 @@ export const useAdmin = () => {
     createPromo,
     deletePromo,
     validatePromo,
+    // Support
+    fetchTickets,
+    createTicket,
+    replyToTicket,
+    updateTicketStatus,
   };
 };
