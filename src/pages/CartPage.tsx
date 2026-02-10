@@ -8,7 +8,7 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, ShoppingBag, AlertTriangle, Check, Ticket, Loader2 } from 'lucide-react';
+import { Trash2, ShoppingBag, AlertTriangle, Check, Ticket, Loader2, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -17,7 +17,7 @@ import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
 const CartPage = () => {
   const { items, removeItem, clearCart, total, itemCount } = useCart();
   const { user, webApp, hapticFeedback } = useTelegram();
-  const { payWithCryptoBot, isProcessing } = usePayment();
+  const { payWithCryptoBot, payWithBalance, isProcessing } = usePayment();
   const { validatePromo } = useAdmin();
   
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -51,7 +51,6 @@ const CartPage = () => {
 
   const handlePayWithCrypto = async () => {
     if (!agreedToTerms || !user) return;
-
     hapticFeedback('medium');
 
     const cartItems = items.map(item => ({
@@ -59,17 +58,13 @@ const CartPage = () => {
       productName: item.product.name,
       price: item.product.price,
       quantity: item.quantity,
-      options: {
-        country: item.selectedCountry,
-        services: item.selectedServices,
-      },
+      options: { country: item.selectedCountry, services: item.selectedServices },
     }));
 
     const result = await payWithCryptoBot(cartItems, discountedTotal);
 
     if (result.success && result.invoiceUrl) {
       hapticFeedback('success');
-      // Open CryptoBot payment in Telegram
       if (webApp) {
         webApp.openTelegramLink(result.invoiceUrl);
       } else {
@@ -81,6 +76,33 @@ const CartPage = () => {
       toast.error(result.error || 'Ошибка создания счёта');
     }
   };
+
+  const handlePayWithBalance = async () => {
+    if (!agreedToTerms || !user) return;
+    hapticFeedback('medium');
+
+    const cartItems = items.map(item => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      price: item.product.price,
+      quantity: item.quantity,
+      options: { country: item.selectedCountry, services: item.selectedServices },
+    }));
+
+    const result = await payWithBalance(cartItems, discountedTotal);
+
+    if (result.success) {
+      hapticFeedback('success');
+      clearCart();
+      setOrderComplete(true);
+      toast.success('Заказ оплачен с баланса!');
+    } else {
+      hapticFeedback('error');
+      toast.error(result.error || 'Ошибка оплаты');
+    }
+  };
+
+  const canPayWithBalance = user && user.balance >= discountedTotal && discountedTotal > 0;
 
   if (orderComplete) {
     return (
@@ -264,9 +286,29 @@ const CartPage = () => {
                     </label>
                   </div>
 
+                  {/* Balance Payment Button */}
+                  {canPayWithBalance && (
+                    <Button
+                      size="lg"
+                      className="w-full gap-3 mb-3"
+                      disabled={!agreedToTerms || isProcessing}
+                      onClick={handlePayWithBalance}
+                    >
+                      {isProcessing ? (
+                        'Обработка...'
+                      ) : (
+                        <>
+                          <Wallet className="h-5 w-5" />
+                          Оплатить с баланса ({user?.balance?.toLocaleString('ru-RU')} ₽)
+                        </>
+                      )}
+                    </Button>
+                  )}
+
                   {/* CryptoBot Payment Button */}
                   <Button
                     size="lg"
+                    variant={canPayWithBalance ? 'outline' : 'default'}
                     className="w-full gap-3"
                     disabled={!agreedToTerms || isProcessing}
                     onClick={handlePayWithCrypto}
