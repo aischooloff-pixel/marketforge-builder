@@ -28,7 +28,7 @@ serve(async (req) => {
 
     const invoice = update.payload;
     const payloadData = JSON.parse(invoice.payload || "{}");
-    const { userId, orderId, amountRub } = payloadData;
+    const { userId, orderId, amountRub, balanceToUse } = payloadData;
 
     if (!userId || !amountRub) {
       console.error("Missing payload data");
@@ -51,11 +51,17 @@ serve(async (req) => {
     }
 
     const currentBalance = parseFloat(profile.balance) || 0;
-    const newBalance = currentBalance + amountRub;
+    const balanceDeduction = parseFloat(balanceToUse) || 0;
+
+    // 1. Add CryptoBot deposit to balance
+    const afterDeposit = currentBalance + amountRub;
+
+    // 2. Deduct partial balance payment if used
+    const finalBalance = afterDeposit - balanceDeduction;
 
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ balance: newBalance })
+      .update({ balance: finalBalance })
       .eq("id", userId);
 
     if (updateError) {
@@ -63,14 +69,29 @@ serve(async (req) => {
       return new Response("Balance update failed", { status: 500 });
     }
 
+    // Transaction for the CryptoBot deposit
     await supabase.from("transactions").insert({
       user_id: userId,
       type: "deposit",
       amount: amountRub,
-      balance_after: newBalance,
+      balance_after: afterDeposit,
       description: `Пополнение через CryptoBot`,
       payment_id: invoice.invoice_id.toString(),
     });
+
+    // Transaction for the balance deduction (partial payment)
+    if (balanceDeduction > 0) {
+      await supabase.from("transactions").insert({
+        user_id: userId,
+        type: "purchase",
+        amount: -balanceDeduction,
+        balance_after: finalBalance,
+        order_id: orderId || null,
+        description: `Частичная оплата заказа (баланс)`,
+      });
+
+      console.log(`Balance deduction: ${balanceDeduction} RUB for user ${userId}`);
+    }
 
     if (orderId) {
       await supabase.from("orders").update({ status: "paid" }).eq("id", orderId);

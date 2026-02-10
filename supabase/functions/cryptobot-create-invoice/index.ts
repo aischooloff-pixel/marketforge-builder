@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, amount, orderId, description } = await req.json();
+    const { userId, amount, orderId, description, balanceToUse } = await req.json();
 
     if (!userId || !amount) {
       return new Response(
@@ -50,7 +50,7 @@ serve(async (req) => {
         hidden_message: `Спасибо за пополнение! Баланс обновлён.`,
         paid_btn_name: "callback",
         paid_btn_url: webhookUrl,
-        payload: JSON.stringify({ userId, orderId, amountRub: amount }),
+        payload: JSON.stringify({ userId, orderId, amountRub: amount, balanceToUse: balanceToUse || 0 }),
         allow_comments: false,
         allow_anonymous: false,
         expires_in: 3600, // 1 hour
