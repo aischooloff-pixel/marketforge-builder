@@ -65,7 +65,7 @@ export const useAdmin = () => {
     try {
       const { data, error: fnError } = await supabase.functions.invoke('admin-api', {
         body: {
-          userId: user?.id || 'temp-admin',
+          userId: user.id,
           path,
           method,
           ...body,
