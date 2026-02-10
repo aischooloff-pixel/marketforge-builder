@@ -148,15 +148,39 @@ serve(async (req) => {
       });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Unknown path" }),
-      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Submit a review
+    if (path === "/reviews" && body.method === "POST") {
+      const { text, rating } = body;
+      if (!text || !rating || typeof rating !== "number" || rating < 1 || rating > 5) {
+        return json({ error: "Invalid review data" }, 400);
+      }
+      const sanitizedText = String(text).trim().slice(0, 500);
+      if (sanitizedText.length < 5) {
+        return json({ error: "Напишите хотя бы 5 символов" }, 400);
+      }
+      const { error } = await supabase.from("reviews").insert({
+        user_id: userId,
+        text: sanitizedText,
+        rating,
+      });
+      if (error) throw error;
+      return json({ success: true });
+    }
+
+    // Get user's support tickets
+    if (path === "/support-tickets") {
+      const { data, error } = await supabase
+        .from("support_tickets")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return json(data || []);
+    }
+
+    return json({ error: "Unknown path" }, 404);
   } catch (error) {
     console.error("User data API error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ error: "Internal server error" }, 500);
   }
 });
