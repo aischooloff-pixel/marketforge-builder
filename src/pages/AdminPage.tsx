@@ -140,7 +140,7 @@ const AdminPage = () => {
     if (hasAccess) {
       loadAllData();
     }
-  }, [isAdmin]);
+  }, [hasAccess]);
 
   const loadAllData = async () => {
     setDataLoading(true);
