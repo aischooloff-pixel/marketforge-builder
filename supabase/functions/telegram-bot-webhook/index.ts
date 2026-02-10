@@ -77,6 +77,9 @@ serve(async (req) => {
     return new Response(JSON.stringify(result), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
   try {
     const update = await req.json();
 
@@ -95,6 +98,32 @@ serve(async (req) => {
           body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
         });
 
+        // Mark user as verified in profiles (set language_code to include verified flag)
+        // We use a custom approach: check if profile exists, if not the user-data function will create it
+        // For now, store verified state by creating a minimal profile entry
+        const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${callback.from?.id}&select=id`, {
+          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+        });
+        const profiles = await profileRes.json();
+        
+        if (!profiles || profiles.length === 0) {
+          // Create a profile so we know they passed captcha
+          await fetch(`${supabaseUrl}/rest/v1/profiles`, {
+            method: "POST",
+            headers: {
+              "apikey": supabaseKey,
+              "Authorization": `Bearer ${supabaseKey}`,
+              "Content-Type": "application/json",
+              "Prefer": "return=minimal",
+            },
+            body: JSON.stringify({
+              telegram_id: callback.from?.id,
+              first_name: callback.from?.first_name || null,
+              username: callback.from?.username || null,
+            }),
+          });
+        }
+
         // Send welcome
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: "POST",
@@ -112,14 +141,12 @@ serve(async (req) => {
           }),
         });
 
-        // Answer callback
         await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ callback_query_id: callback.id, text: "✅ Проверка пройдена!" }),
         });
       } else if (data === "captcha_fail") {
-        // Answer with alert
         await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -139,22 +166,48 @@ serve(async (req) => {
     if (!message) return new Response("ok", { status: 200 });
 
     const chatId = message.chat.id;
+    const telegramId = message.from?.id;
     const text = message.text?.trim();
 
     if (text === "/start" || text?.startsWith("/start ")) {
-      const captcha = buildCaptcha();
-
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: captcha.text,
-          reply_markup: {
-            inline_keyboard: [captcha.buttons],
-          },
-        }),
+      // Check if user already exists in profiles (= already passed captcha before)
+      const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id`, {
+        headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
       });
+      const profiles = await profileRes.json();
+
+      if (profiles && profiles.length > 0) {
+        // Returning user — send welcome directly, no captcha
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: WELCOME_MESSAGE,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+                [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
+              ],
+            },
+          }),
+        });
+      } else {
+        // New user — show captcha
+        const captcha = buildCaptcha();
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: captcha.text,
+            reply_markup: {
+              inline_keyboard: [captcha.buttons],
+            },
+          }),
+        });
+      }
     }
 
     return new Response("ok", { status: 200 });
