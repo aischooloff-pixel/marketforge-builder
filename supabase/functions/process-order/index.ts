@@ -70,6 +70,57 @@ serve(async (req) => {
     for (const item of order.order_items) {
       const quantity = item.quantity || 1;
 
+      // Check if this is an API-based product (e.g., px6 proxy)
+      const { data: productData } = await supabase
+        .from("products")
+        .select("tags")
+        .eq("id", item.product_id)
+        .single();
+
+      const tags: string[] = productData?.tags || [];
+      const isApiPx6 = tags.includes("api:px6");
+
+      if (isApiPx6) {
+        // Buy proxy via px6.me API
+        const options = item.options as { country?: string; period?: number } | null;
+        const country = options?.country || "ru";
+        const period = options?.period || 30;
+
+        console.log(`[ProcessOrder] API product (px6): buying ${quantity} proxy for ${country}, period ${period}`);
+
+        try {
+          const px6Url = `${supabaseUrl}/functions/v1/px6-buy-proxy`;
+          const px6Res = await fetch(px6Url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              action: "buy",
+              country,
+              period,
+              count: quantity,
+            }),
+          });
+
+          const px6Data = await px6Res.json();
+
+          if (px6Data.success && px6Data.formatted) {
+            deliveredItems.push(`📦 ${item.product_name}:\n${px6Data.formatted}`);
+            console.log(`[ProcessOrder] px6 proxy purchased successfully`);
+          } else {
+            console.error("[ProcessOrder] px6 buy failed:", px6Data);
+            deliveredItems.push(`📦 ${item.product_name}:\n❌ Ошибка покупки прокси: ${px6Data.error || "Неизвестная ошибка"}. Обратитесь в поддержку.`);
+          }
+        } catch (px6Error) {
+          console.error("[ProcessOrder] px6 API error:", px6Error);
+          deliveredItems.push(`📦 ${item.product_name}:\n❌ Ошибка API прокси. Обратитесь в поддержку.`);
+        }
+        continue;
+      }
+
+      // Standard product: claim product_items
       for (let i = 0; i < quantity; i++) {
         // Atomically claim one product item (prevents double-delivery)
         const { data: claimed, error: claimError } = await supabase
