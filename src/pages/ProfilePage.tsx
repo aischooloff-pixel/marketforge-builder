@@ -79,7 +79,7 @@ const ProfilePage = () => {
     const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
       completed: { variant: 'default', label: 'Выполнен' },
       paid: { variant: 'secondary', label: 'Оплачен' },
-      pending: { variant: 'outline', label: 'Ожидает' },
+      pending: { variant: 'outline', label: 'Не оплачен' },
       cancelled: { variant: 'destructive', label: 'Отменён' },
       refunded: { variant: 'secondary', label: 'Возвращён' },
     };

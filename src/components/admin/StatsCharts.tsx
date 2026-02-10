@@ -59,7 +59,7 @@ export const StatsCharts = ({ orders }: StatsChartsProps) => {
   // Prepare data for orders by status
   const ordersByStatus = () => {
     const statuses: Record<string, number> = {
-      'Ожидает': 0,
+      'Не оплачен': 0,
       'Оплачен': 0,
       'Выполнен': 0,
       'Отменён': 0,
@@ -69,7 +69,7 @@ export const StatsCharts = ({ orders }: StatsChartsProps) => {
     orders.forEach(order => {
       switch (order.status) {
         case 'pending':
-          statuses['Ожидает']++;
+          statuses['Не оплачен']++;
           break;
         case 'paid':
           statuses['Оплачен']++;

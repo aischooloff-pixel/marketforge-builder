@@ -537,7 +537,7 @@ const AdminPage = () => {
                             >
                               {order.status === 'completed' ? 'Выполнен' :
                                order.status === 'paid' ? 'Оплачен' :
-                               order.status === 'pending' ? 'Ожидает' : order.status}
+                               order.status === 'pending' ? 'Не оплачен' : order.status}
                             </Badge>
                           </div>
                         </div>
