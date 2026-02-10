@@ -175,7 +175,14 @@ const AdminPage = () => {
   const handleToggleUserBan = async (userId: string, isBanned: boolean) => {
     await admin.toggleUserBan(userId, isBanned);
     const updated = await admin.fetchUsers();
-    if (updated) setUsers(updated);
+    if (updated) {
+      setUsers(updated);
+      // Update selectedUser so the dialog reflects the change
+      const refreshed = updated.find(u => u.id === userId);
+      if (refreshed && selectedUser?.id === userId) {
+        setSelectedUser(refreshed);
+      }
+    }
   };
 
   const handleProductSubmit = async (productData: Partial<Product>) => {
