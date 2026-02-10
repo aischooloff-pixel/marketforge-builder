@@ -20,15 +20,16 @@ const SupportDialog = () => {
   const [isSending, setIsSending] = useState(false);
   const [tab, setTab] = useState<'new' | 'history'>('new');
 
+  const { webApp } = useTelegram();
+
   const { data: tickets = [], refetch } = useQuery({
     queryKey: ['support-tickets', user?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      if (!user?.id || !webApp?.initData) return [];
+      const { data, error } = await supabase.functions.invoke('user-data', {
+        body: { initData: webApp.initData, path: '/support-tickets' },
+      });
+      if (error) throw error;
       return data || [];
     },
     enabled: !!user?.id && isOpen,

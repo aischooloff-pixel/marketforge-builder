@@ -32,12 +32,16 @@ export const ReviewForm = () => {
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from('reviews').insert({
-        user_id: user.id,
-        text: text.trim().slice(0, 500),
-        rating,
+      const { data, error } = await supabase.functions.invoke('user-data', {
+        body: {
+          initData: window.Telegram?.WebApp?.initData,
+          path: '/reviews',
+          method: 'POST',
+          text: text.trim().slice(0, 500),
+          rating,
+        },
       });
-      if (error) throw error;
+      if (error || data?.error) throw new Error(data?.error || 'Failed');
       setSubmitted(true);
       setOpen(false);
       toast.success('Отзыв отправлен на модерацию');
