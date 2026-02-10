@@ -3,6 +3,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useTelegram } from '@/contexts/TelegramContext';
 import { usePayment } from '@/hooks/usePayment';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useProductStock } from '@/hooks/useProducts';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,93 @@ import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
+
+// Cart item row with stock-aware quantity limits
+const CartItemRow = ({ item, index, updateQuantity, removeItem }: {
+  item: { product: any; quantity: number; selectedCountry?: string; selectedServices?: string[] };
+  index: number;
+  updateQuantity: (id: string, qty: number) => void;
+  removeItem: (id: string) => void;
+}) => {
+  const { data: stockCount = 0 } = useProductStock(item.product.id);
+  const maxQty = stockCount === -1 ? 99 : stockCount;
+
+  return (
+    <motion.div
+      key={item.product.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -100 }}
+      transition={{ delay: index * 0.1 }}
+      className="p-6 rounded-xl border bg-card flex flex-col sm:flex-row gap-4"
+    >
+      <div className="flex-1">
+        <Link to={`/product/${item.product.id}`}>
+          <h3 className="font-semibold hover:underline">
+            {item.product.name}
+          </h3>
+        </Link>
+        <p className="text-sm text-muted-foreground mt-1">
+          {item.product.shortDesc}
+        </p>
+        {item.selectedCountry && (
+          <p className="text-sm mt-2">
+            Страна: {item.selectedCountry}
+          </p>
+        )}
+        {item.selectedServices && item.selectedServices.length > 0 && (
+          <p className="text-sm mt-1">
+            Сервисы: {item.selectedServices.join(', ')}
+          </p>
+        )}
+        {maxQty > 0 && maxQty < 99 && item.quantity > maxQty && (
+          <p className="text-xs text-destructive mt-1">
+            В наличии только {maxQty} шт
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1 border rounded-lg">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+          >
+            <Minus className="h-3 w-3" />
+          </Button>
+          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            disabled={item.quantity >= maxQty}
+            onClick={() => updateQuantity(item.product.id, Math.min(item.quantity + 1, maxQty))}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+        <div className="text-right">
+          <p className="font-bold">
+            {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
+          </p>
+          {item.quantity > 1 && (
+            <p className="text-xs text-muted-foreground">
+              {item.product.price.toLocaleString('ru-RU')} ₽ × {item.quantity}
+            </p>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => removeItem(item.product.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </motion.div>
+  );
+};
 
 const CartPage = () => {
   const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
@@ -177,74 +265,13 @@ const CartPage = () => {
               <div className="lg:col-span-2 space-y-4">
                 <AnimatePresence>
                   {items.map((item, index) => (
-                    <motion.div
+                    <CartItemRow
                       key={item.product.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -100 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="p-6 rounded-xl border bg-card flex flex-col sm:flex-row gap-4"
-                    >
-                      <div className="flex-1">
-                        <Link to={`/product/${item.product.id}`}>
-                          <h3 className="font-semibold hover:underline">
-                            {item.product.name}
-                          </h3>
-                        </Link>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {item.product.shortDesc}
-                        </p>
-                        {item.selectedCountry && (
-                          <p className="text-sm mt-2">
-                            Страна: {item.selectedCountry}
-                          </p>
-                        )}
-                        {item.selectedServices && item.selectedServices.length > 0 && (
-                          <p className="text-sm mt-1">
-                            Сервисы: {item.selectedServices.join(', ')}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {/* Quantity controls */}
-                        <div className="flex items-center gap-1 border rounded-lg">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold">
-                            {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
-                          </p>
-                          {item.quantity > 1 && (
-                            <p className="text-xs text-muted-foreground">
-                              {item.product.price.toLocaleString('ru-RU')} ₽ × {item.quantity}
-                            </p>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeItem(item.product.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </motion.div>
+                      item={item}
+                      index={index}
+                      updateQuantity={updateQuantity}
+                      removeItem={removeItem}
+                    />
                   ))}
                 </AnimatePresence>
               </div>

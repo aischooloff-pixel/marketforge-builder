@@ -47,13 +47,35 @@ export const usePayment = () => {
     setError(null);
 
     try {
-      // Check max_per_user limits before creating order
+      // Check stock availability and max_per_user limits
       for (const item of items) {
         const { data: productData } = await supabase
           .from('products')
           .select('max_per_user')
           .eq('id', item.productId)
           .single();
+
+        // Check stock (count unsold items without file_url)
+        const { count: fileCount } = await supabase
+          .from('product_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('product_id', item.productId)
+          .not('file_url', 'is', null);
+
+        const isUnlimited = (fileCount || 0) > 0;
+
+        if (!isUnlimited) {
+          const { count: availableStock } = await supabase
+            .from('product_items')
+            .select('*', { count: 'exact', head: true })
+            .eq('product_id', item.productId)
+            .eq('is_sold', false);
+
+          if ((availableStock || 0) < item.quantity) {
+            setIsProcessing(false);
+            return { success: false, error: `Товар "${item.productName}" — в наличии только ${availableStock || 0} шт` };
+          }
+        }
 
         if (productData && productData.max_per_user > 0) {
           const { count } = await supabase
@@ -162,13 +184,35 @@ export const usePayment = () => {
     setError(null);
 
     try {
-      // Check max_per_user limits before creating order
+      // Check stock availability and max_per_user limits
       for (const item of items) {
         const { data: productData } = await supabase
           .from('products')
           .select('max_per_user')
           .eq('id', item.productId)
           .single();
+
+        // Check stock
+        const { count: fileCount } = await supabase
+          .from('product_items')
+          .select('*', { count: 'exact', head: true })
+          .eq('product_id', item.productId)
+          .not('file_url', 'is', null);
+
+        const isUnlimited = (fileCount || 0) > 0;
+
+        if (!isUnlimited) {
+          const { count: availableStock } = await supabase
+            .from('product_items')
+            .select('*', { count: 'exact', head: true })
+            .eq('product_id', item.productId)
+            .eq('is_sold', false);
+
+          if ((availableStock || 0) < item.quantity) {
+            setIsProcessing(false);
+            return { success: false, error: `Товар "${item.productName}" — в наличии только ${availableStock || 0} шт` };
+          }
+        }
 
         if (productData && productData.max_per_user > 0) {
           const { count } = await supabase
