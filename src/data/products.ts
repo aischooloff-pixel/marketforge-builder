@@ -432,7 +432,8 @@ export const countries = [
   { code: 'BR', name: 'Бразилия', flag: '🇧🇷', latency: 190, available: true },
   { code: 'IN', name: 'Индия', flag: '🇮🇳', latency: 160, available: true },
   { code: 'KR', name: 'Южная Корея', flag: '🇰🇷', latency: 155, available: true },
-  { code: 'HK', name: 'Гонконг', flag: '🇭🇰', latency: 165, available: false }
+  { code: 'HK', name: 'Гонконг', flag: '🇭🇰', latency: 165, available: false },
+  { code: 'EE', name: 'Эстония', flag: '🇪🇪', latency: 50, available: true }
 ];
 
 export const services = [
