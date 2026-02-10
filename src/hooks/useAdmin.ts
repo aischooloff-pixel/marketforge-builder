@@ -54,9 +54,34 @@ export const useAdmin = () => {
     return null;
   });
 
-  const loginWithPassword = useCallback((password: string) => {
-    sessionStorage.setItem('admin_password', password);
-    setAdminPassword(password);
+  const loginWithPassword = useCallback(async (password: string): Promise<boolean> => {
+    // Temporarily set password to make a test API call
+    setIsLoading(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('admin-api', {
+        body: {
+          adminPassword: password,
+          path: '/stats',
+          method: 'GET',
+        },
+      });
+
+      if (fnError || data?.error) {
+        toast.error('Неверный пароль');
+        setIsLoading(false);
+        return false;
+      }
+
+      // Password is valid — persist it
+      sessionStorage.setItem('admin_password', password);
+      setAdminPassword(password);
+      setIsLoading(false);
+      return true;
+    } catch {
+      toast.error('Ошибка проверки пароля');
+      setIsLoading(false);
+      return false;
+    }
   }, []);
 
   const isPasswordAuthed = !!adminPassword;
