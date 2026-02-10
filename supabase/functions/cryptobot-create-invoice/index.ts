@@ -92,6 +92,14 @@ serve(async (req) => {
       }
     }
 
+    // Update order with payment_id if orderId was provided
+    if (orderId) {
+      await supabase
+        .from("orders")
+        .update({ payment_id: invoice.invoice_id.toString() })
+        .eq("id", orderId);
+    }
+
     console.log(`Invoice created: ${invoice.invoice_id} for user ${userId}`);
 
     return new Response(
