@@ -149,10 +149,19 @@ serve(async (req) => {
     const telegramId = message.from?.id;
     const text = message.text?.trim();
 
-    // --- Check for pending review text ---
-    if (telegramId && pendingReviews.has(telegramId) && text && !text.startsWith("/")) {
-      const pending = pendingReviews.get(telegramId)!;
-      pendingReviews.delete(telegramId);
+    // --- Check for pending review text (from DB) ---
+    const { data: pendingArr } = await supabase
+      .from("pending_reviews")
+      .select("*")
+      .eq("telegram_id", telegramId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const pending = pendingArr?.[0];
+
+    if (telegramId && pending && text && !text.startsWith("/")) {
+      // Delete the pending review record
+      await supabase.from("pending_reviews").delete().eq("id", pending.id);
 
       // Get user profile id
       const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id`, {
