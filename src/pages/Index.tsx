@@ -80,20 +80,6 @@ const Index = () => {
                     {char}
                   </motion.span>
                 ))}
-                <motion.span
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: [0, 1, 0.8], scale: [0, 1.3, 1] }}
-                  transition={{ delay: 1.4, duration: 0.6, ease: 'easeOut' }}
-                  className="ml-2 inline-block"
-                >
-                  <motion.span
-                    animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ delay: 2, duration: 0.5, ease: 'easeInOut' }}
-                    className="inline-block text-2xl md:text-5xl lg:text-6xl"
-                  >
-                    🔥
-                  </motion.span>
-                </motion.span>
               </h1>
               
               <p className="text-base md:text-2xl text-muted-foreground mb-6 md:mb-10 max-w-2xl mx-auto px-2">
