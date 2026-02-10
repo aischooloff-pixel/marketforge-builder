@@ -82,6 +82,7 @@ export interface TelegramUser {
   language_code?: string;
   balance: number;
   is_banned: boolean;
+  ban_reason?: string;
   roles: string[];
   created_at: string;
 }
