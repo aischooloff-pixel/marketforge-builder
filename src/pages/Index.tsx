@@ -1,7 +1,5 @@
 import { Link } from 'react-router-dom';
 import { storeData } from '@/data/products';
-import { lazy, Suspense } from 'react';
-const FloatingObjects3D = lazy(() => import('@/components/FloatingObjects3D'));
 import { usePopularProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useApprovedReviews, useAverageRating } from '@/hooks/useReviews';
@@ -36,11 +34,8 @@ const Index = () => {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="pt-24 pb-12 md:pt-40 md:pb-32 relative overflow-hidden">
-          <Suspense fallback={null}>
-            <FloatingObjects3D />
-          </Suspense>
-          <div className="container mx-auto px-4 relative" style={{ zIndex: 1 }}>
+        <section className="pt-24 pb-12 md:pt-40 md:pb-32">
+          <div className="container mx-auto px-4">
             <motion.div initial={{
             opacity: 0,
             y: 30
