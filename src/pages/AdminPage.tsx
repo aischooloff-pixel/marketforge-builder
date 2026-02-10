@@ -247,9 +247,9 @@ const AdminPage = () => {
             <h2 className="text-lg font-bold">Админ-панель</h2>
             <p className="text-sm text-muted-foreground mt-1">Введите пароль для доступа</p>
           </div>
-          <form onSubmit={(e) => {
+          <form onSubmit={async (e) => {
             e.preventDefault();
-            admin.loginWithPassword(passwordInput);
+            await admin.loginWithPassword(passwordInput);
           }} className="space-y-3">
             <Input
               type="password"
