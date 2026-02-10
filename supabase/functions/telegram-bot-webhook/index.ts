@@ -165,10 +165,15 @@ serve(async (req) => {
       // Get user profile id
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, first_name, username")
         .eq("telegram_id", telegramId)
         .limit(1);
-      const userId = profiles?.[0]?.id;
+      const userProfile = profiles?.[0];
+      const userId = userProfile?.id;
+
+      // Build author display name
+      const authorName = [userProfile?.first_name, userProfile?.username ? `@${userProfile.username}` : null]
+        .filter(Boolean).join(" ") || "Пользователь";
 
       if (userId) {
         // Insert review with status=pending
@@ -179,6 +184,7 @@ serve(async (req) => {
             rating: pending.rating,
             text: text.substring(0, 1000),
             status: "pending",
+            author_name: authorName,
           });
 
         if (!reviewErr) {
