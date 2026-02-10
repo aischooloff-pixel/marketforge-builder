@@ -442,8 +442,9 @@ serve(async (req) => {
 
         if (fetchErr) throw fetchErr;
         if (!item) {
-          return new Response(JSON.stringify({ error: "Item not found" }), {
-            status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          // Item already deleted — return success (idempotent)
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         if (item.is_sold) {
