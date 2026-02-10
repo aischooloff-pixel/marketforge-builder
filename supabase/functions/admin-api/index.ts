@@ -616,16 +616,20 @@ serve(async (req) => {
       case path.startsWith("/users/") && path.endsWith("/details") && method === "GET": {
         const targetUserId = path.split("/")[2];
 
-        const [profileRes, ordersRes, transactionsRes] = await Promise.all([
+        const [profileRes, ordersRes, transactionsRes, ticketsRes, eventsRes] = await Promise.all([
           supabase.from("profiles").select("*, user_roles(role)").eq("id", targetUserId).single(),
           supabase.from("orders").select("*, order_items(*)").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(50),
           supabase.from("transactions").select("*").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(50),
+          supabase.from("support_tickets").select("*").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(50),
+          supabase.from("analytics_events").select("*").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(100),
         ]);
 
         return new Response(JSON.stringify({
           profile: profileRes.data,
           orders: ordersRes.data || [],
           transactions: transactionsRes.data || [],
+          tickets: ticketsRes.data || [],
+          events: eventsRes.data || [],
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Ban, Shield, Wallet, ShoppingCart, Clock, Send, Package } from 'lucide-react';
+import { Loader2, Ban, Shield, Wallet, ShoppingCart, Clock, Send, Package, ScrollText, MessageSquare } from 'lucide-react';
 
 interface UserDetailsDialogProps {
   open: boolean;
@@ -104,13 +104,14 @@ export const UserDetailsDialog = ({
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
         ) : (
           <Tabs defaultValue="info" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
+            <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7">
               <TabsTrigger value="info" className="text-xs">Инфо</TabsTrigger>
               <TabsTrigger value="balance" className="text-xs">Баланс</TabsTrigger>
               <TabsTrigger value="deliver" className="text-xs">Выдать</TabsTrigger>
-              <TabsTrigger value="message" className="text-xs">Написать</TabsTrigger>
+              <TabsTrigger value="message" className="text-xs">ЛС</TabsTrigger>
               <TabsTrigger value="orders" className="text-xs">Заказы</TabsTrigger>
-              <TabsTrigger value="history" className="text-xs">История</TabsTrigger>
+              <TabsTrigger value="history" className="text-xs">Баланс</TabsTrigger>
+              <TabsTrigger value="logs" className="text-xs">Логи</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="space-y-4">
@@ -303,6 +304,56 @@ export const UserDetailsDialog = ({
                   </Card>
                 ))
               )}
+            </TabsContent>
+
+            <TabsContent value="logs" className="space-y-3">
+              {/* Support tickets */}
+              {details?.tickets?.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <MessageSquare className="h-3 w-3" /> Обращения в поддержку
+                  </p>
+                  {details.tickets.map((t: any) => (
+                    <Card key={t.id} className="p-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium">{t.subject}</span>
+                        <Badge variant={t.status === 'closed' ? 'outline' : t.status === 'replied' ? 'default' : 'secondary'} className="text-xs">
+                          {t.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{t.message}</p>
+                      {t.admin_reply && (
+                        <p className="text-xs mt-1 text-primary">↳ {t.admin_reply}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">{formatDate(t.created_at)}</p>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Analytics events */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <ScrollText className="h-3 w-3" /> Действия ({details?.events?.length || 0})
+                </p>
+                {!details?.events?.length ? (
+                  <p className="text-center text-sm text-muted-foreground py-4">Нет событий</p>
+                ) : (
+                  details.events.slice(0, 50).map((e: any) => (
+                    <Card key={e.id} className="p-2">
+                      <div className="flex justify-between items-center">
+                        <Badge variant="outline" className="text-xs font-mono">{e.event_type}</Badge>
+                        <span className="text-xs text-muted-foreground">{formatDate(e.created_at)}</span>
+                      </div>
+                      {e.event_data && Object.keys(e.event_data).length > 0 && (
+                        <pre className="text-xs text-muted-foreground mt-1 overflow-x-auto max-h-20">
+                          {JSON.stringify(e.event_data, null, 2)}
+                        </pre>
+                      )}
+                    </Card>
+                  ))
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         )}
