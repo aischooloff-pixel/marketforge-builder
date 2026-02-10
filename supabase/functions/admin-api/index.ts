@@ -835,6 +835,38 @@ serve(async (req) => {
         });
       }
 
+      // ============ REVIEWS ============
+      case path === "/reviews" && method === "GET": {
+        const { data, error } = await supabase
+          .from("reviews")
+          .select("*, profiles!reviews_user_id_fkey(first_name, username)")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/reviews/") && path.endsWith("/moderate") && method === "POST": {
+        const reviewId = path.split("/")[2];
+        const { status: newStatus } = body;
+
+        const { error } = await supabase
+          .from("reviews")
+          .update({
+            status: newStatus,
+            moderated_at: new Date().toISOString(),
+            moderated_by: userId || null,
+          })
+          .eq("id", reviewId);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Not found" }),

@@ -281,6 +281,17 @@ export const useAdmin = () => {
     return result;
   }, [invokeAdminApi]);
 
+  // Reviews
+  const fetchReviews = useCallback(async () => {
+    return invokeAdminApi('/reviews', 'GET');
+  }, [invokeAdminApi]);
+
+  const moderateReview = useCallback(async (reviewId: string, status: 'approved' | 'rejected') => {
+    const result = await invokeAdminApi<{ success: boolean }>(`/reviews/${reviewId}/moderate`, 'POST', { status });
+    if (result?.success) toast.success(status === 'approved' ? 'Отзыв одобрен' : 'Отзыв отклонён');
+    return result?.success || false;
+  }, [invokeAdminApi]);
+
   return {
     isLoading,
     error,
@@ -321,5 +332,8 @@ export const useAdmin = () => {
     createTicket,
     replyToTicket,
     updateTicketStatus,
+    // Reviews
+    fetchReviews,
+    moderateReview,
   };
 };
