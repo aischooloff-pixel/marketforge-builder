@@ -6,6 +6,7 @@ import { useApprovedReviews, useAverageRating } from '@/hooks/useReviews';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ProductCard } from '@/components/ProductCard';
+import { InfiniteCarousel } from '@/components/InfiniteCarousel';
 import { ReviewForm } from '@/components/ReviewForm';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -194,17 +195,7 @@ const Index = () => {
                     </div>)}
                 </div>
               </> : popularProducts.length > 0 ? <>
-                {/* Horizontal scroll on Mobile, Grid on Desktop */}
-                <div className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
-                  <div className="flex gap-3 snap-x snap-mandatory">
-                    {popularProducts.map((product, index) => <div key={product.id} className="w-[85vw] flex-shrink-0 snap-center">
-                        <ProductCard product={product} index={index} />
-                      </div>)}
-                  </div>
-                </div>
-                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {popularProducts.map((product, index) => <ProductCard key={product.id} product={product} index={index} />)}
-                </div>
+                <InfiniteCarousel products={popularProducts} />
               </> : <div className="text-center py-12 text-muted-foreground">
                 <p>Популярные товары скоро появятся</p>
               </div>}
