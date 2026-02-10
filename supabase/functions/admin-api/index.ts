@@ -6,6 +6,88 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ============ SECURITY UTILITIES ============
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(value: string): boolean {
+  return UUID_REGEX.test(value);
+}
+
+/** Timing-safe string comparison to prevent timing attacks */
+async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const keyData = crypto.getRandomValues(new Uint8Array(32));
+  const key = await crypto.subtle.importKey(
+    "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const [sigA, sigB] = await Promise.all([
+    crypto.subtle.sign("HMAC", key, encoder.encode(a)),
+    crypto.subtle.sign("HMAC", key, encoder.encode(b)),
+  ]);
+  const viewA = new Uint8Array(sigA);
+  const viewB = new Uint8Array(sigB);
+  if (viewA.length !== viewB.length) return false;
+  let result = 0;
+  for (let i = 0; i < viewA.length; i++) {
+    result |= viewA[i] ^ viewB[i];
+  }
+  return result === 0;
+}
+
+/** Validate Telegram initData signature (same logic as telegram-auth) */
+function arrayBufferToHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function validateTelegramInitData(initDataString: string, botToken: string): Promise<{ valid: boolean; telegramId?: number }> {
+  try {
+    const params = new URLSearchParams(initDataString);
+    const hash = params.get("hash");
+    const authDate = params.get("auth_date");
+    const userStr = params.get("user");
+    if (!hash || !authDate) return { valid: false };
+
+    // Check expiration (1 hour)
+    const now = Math.floor(Date.now() / 1000);
+    if (now - parseInt(authDate) > 3600) return { valid: false };
+
+    params.delete("hash");
+    const sortedParams = Array.from(params.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join("\n");
+
+    const encoder = new TextEncoder();
+    const webAppDataKey = await crypto.subtle.importKey(
+      "raw", encoder.encode("WebAppData"), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const secretKeyBuffer = await crypto.subtle.sign("HMAC", webAppDataKey, encoder.encode(botToken));
+    const secretKey = await crypto.subtle.importKey(
+      "raw", secretKeyBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const hashBuffer = await crypto.subtle.sign("HMAC", secretKey, encoder.encode(sortedParams));
+    const calculatedHash = arrayBufferToHex(hashBuffer);
+
+    if (calculatedHash !== hash) return { valid: false };
+
+    // Extract telegram user ID
+    if (userStr) {
+      const user = JSON.parse(decodeURIComponent(userStr));
+      return { valid: true, telegramId: user.id };
+    }
+    return { valid: false };
+  } catch {
+    return { valid: false };
+  }
+}
+
+/** Rate limiting constants */
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 15;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -16,21 +98,111 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { userId, path: requestPath, method: requestMethod, adminPassword, ...body } = await req.json().catch(() => ({}));
+    // Limit request body size (1MB max)
+    const contentLength = req.headers.get("content-length");
+    if (contentLength && parseInt(contentLength) > 1_048_576) {
+      return new Response(
+        JSON.stringify({ error: "Request too large" }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { userId, path: requestPath, method: requestMethod, adminPassword, initData, ...body } = await req.json().catch(() => ({}));
     
-    // Use path from body if provided (for unified routing), otherwise parse from URL
     const url = new URL(req.url);
     const path = requestPath || url.pathname.replace("/admin-api", "") || "/";
     const method = requestMethod || req.method;
 
-    // Auth: either admin password OR user role check
-    const configuredPassword = Deno.env.get("ADMIN_PASSWORD");
-    const isPasswordAuth = adminPassword && configuredPassword && adminPassword === configuredPassword;
+    // Derive a rate-limit key from forwarded IP or fallback
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    // Hash the IP so we don't store raw IPs
+    const encoder = new TextEncoder();
+    const ipHashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(clientIp + supabaseServiceKey));
+    const ipHint = arrayBufferToHex(ipHashBuf).substring(0, 16);
 
-    if (!isPasswordAuth) {
-      // Fallback to role-based auth (for Telegram users with admin role)
-      if (!userId) {
-        console.log("Admin API: Missing userId and no valid password");
+    // ============ AUTHENTICATION ============
+    let isAuthed = false;
+    let authMethod = "none";
+
+    // Method 1: Admin password
+    const configuredPassword = Deno.env.get("ADMIN_PASSWORD");
+    if (adminPassword && configuredPassword) {
+      // Check rate limiting BEFORE password comparison
+      const cutoff = new Date(Date.now() - LOCKOUT_MINUTES * 60 * 1000).toISOString();
+      const { count: recentFailures } = await supabase
+        .from("admin_login_attempts")
+        .select("*", { count: "exact", head: true })
+        .eq("ip_hint", ipHint)
+        .eq("success", false)
+        .gte("attempted_at", cutoff);
+
+      if ((recentFailures || 0) >= MAX_ATTEMPTS) {
+        console.log(`Admin API: Rate limited IP ${ipHint}`);
+        return new Response(
+          JSON.stringify({ error: "Too many attempts. Try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Timing-safe comparison
+      const passwordMatch = await timingSafeEqual(adminPassword, configuredPassword);
+
+      // Log the attempt
+      await supabase.from("admin_login_attempts").insert({
+        ip_hint: ipHint,
+        success: passwordMatch,
+      });
+
+      // Cleanup old attempts (older than 24h)
+      const cleanupCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      await supabase.from("admin_login_attempts").delete().lt("attempted_at", cleanupCutoff);
+
+      if (passwordMatch) {
+        isAuthed = true;
+        authMethod = "password";
+      } else {
+        console.log(`Admin API: Invalid password from ${ipHint}`);
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Method 2: Telegram initData verification + role check
+    if (!isAuthed && initData) {
+      const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+      if (botToken) {
+        const validation = await validateTelegramInitData(initData, botToken);
+        if (validation.valid && validation.telegramId) {
+          // Look up profile by telegram_id
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("telegram_id", validation.telegramId)
+            .single();
+
+          if (profile?.id) {
+            const { data: roles } = await supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", profile.id);
+
+            const hasAdminRole = roles?.some((r) => r.role === "admin" || r.role === "moderator");
+            if (hasAdminRole) {
+              isAuthed = true;
+              authMethod = "telegram";
+            }
+          }
+        }
+      }
+    }
+
+    // Method 3: Legacy userId (DEPRECATED - kept for backward compatibility but validated)
+    if (!isAuthed && userId && !initData) {
+      // Only accept valid UUIDs
+      if (!isValidUUID(userId)) {
+        console.log(`Admin API: Invalid userId format: ${userId}`);
         return new Response(
           JSON.stringify({ error: "Unauthorized" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -50,17 +222,35 @@ serve(async (req) => {
         );
       }
 
-      const isAdmin = roles?.some((r) => r.role === "admin" || r.role === "moderator");
-      if (!isAdmin) {
-        console.log(`Admin API: User ${userId} is not admin. Roles:`, roles);
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      const hasAdminRole = roles?.some((r) => r.role === "admin" || r.role === "moderator");
+      if (hasAdminRole) {
+        isAuthed = true;
+        authMethod = "role";
       }
     }
 
-    console.log(`Admin API: ${method} ${path} (auth: ${isPasswordAuth ? "password" : "role"})`);
+    if (!isAuthed) {
+      console.log("Admin API: Authentication failed - no valid method");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Admin API: ${method} ${path} (auth: ${authMethod})`);
+
+    // Validate UUID in path segments where expected
+    const pathParts = path.split("/").filter(Boolean);
+    if (pathParts.length >= 2) {
+      const possibleId = pathParts[1];
+      // If it looks like it should be a UUID (not a keyword like "validate")
+      if (possibleId && possibleId.length > 10 && !isValidUUID(possibleId)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid ID format" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // Route handling
     switch (true) {
@@ -989,9 +1179,9 @@ serve(async (req) => {
     }
   } catch (err) {
     console.error("Admin API error:", err);
-    const message = err instanceof Error ? err.message : "Internal server error";
+    // Don't expose internal error details to client
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

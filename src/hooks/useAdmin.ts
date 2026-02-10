@@ -44,7 +44,7 @@ interface User {
 type OrderStatus = 'pending' | 'paid' | 'completed' | 'cancelled' | 'refunded';
 
 export const useAdmin = () => {
-  const { user } = useTelegram();
+  const { user, webApp } = useTelegram();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [adminPassword, setAdminPassword] = useState<string | null>(() => {
@@ -105,6 +105,7 @@ export const useAdmin = () => {
       const { data, error: fnError } = await supabase.functions.invoke('admin-api', {
         body: {
           userId: user?.id || null,
+          initData: webApp?.initData || undefined,
           adminPassword: adminPassword || undefined,
           path,
           method,
