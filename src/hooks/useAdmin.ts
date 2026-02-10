@@ -105,6 +105,7 @@ export const useAdmin = () => {
       const { data, error: fnError } = await supabase.functions.invoke('admin-api', {
         body: {
           userId: user?.id || null,
+          initData: webApp?.initData || undefined,
           adminPassword: adminPassword || undefined,
           path,
           method,
