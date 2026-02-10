@@ -35,6 +35,35 @@ serve(async (req) => {
       );
     }
 
+    // Action: availability — get countries with stock counts
+    if (action === "availability") {
+      const countriesRes = await fetch(`${PX6_BASE}/${apiKey}/getcountry?version=${proxyVersion}`);
+      const countriesData = await countriesRes.json();
+      if (countriesData.status !== "yes") {
+        throw new Error(`px6 getcountry failed: ${JSON.stringify(countriesData)}`);
+      }
+
+      const countryList: string[] = countriesData.list || [];
+      const availability: Record<string, number> = {};
+
+      // Fetch count for each country in parallel
+      const countPromises = countryList.map(async (c: string) => {
+        try {
+          const r = await fetch(`${PX6_BASE}/${apiKey}/getcount?country=${c}&version=${proxyVersion}`);
+          const d = await r.json();
+          availability[c] = d.status === "yes" ? parseInt(d.count) || 0 : 0;
+        } catch {
+          availability[c] = 0;
+        }
+      });
+      await Promise.all(countPromises);
+
+      return new Response(
+        JSON.stringify({ countries: countryList, availability, balance: countriesData.balance }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Action: getcount — check available proxy count for a country
     if (action === "getcount") {
       if (!country) throw new Error("country is required");

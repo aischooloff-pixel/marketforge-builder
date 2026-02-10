@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useProduct, useProductStock } from '@/hooks/useProducts';
 import { useCart } from '@/contexts/CartContext';
+import { useProxyAvailability } from '@/hooks/useProxyAvailability';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CountrySelector, ServiceSelector } from '@/components/CountrySelector';
+import { ProxyCountrySelector } from '@/components/ProxyCountrySelector';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,6 +34,12 @@ const ProductPage = () => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('30');
+
+  // Determine if this is an API proxy product and which version
+  const isApiProduct = product?.tags?.some(t => t.startsWith('api:px6')) ?? false;
+  const proxyVersion = product?.tags?.includes('api:px6:v3') ? 3 : product?.tags?.includes('api:px6:v4') ? 4 : 6;
+
+  const { data: proxyData, isLoading: proxyLoading } = useProxyAvailability(proxyVersion, isApiProduct);
   if (isLoading) {
     return <div className="min-h-screen flex flex-col">
         <Header />
@@ -65,7 +73,6 @@ const ProductPage = () => {
         </div>
       </div>;
   }
-  const isApiProduct = product.tags?.some(t => t.startsWith('api:'));
   const needsPeriodSelector = isApiProduct;
 
   const periodOptions = [
@@ -217,8 +224,17 @@ const ProductPage = () => {
                       </p>
                     </div>}
 
-                  {/* Country Selector for Proxy/VPS */}
-                  {needsCountrySelector && !isOutOfStock && <div className="mb-6">
+                  {/* Country Selector - dynamic for API products, static for others */}
+                  {isApiProduct && !isOutOfStock && <div className="mb-6">
+                      <ProxyCountrySelector
+                        countries={proxyData?.countries || []}
+                        availability={proxyData?.availability || {}}
+                        selectedCountry={selectedCountry}
+                        onSelect={setSelectedCountry}
+                        isLoading={proxyLoading}
+                      />
+                    </div>}
+                  {!isApiProduct && needsCountrySelector && !isOutOfStock && <div className="mb-6">
                       <CountrySelector selectedCountry={selectedCountry} onSelect={setSelectedCountry} availableCountries={product.countries} />
                     </div>}
 
@@ -259,7 +275,7 @@ const ProductPage = () => {
                   </div>
 
                   {/* Add to Cart */}
-                  <Button size="lg" className="w-full gap-2 mb-4" onClick={handleAddToCart} disabled={isOutOfStock || (needsCountrySelector && !selectedCountry)}>
+                  <Button size="lg" className="w-full gap-2 mb-4" onClick={handleAddToCart} disabled={isOutOfStock || (isApiProduct && !selectedCountry) || (isApiProduct && selectedCountry && (proxyData?.availability?.[selectedCountry] || 0) === 0) || (!isApiProduct && needsCountrySelector && !selectedCountry)}>
                     {isOutOfStock ? <>
                         <PackageX className="h-5 w-5" />
                         Нет в наличии
