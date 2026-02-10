@@ -58,8 +58,42 @@ const Index = () => {
                 ​Первый магазин с приложением         
               </motion.div>
               
-              <h1 className="text-3xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 md:mb-6">
-                TEMKA<span style={{ color: '#8c8c8c' }}>.STORE</span>
+              <h1 className="text-3xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4 md:mb-6 flex items-center justify-center flex-wrap">
+                {'TEMKA'.split('').map((char, i) => (
+                  <motion.span
+                    key={`t-${i}`}
+                    initial={{ opacity: 0, y: 30, scale: 0.5 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: 0.4 + i * 0.08, duration: 0.4, type: 'spring', stiffness: 200 }}
+                  >
+                    {char}
+                  </motion.span>
+                ))}
+                {'.STORE'.split('').map((char, i) => (
+                  <motion.span
+                    key={`s-${i}`}
+                    initial={{ opacity: 0, y: 30, scale: 0.5 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: 0.4 + (5 + i) * 0.08, duration: 0.4, type: 'spring', stiffness: 200 }}
+                    style={{ color: '#8c8c8c' }}
+                  >
+                    {char}
+                  </motion.span>
+                ))}
+                <motion.span
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: [0, 1, 0.8], scale: [0, 1.3, 1] }}
+                  transition={{ delay: 1.4, duration: 0.6, ease: 'easeOut' }}
+                  className="ml-2 inline-block"
+                >
+                  <motion.span
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ delay: 2, duration: 0.5, ease: 'easeInOut' }}
+                    className="inline-block text-2xl md:text-5xl lg:text-6xl"
+                  >
+                    🔥
+                  </motion.span>
+                </motion.span>
               </h1>
               
               <p className="text-base md:text-2xl text-muted-foreground mb-6 md:mb-10 max-w-2xl mx-auto px-2">
