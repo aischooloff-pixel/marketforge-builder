@@ -740,7 +740,7 @@ serve(async (req) => {
         });
 
         // Claim product items
-        const claimedItems: string[] = [];
+        const claimedItems: Array<{ content: string; file_url?: string }> = [];
         for (let i = 0; i < qty; i++) {
           const { data: claimed } = await supabase.rpc("claim_product_item", {
             p_product_id: deliverProductId,
@@ -748,14 +748,14 @@ serve(async (req) => {
             p_order_id: order.id,
           });
           if (claimed && claimed.length > 0) {
-            claimedItems.push(claimed[0].content);
+            claimedItems.push({ content: claimed[0].content, file_url: claimed[0].file_url });
           }
         }
 
         // Update order with delivered content
         if (claimedItems.length > 0) {
           await supabase.from("orders").update({
-            delivered_content: claimedItems.join("\n---\n"),
+            delivered_content: claimedItems.map(i => i.content).join("\n---\n"),
           }).eq("id", order.id);
         }
 
@@ -769,19 +769,60 @@ serve(async (req) => {
             .single();
 
           if (userProfile?.telegram_id) {
-            const deliveryText = claimedItems.length > 0
-              ? `🎁 *Вам выдан товар!*\n\n*Товар:* ${product.name}\n*Количество:* ${qty}\n\n${claimedItems.join("\n---\n")}`
+            const chatId = userProfile.telegram_id;
+            const textItems = claimedItems.filter(i => !i.file_url);
+            const fileItems = claimedItems.filter(i => !!i.file_url);
+
+            // Send text message
+            const deliveryText = textItems.length > 0
+              ? `🎁 *Вам выдан товар!*\n\n*Товар:* ${product.name}\n*Количество:* ${qty}\n\n${textItems.map(i => i.content).join("\n---\n")}`
               : `🎁 *Вам выдан товар!*\n\n*Товар:* ${product.name}\n*Количество:* ${qty}`;
 
             await fetch(`https://api.telegram.org/bot${botToken2}/sendMessage`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                chat_id: userProfile.telegram_id,
+                chat_id: chatId,
                 text: deliveryText,
                 parse_mode: "Markdown",
               }),
             }).catch(e => console.error("TG delivery notify error:", e));
+
+            // Send files via Telegram
+            for (const item of fileItems) {
+              try {
+                const fileUrl = item.file_url!;
+                const filePath = fileUrl.includes("/storage/v1/object/public/")
+                  ? fileUrl.split("/storage/v1/object/public/delivery-files/")[1]
+                  : fileUrl.split("/delivery-files/").pop();
+
+                if (!filePath) continue;
+
+                const { data: fileData, error: fileError } = await supabase.storage
+                  .from("delivery-files")
+                  .download(filePath);
+
+                if (fileError || !fileData) {
+                  console.error(`Failed to download file ${filePath}:`, fileError);
+                  continue;
+                }
+
+                const fileName = decodeURIComponent(filePath.split("/").pop() || "file");
+                const formData = new FormData();
+                formData.append("chat_id", chatId.toString());
+                formData.append("document", new File([fileData], fileName));
+                formData.append("caption", `📎 Файл из выдачи: ${product.name}`);
+
+                await fetch(`https://api.telegram.org/bot${botToken2}/sendDocument`, {
+                  method: "POST",
+                  body: formData,
+                });
+
+                console.log(`[AdminDeliver] Sent file ${fileName} to chat ${chatId}`);
+              } catch (e) {
+                console.error("TG file delivery error:", e);
+              }
+            }
           }
         }
 
