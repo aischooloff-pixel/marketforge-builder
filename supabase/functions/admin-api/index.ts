@@ -1179,9 +1179,9 @@ serve(async (req) => {
     }
   } catch (err) {
     console.error("Admin API error:", err);
-    const message = err instanceof Error ? err.message : "Internal server error";
+    // Don't expose internal error details to client
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
