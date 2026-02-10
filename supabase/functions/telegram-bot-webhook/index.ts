@@ -182,13 +182,13 @@ serve(async (req) => {
     const text = message.text?.trim();
 
     if (text === "/start" || text?.startsWith("/start ")) {
-      // Check if user already exists in profiles (= already passed captcha before)
-      const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id`, {
+      // Check if user already passed captcha (bot_verified = true)
+      const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id,bot_verified`, {
         headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
       });
       const profiles = await profileRes.json();
 
-      if (profiles && profiles.length > 0) {
+      if (profiles && profiles.length > 0 && profiles[0].bot_verified === true) {
         // Returning user — send welcome directly, no captcha
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: "POST",
