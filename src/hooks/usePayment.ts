@@ -79,32 +79,11 @@ export const usePayment = () => {
         console.error('Order items error:', itemsError);
       }
 
-      // Deduct balance if using partial balance
-      if (balanceToUse > 0) {
-        const newBalance = user.balance - balanceToUse;
-
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ balance: newBalance })
-          .eq('id', user.id);
-
-        if (profileError) {
-          throw new Error('Ошибка списания баланса');
-        }
-
-        await supabase.from('transactions').insert({
-          user_id: user.id,
-          type: 'purchase' as const,
-          amount: -balanceToUse,
-          balance_after: newBalance,
-          order_id: order.id,
-          description: `Частичная оплата заказа #${order.id.substring(0, 8)} (баланс)`,
-        });
-
-        await refreshUser();
-      }
+      // NOTE: Balance is NOT deducted here — it will be deducted in the webhook
+      // after CryptoBot confirms payment, to avoid losing balance on unpaid invoices.
 
       // Create CryptoBot invoice for the remaining amount
+      // Pass balanceToUse so the webhook can deduct it upon payment confirmation
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke(
         'cryptobot-create-invoice',
         {
@@ -112,6 +91,7 @@ export const usePayment = () => {
             userId: user.id,
             amount: cryptoAmount,
             orderId: order.id,
+            balanceToUse,
             description: `Заказ #${order.id.substring(0, 8)}${balanceToUse > 0 ? ` (баланс: ${balanceToUse}₽)` : ''}`,
           },
         }
