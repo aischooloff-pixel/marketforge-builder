@@ -164,26 +164,25 @@ serve(async (req) => {
       await supabase.from("pending_reviews").delete().eq("id", pending.id);
 
       // Get user profile id
-      const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id`, {
-        headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
-      });
-      const profiles = await profileRes.json();
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("telegram_id", telegramId)
+        .limit(1);
       const userId = profiles?.[0]?.id;
 
       if (userId) {
         // Insert review with status=pending
-        const insertRes = await fetch(`${supabaseUrl}/rest/v1/reviews`, {
-          method: "POST",
-          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-          body: JSON.stringify({
+        const { error: reviewErr } = await supabase
+          .from("reviews")
+          .insert({
             user_id: userId,
             rating: pending.rating,
             text: text.substring(0, 1000),
             status: "pending",
-          }),
-        });
+          });
 
-        if (insertRes.ok) {
+        if (!reviewErr) {
           await tg(botToken, "sendMessage", {
             chat_id: chatId,
             text: "✅ Спасибо за отзыв! Он отправлен на модерацию и будет опубликован после проверки.",
