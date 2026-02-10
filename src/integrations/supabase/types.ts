@@ -324,6 +324,7 @@ export type Database = {
         Row: {
           balance: number | null
           ban_reason: string | null
+          bot_verified: boolean
           created_at: string | null
           first_name: string | null
           id: string
@@ -338,6 +339,7 @@ export type Database = {
         Insert: {
           balance?: number | null
           ban_reason?: string | null
+          bot_verified?: boolean
           created_at?: string | null
           first_name?: string | null
           id?: string
@@ -352,6 +354,7 @@ export type Database = {
         Update: {
           balance?: number | null
           ban_reason?: string | null
+          bot_verified?: boolean
           created_at?: string | null
           first_name?: string | null
           id?: string

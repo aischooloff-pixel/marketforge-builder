@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN bot_verified boolean NOT NULL DEFAULT false;
