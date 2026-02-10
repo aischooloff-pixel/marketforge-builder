@@ -47,7 +47,7 @@ export const usePayment = () => {
     setError(null);
 
     try {
-      // Check stock availability and max_per_user limits
+      // Check stock availability and max_per_user limits (read-only, safe via anon)
       for (const item of items) {
         const { data: productData } = await supabase
           .from('products')
@@ -55,7 +55,6 @@ export const usePayment = () => {
           .eq('id', item.productId)
           .single();
 
-        // Check stock (count unsold items without file_url)
         const { count: fileCount } = await supabase
           .from('product_items')
           .select('*', { count: 'exact', head: true })
@@ -91,7 +90,8 @@ export const usePayment = () => {
           }
         }
       }
-      // Create order
+
+      // Create order via client (INSERT is allowed)
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -107,7 +107,7 @@ export const usePayment = () => {
         throw new Error('Не удалось создать заказ');
       }
 
-      // Create order items
+      // Create order items (INSERT is allowed)
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.productId,
@@ -125,11 +125,7 @@ export const usePayment = () => {
         console.error('Order items error:', itemsError);
       }
 
-      // NOTE: Balance is NOT deducted here — it will be deducted in the webhook
-      // after CryptoBot confirms payment, to avoid losing balance on unpaid invoices.
-
-      // Create CryptoBot invoice for the remaining amount
-      // Pass balanceToUse so the webhook can deduct it upon payment confirmation
+      // Create CryptoBot invoice via edge function (handles payment_id update securely)
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke(
         'cryptobot-create-invoice',
         {
@@ -147,12 +143,6 @@ export const usePayment = () => {
         throw new Error(invoiceData?.error || 'Ошибка создания счёта');
       }
 
-      // Update order with payment_id
-      await supabase
-        .from('orders')
-        .update({ payment_id: invoiceData.invoiceId.toString() })
-        .eq('id', order.id);
-
       return {
         success: true,
         orderId: order.id,
@@ -167,7 +157,7 @@ export const usePayment = () => {
     }
   };
 
-  // Pay with balance
+  // Pay with balance — all mutations happen server-side via edge function
   const payWithBalance = async (
     items: CartItem[],
     total: number
@@ -184,104 +174,27 @@ export const usePayment = () => {
     setError(null);
 
     try {
-      // Check stock availability and max_per_user limits
-      for (const item of items) {
-        const { data: productData } = await supabase
-          .from('products')
-          .select('max_per_user')
-          .eq('id', item.productId)
-          .single();
-
-        // Check stock
-        const { count: fileCount } = await supabase
-          .from('product_items')
-          .select('*', { count: 'exact', head: true })
-          .eq('product_id', item.productId)
-          .not('file_url', 'is', null);
-
-        const isUnlimited = (fileCount || 0) > 0;
-
-        if (!isUnlimited) {
-          const { count: availableStock } = await supabase
-            .from('product_items')
-            .select('*', { count: 'exact', head: true })
-            .eq('product_id', item.productId)
-            .eq('is_sold', false);
-
-          if ((availableStock || 0) < item.quantity) {
-            setIsProcessing(false);
-            return { success: false, error: `Товар "${item.productName}" — в наличии только ${availableStock || 0} шт` };
-          }
-        }
-
-        if (productData && productData.max_per_user > 0) {
-          const { count } = await supabase
-            .from('order_items')
-            .select('*, orders!inner(user_id, status)', { count: 'exact', head: true })
-            .eq('product_id', item.productId)
-            .eq('orders.user_id', user.id)
-            .in('orders.status', ['paid', 'completed']);
-
-          if ((count || 0) >= productData.max_per_user) {
-            setIsProcessing(false);
-            return { success: false, error: `Товар "${item.productName}" можно купить только ${productData.max_per_user} раз(а)` };
-          }
-        }
-      }
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
+      const { data, error: fnError } = await supabase.functions.invoke('pay-with-balance', {
+        body: {
+          userId: user.id,
+          items: items.map(item => ({
+            productId: item.productId,
+            productName: item.productName,
+            price: item.price,
+            quantity: item.quantity,
+            options: item.options || {},
+          })),
           total,
-          status: 'paid',
-          payment_method: 'balance',
-        })
-        .select()
-        .single();
-
-      if (orderError) {
-        throw new Error('Не удалось создать заказ');
-      }
-
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.productId,
-        product_name: item.productName,
-        price: item.price * item.quantity,
-        quantity: item.quantity,
-        options: item.options || {},
-      }));
-
-      await supabase.from('order_items').insert(orderItems);
-
-      // Deduct balance and create transaction
-      const newBalance = user.balance - total;
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ balance: newBalance })
-        .eq('id', user.id);
-
-      if (profileError) {
-        throw new Error('Ошибка списания баланса');
-      }
-
-      // Create transaction record
-      await supabase.from('transactions').insert({
-        user_id: user.id,
-        type: 'purchase',
-        amount: -total,
-        balance_after: newBalance,
-        order_id: order.id,
-        description: `Оплата заказа #${order.id.substring(0, 8)}`,
+        },
       });
 
-      // Trigger auto-delivery via edge function
-      const { data: deliveryData } = await supabase.functions.invoke('process-order', {
-        body: { orderId: order.id },
-      });
+      if (fnError) {
+        throw new Error(fnError.message || 'Ошибка оплаты');
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       // Refresh user to update balance
       await refreshUser();
@@ -292,7 +205,7 @@ export const usePayment = () => {
 
       return {
         success: true,
-        orderId: order.id,
+        orderId: data.orderId,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Ошибка оплаты';
