@@ -7,6 +7,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CountrySelector, ServiceSelector } from '@/components/CountrySelector';
 import { ProxyCountrySelector } from '@/components/ProxyCountrySelector';
+import { TigerNumberBuyer } from '@/components/TigerNumberBuyer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,8 +38,9 @@ const ProductPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [selectedProtocol, setSelectedProtocol] = useState<string>('http');
 
-  // Determine if this is an API proxy product and which version
+  // Determine product type
   const isApiProduct = product?.tags?.some(t => t.startsWith('api:px6')) ?? false;
+  const isTigerProduct = product?.tags?.includes('api:tiger') ?? false;
   const proxyVersion = product?.tags?.includes('api:px6:v3') ? 3 : product?.tags?.includes('api:px6:v4') ? 4 : 6;
 
   const { data: proxyData, isLoading: proxyLoading } = useProxyAvailability(proxyVersion, isApiProduct);
@@ -242,97 +244,105 @@ const ProductPage = () => {
                   </div>}
                 
                 <div className="p-4 md:p-6">
-                  {/* Stock info */}
-                  {!stockLoading && !isOutOfStock && <div className="mb-4">
-                      <p className="text-sm text-muted-foreground">
-                        В наличии: <span className={stockCount > 0 && stockCount <= 5 ? 'text-orange-500 font-medium' : 'font-medium'}>
-                          {stockCount === -1 ? '∞' : stockCount} шт
+                  {/* Tiger SMS Product - Custom buyer */}
+                  {isTigerProduct && !isOutOfStock && (
+                    <TigerNumberBuyer />
+                  )}
+
+                  {/* Non-Tiger products: standard purchase flow */}
+                  {!isTigerProduct && <>
+                    {/* Stock info */}
+                    {!stockLoading && !isOutOfStock && <div className="mb-4">
+                        <p className="text-sm text-muted-foreground">
+                          В наличии: <span className={stockCount > 0 && stockCount <= 5 ? 'text-orange-500 font-medium' : 'font-medium'}>
+                            {stockCount === -1 ? '∞' : stockCount} шт
+                          </span>
+                        </p>
+                      </div>}
+
+                    {/* Country Selector - dynamic for API products, static for others */}
+                    {isApiProduct && !isOutOfStock && <div className="mb-6">
+                        <ProxyCountrySelector
+                          countries={proxyData?.countries || []}
+                          availability={proxyData?.availability || {}}
+                          selectedCountry={selectedCountry}
+                          onSelect={setSelectedCountry}
+                          isLoading={proxyLoading}
+                        />
+                      </div>}
+                    {!isApiProduct && needsCountrySelector && !isOutOfStock && <div className="mb-6">
+                        <CountrySelector selectedCountry={selectedCountry} onSelect={setSelectedCountry} availableCountries={product.countries} />
+                      </div>}
+
+                    {/* Period Selector for API products */}
+                    {needsPeriodSelector && !isOutOfStock && <div className="mb-6">
+                        <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Период
+                        </label>
+                        <Select value={activePeriod} onValueChange={setSelectedPeriod}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {periodOptions.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label} — {opt.price} ₽
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>}
+
+                    {/* Protocol Selector for API products */}
+                    {isApiProduct && !isOutOfStock && <div className="mb-6">
+                        <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          Протокол
+                        </label>
+                        <ToggleGroup type="single" value={selectedProtocol} onValueChange={(v) => v && setSelectedProtocol(v)} className="justify-start">
+                          <ToggleGroupItem value="http" className="px-4">
+                            HTTP/HTTPS
+                          </ToggleGroupItem>
+                          <ToggleGroupItem value="socks" className="px-4">
+                            SOCKS5
+                          </ToggleGroupItem>
+                        </ToggleGroup>
+                      </div>}
+
+                    {/* Service Selector for Virtual Numbers */}
+                    {needsServiceSelector && !isOutOfStock && <div className="mb-6">
+                        <ServiceSelector selectedServices={selectedServices} onToggle={toggleService} availableServices={product.services?.map(s => s.toLowerCase())} />
+                      </div>}
+
+                    {/* Price */}
+                    <div className="mb-4 md:mb-6">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl md:text-4xl font-bold">
+                          {currentPeriodPrice.toLocaleString('ru-RU')}
                         </span>
-                      </p>
-                    </div>}
-
-                  {/* Country Selector - dynamic for API products, static for others */}
-                  {isApiProduct && !isOutOfStock && <div className="mb-6">
-                      <ProxyCountrySelector
-                        countries={proxyData?.countries || []}
-                        availability={proxyData?.availability || {}}
-                        selectedCountry={selectedCountry}
-                        onSelect={setSelectedCountry}
-                        isLoading={proxyLoading}
-                      />
-                    </div>}
-                  {!isApiProduct && needsCountrySelector && !isOutOfStock && <div className="mb-6">
-                      <CountrySelector selectedCountry={selectedCountry} onSelect={setSelectedCountry} availableCountries={product.countries} />
-                    </div>}
-
-                  {/* Period Selector for API products */}
-                  {needsPeriodSelector && !isOutOfStock && <div className="mb-6">
-                      <label className="text-sm font-medium mb-2 block flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        Период
-                      </label>
-                      <Select value={activePeriod} onValueChange={setSelectedPeriod}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {periodOptions.map(opt => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label} — {opt.price} ₽
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>}
-
-                  {/* Protocol Selector for API products */}
-                  {isApiProduct && !isOutOfStock && <div className="mb-6">
-                      <label className="text-sm font-medium mb-2 block flex items-center gap-2">
-                        <Globe className="h-4 w-4" />
-                        Протокол
-                      </label>
-                      <ToggleGroup type="single" value={selectedProtocol} onValueChange={(v) => v && setSelectedProtocol(v)} className="justify-start">
-                        <ToggleGroupItem value="http" className="px-4">
-                          HTTP/HTTPS
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="socks" className="px-4">
-                          SOCKS5
-                        </ToggleGroupItem>
-                      </ToggleGroup>
-                    </div>}
-
-                  {/* Service Selector for Virtual Numbers */}
-                  {needsServiceSelector && !isOutOfStock && <div className="mb-6">
-                      <ServiceSelector selectedServices={selectedServices} onToggle={toggleService} availableServices={product.services?.map(s => s.toLowerCase())} />
-                    </div>}
-
-                  {/* Price */}
-                  <div className="mb-4 md:mb-6">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl md:text-4xl font-bold">
-                        {currentPeriodPrice.toLocaleString('ru-RU')}
-                      </span>
-                      <span className="text-lg md:text-xl text-muted-foreground">₽</span>
-                      {product.type === 'subscription' && <span className="text-muted-foreground text-sm">/мес</span>}
+                        <span className="text-lg md:text-xl text-muted-foreground">₽</span>
+                        {product.type === 'subscription' && <span className="text-muted-foreground text-sm">/мес</span>}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Add to Cart */}
-                  <Button size="lg" className="w-full gap-2 mb-4" onClick={handleAddToCart} disabled={isOutOfStock || (isApiProduct && !selectedCountry) || (isApiProduct && selectedCountry && (proxyData?.availability?.[selectedCountry] || 0) === 0) || (!isApiProduct && needsCountrySelector && !selectedCountry)}>
-                    {isOutOfStock ? <>
-                        <PackageX className="h-5 w-5" />
-                        Нет в наличии
-                      </> : <>
-                        <ShoppingCart className="h-5 w-5" />
-                        Добавить в корзину
-                      </>}
-                  </Button>
+                    {/* Add to Cart */}
+                    <Button size="lg" className="w-full gap-2 mb-4" onClick={handleAddToCart} disabled={isOutOfStock || (isApiProduct && !selectedCountry) || (isApiProduct && selectedCountry && (proxyData?.availability?.[selectedCountry] || 0) === 0) || (!isApiProduct && needsCountrySelector && !selectedCountry)}>
+                      {isOutOfStock ? <>
+                          <PackageX className="h-5 w-5" />
+                          Нет в наличии
+                        </> : <>
+                          <ShoppingCart className="h-5 w-5" />
+                          Добавить в корзину
+                        </>}
+                    </Button>
 
-                  {/* Warning */}
-                  {!isOutOfStock && <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <span>Возврат и замена товара возможна через Тех.поддержку</span>
-                    </div>}
+                    {/* Warning */}
+                    {!isOutOfStock && <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>Возврат и замена товара возможна через Тех.поддержку</span>
+                      </div>}
+                  </>}
                 </div>
               </div>
             </motion.div>
