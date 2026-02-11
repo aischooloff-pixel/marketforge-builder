@@ -17,11 +17,11 @@ export const useTigerPrices = (service?: string) => {
         body: { action: 'getPrices', service },
       });
       if (error) throw error;
-      // API returns { country_code: { service_code: { cost, count } } }
       return data.prices as Record<string, Record<string, TigerPriceInfo>>;
     },
     enabled: !!service,
-    staleTime: 1000 * 60,
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 60,
   });
 };
 

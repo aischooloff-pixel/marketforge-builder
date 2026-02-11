@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { useTigerPrices, useBuyNumber, TIGER_SERVICES, TIGER_COUNTRIES, getServiceByCode, getCountryByCode } from '@/hooks/useTigerSms';
+import { useTigerPrices, useBuyNumber, TIGER_SERVICES, getServiceByCode, getCountryByCode } from '@/hooks/useTigerSms';
 import { useTelegram } from '@/contexts/TelegramContext';
 import { CountryFlag } from '@/components/CountryFlags';
+import { ServiceLogo } from '@/components/ServiceLogo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -24,16 +25,19 @@ export const TigerNumberBuyer = () => {
     selectedService || undefined
   );
 
-  // Filter services by search
+  // Filter services by search — normalize input
   const filteredServices = useMemo(() => {
     const q = serviceSearch.toLowerCase().trim();
     if (!q) return TIGER_SERVICES;
-    return TIGER_SERVICES.filter(s =>
-      s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q)
-    );
+    return TIGER_SERVICES.filter(s => {
+      const name = s.name.toLowerCase();
+      // Search by name parts (split by / for combined names like "TikTok/Douyin")
+      const nameParts = name.split(/[\s\/]+/);
+      return nameParts.some(part => part.startsWith(q)) || name.includes(q) || s.code.toLowerCase().includes(q);
+    });
   }, [serviceSearch]);
 
-  // Get available countries for selected service from prices data + merge with known names
+  // Get available countries for selected service from prices data
   const availableCountries = useMemo(() => {
     if (!selectedService || !pricesData) return [];
 
@@ -47,9 +51,9 @@ export const TigerNumberBuyer = () => {
         const serviceData = serviceMap[selectedService];
         return {
           code,
-          name: known?.name || `#${code}`,
+          name: known?.name || `Страна #${code}`,
           flag: known?.flag || '',
-          price: Math.ceil(parseFloat(serviceData.cost)),
+          price: parseFloat(serviceData.cost),
           count: serviceData.count,
         };
       })
@@ -137,7 +141,7 @@ export const TigerNumberBuyer = () => {
                     : 'hover:bg-secondary'
                 }`}
               >
-                <span className="text-base flex-shrink-0 w-6 text-center">{s.icon || '📱'}</span>
+                <ServiceLogo serviceCode={s.code} fallbackEmoji={s.icon} className="flex-shrink-0" />
                 <span className="flex-1 truncate">{s.name}</span>
                 {selectedService === s.code && <Check className="h-4 w-4 flex-shrink-0" />}
               </button>
@@ -162,6 +166,11 @@ export const TigerNumberBuyer = () => {
             <label className="text-sm font-medium mb-2 block flex items-center gap-2">
               <Phone className="h-4 w-4" />
               Страна
+              {!pricesLoading && availableCountries.length > 0 && (
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({availableCountries.length} доступно)
+                </span>
+              )}
             </label>
 
             {pricesLoading ? (
@@ -201,7 +210,7 @@ export const TigerNumberBuyer = () => {
                         <span className={`text-xs flex-shrink-0 ${
                           selectedCountry === c.code ? 'text-primary-foreground/80' : 'text-muted-foreground'
                         }`}>
-                          {c.price} ₽ · {c.count} шт
+                          {c.price.toFixed(2)} ₽ · {c.count} шт
                         </span>
                         {selectedCountry === c.code && <Check className="h-4 w-4 flex-shrink-0" />}
                       </button>
@@ -233,16 +242,17 @@ export const TigerNumberBuyer = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Стоимость номера</p>
                 <p className="text-2xl font-bold">
-                  {selectedCountryData.price} <span className="text-lg text-muted-foreground">₽</span>
+                  {selectedCountryData.price.toFixed(2)} <span className="text-lg text-muted-foreground">₽</span>
                 </p>
               </div>
               <div className="text-right">
                 <Badge variant="outline" className="text-xs mb-1">
                   {selectedCountryData.count} шт
                 </Badge>
-                <p className="text-xs text-muted-foreground">
-                  {serviceInfo?.icon} {serviceInfo?.name} · {countryInfo?.name || `#${selectedCountry}`}
-                </p>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground justify-end">
+                  <ServiceLogo serviceCode={selectedService} fallbackEmoji={serviceInfo?.icon} className="w-3.5 h-3.5" />
+                  {serviceInfo?.name} · {countryInfo?.name || `#${selectedCountry}`}
+                </div>
               </div>
             </div>
           </motion.div>
@@ -264,7 +274,7 @@ export const TigerNumberBuyer = () => {
         ) : (
           <>
             <ShoppingCart className="h-5 w-5" />
-            {selectedCountryData ? `Купить за ${selectedCountryData.price} ₽` : 'Выберите сервис и страну'}
+            {selectedCountryData ? `Купить за ${selectedCountryData.price.toFixed(2)} ₽` : 'Выберите сервис и страну'}
           </>
         )}
       </Button>
