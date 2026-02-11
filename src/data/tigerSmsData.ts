@@ -44,9 +44,9 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: "hu", name: "Ukrnet", icon: "📧" },
   { code: "ya", name: "Яндекс", icon: "🔴" },
   { code: "mb", name: "Microsoft/Outlook", icon: "💻" },
-  { code: "mm", name: "Mail.ru", icon: "📧" },
+  { code: "ma", name: "Mail.ru", icon: "📧" },
   { code: "pt", name: "ProtonMail", icon: "📧" },
-  { code: "wx", name: "iCloud/Apple", icon: "🍎" },
+  { code: "ma", name: "iCloud/Apple", icon: "🍎" },
   // Маркетплейсы
   { code: "am", name: "Amazon", icon: "📦" },
   { code: "uu", name: "Wildberries", icon: "🟣" },
