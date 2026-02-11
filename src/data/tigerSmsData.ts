@@ -97,7 +97,7 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: "gp", name: "Ticketmaster", icon: "🎫" },
   // Сервисы
   { code: "ot", name: "Любой другой", icon: "📋" },
-  { code: "dp", name: "OpenAI/ChatGPT", icon: "🤖" },
+  { code: "dr", name: "OpenAI/ChatGPT", icon: "🤖" },
   { code: "tl", name: "Truecaller", icon: "📞" },
   { code: "ee", name: "Twilio", icon: "📱" },
   { code: "wj", name: "1xBet", icon: "🎰" },
