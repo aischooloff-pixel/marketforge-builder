@@ -2,14 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useMyVirtualNumbers, useCheckSmsStatus, useSetActivationStatus, TIGER_SERVICES } from '@/hooks/useTigerSms';
 import { useTelegram } from '@/contexts/TelegramContext';
 import { ServiceLogo } from '@/components/ServiceLogo';
-import { ReviewForm } from '@/components/ReviewForm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import { Phone, MessageSquare, Copy, Check, RefreshCw, X, Loader2, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const getServiceInfo = (code: string) =>
   TIGER_SERVICES.find(s => s.code === code) || { code, name: code, icon: '📱' };
@@ -23,6 +24,123 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
   cancelled: { label: 'Отменено', variant: 'destructive' },
 };
 
+const CANCEL_TIMER_MS = 3 * 60 * 1000; // 3 minutes
+
+const InlineReviewForm = ({ numberId }: { numberId: string }) => {
+  const { user } = useTelegram();
+  const [rating, setRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [text, setText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  if (submitted) {
+    return <p className="text-xs text-muted-foreground mt-2">✅ Спасибо за отзыв!</p>;
+  }
+
+  const handleSubmit = async () => {
+    if (!user) return;
+    if (!text.trim() || text.trim().length < 5) {
+      toast.error('Напишите хотя бы 5 символов');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('user-data', {
+        body: {
+          initData: window.Telegram?.WebApp?.initData,
+          path: '/reviews',
+          method: 'POST',
+          text: text.trim().slice(0, 500),
+          rating,
+        },
+      });
+      if (error || data?.error) throw new Error(data?.error || 'Failed');
+      setSubmitted(true);
+      toast.success('Отзыв отправлен на модерацию');
+    } catch {
+      toast.error('Не удалось отправить отзыв');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">Оставить отзыв</p>
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => setRating(star)}
+            onMouseEnter={() => setHoverRating(star)}
+            onMouseLeave={() => setHoverRating(0)}
+            className="p-0.5"
+          >
+            <Star
+              className={`h-5 w-5 transition-colors ${
+                star <= (hoverRating || rating)
+                  ? 'fill-primary text-primary'
+                  : 'text-muted-foreground/30'
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+      <Textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Поделитесь впечатлениями..."
+        maxLength={500}
+        className="resize-none text-xs"
+        rows={2}
+      />
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{text.length}/500</span>
+        <Button size="sm" onClick={handleSubmit} disabled={submitting || !text.trim()} className="h-7 text-xs">
+          {submitting ? 'Отправка...' : 'Отправить'}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+const CancelTimer = ({ createdAt, onExpired }: { createdAt: string; onExpired: () => void }) => {
+  const [remaining, setRemaining] = useState(() => {
+    const diff = CANCEL_TIMER_MS - (Date.now() - new Date(createdAt).getTime());
+    return Math.max(0, diff);
+  });
+
+  useEffect(() => {
+    if (remaining <= 0) {
+      onExpired();
+      return;
+    }
+    const interval = setInterval(() => {
+      const diff = CANCEL_TIMER_MS - (Date.now() - new Date(createdAt).getTime());
+      if (diff <= 0) {
+        setRemaining(0);
+        onExpired();
+        clearInterval(interval);
+      } else {
+        setRemaining(diff);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [createdAt]);
+
+  if (remaining <= 0) return null;
+
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  return (
+    <span className="text-xs text-muted-foreground tabular-nums">
+      {mins}:{secs.toString().padStart(2, '0')}
+    </span>
+  );
+};
+
 export const VirtualNumbersTab = () => {
   const queryClient = useQueryClient();
   const { user } = useTelegram();
@@ -31,6 +149,7 @@ export const VirtualNumbersTab = () => {
   const setStatus = useSetActivationStatus();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pollingIds, setPollingIds] = useState<Set<string>>(new Set());
+  const [expiredIds, setExpiredIds] = useState<Set<string>>(new Set());
 
   // Auto-poll for waiting numbers
   useEffect(() => {
@@ -45,6 +164,11 @@ export const VirtualNumbersTab = () => {
             if (result.status === 'code_received') {
               refetch();
               toast.success(`SMS код получен для ${n.phone_number}!`);
+            } else if (result.status === 'cancelled') {
+              refetch();
+              queryClient.invalidateQueries({ queryKey: ['telegram-user'] });
+              queryClient.invalidateQueries({ queryKey: ['transactions'] });
+              toast.info('Номер был отменён');
             }
           },
         });
@@ -67,37 +191,9 @@ export const VirtualNumbersTab = () => {
       {
         onSuccess: () => {
           refetch();
-          // Invalidate profile/user data to reflect refunded balance
           queryClient.invalidateQueries({ queryKey: ['telegram-user'] });
           queryClient.invalidateQueries({ queryKey: ['transactions'] });
           toast.success('Активация отменена, средства возвращены');
-        },
-        onError: (err) => toast.error(err.message),
-      }
-    );
-  };
-
-
-  const handleComplete = (activationId: string) => {
-    setStatus.mutate(
-      { activationId, status: '6' },
-      {
-        onSuccess: () => {
-          refetch();
-          toast.success('Активация завершена');
-        },
-        onError: (err) => toast.error(err.message),
-      }
-    );
-  };
-
-  const handleRetry = (activationId: string) => {
-    setStatus.mutate(
-      { activationId, status: '3' },
-      {
-        onSuccess: () => {
-          refetch();
-          toast.info('Запрошено повторное SMS');
         },
         onError: (err) => toast.error(err.message),
       }
@@ -111,6 +207,10 @@ export const VirtualNumbersTab = () => {
         refetch();
         if (result.status === 'code_received') {
           toast.success('SMS код получен!');
+        } else if (result.status === 'cancelled') {
+          queryClient.invalidateQueries({ queryKey: ['telegram-user'] });
+          queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          toast.info('Номер был отменён');
         } else {
           toast.info('SMS ещё не получено, ожидаем...');
         }
@@ -124,6 +224,10 @@ export const VirtualNumbersTab = () => {
       },
     });
   };
+
+  const handleTimerExpired = useCallback((activationId: string) => {
+    setExpiredIds(prev => new Set(prev).add(activationId));
+  }, []);
 
   if (isLoading) {
     return (
@@ -155,6 +259,7 @@ export const VirtualNumbersTab = () => {
         const statusInfo = statusLabels[num.status] || statusLabels.waiting;
         const isActive = ['waiting', 'ready', 'retry'].includes(num.status);
         const hasCode = num.status === 'code_received' && num.sms_code;
+        const canCancel = isActive && !expiredIds.has(num.activation_id);
 
         return (
           <motion.div
@@ -173,9 +278,17 @@ export const VirtualNumbersTab = () => {
                   <p className="text-xs text-muted-foreground">{num.country_name || num.country}</p>
                 </div>
               </div>
-              <Badge variant={statusInfo.variant} className="text-xs">
-                {statusInfo.label}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {isActive && (
+                  <CancelTimer
+                    createdAt={num.created_at}
+                    onExpired={() => handleTimerExpired(num.activation_id)}
+                  />
+                )}
+                <Badge variant={statusInfo.variant} className="text-xs">
+                  {statusInfo.label}
+                </Badge>
+              </div>
             </div>
 
             {/* Phone number */}
@@ -216,7 +329,7 @@ export const VirtualNumbersTab = () => {
               </div>
             )}
 
-            {/* Actions */}
+            {/* Actions for active numbers */}
             {isActive && (
               <div className="flex gap-2 flex-wrap">
                 <Button
@@ -233,47 +346,36 @@ export const VirtualNumbersTab = () => {
                   )}
                   Проверить SMS
                 </Button>
-                {num.status !== 'retry' && (
+                {canCancel && (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => handleRetry(num.activation_id)}
+                    className="gap-1.5 text-xs text-destructive"
+                    onClick={() => handleCancel(num.activation_id)}
                   >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Повторное SMS
+                    <X className="h-3.5 w-3.5" />
+                    Отменить
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs text-destructive"
-                  onClick={() => handleCancel(num.activation_id)}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Отменить
-                </Button>
               </div>
             )}
 
-            {hasCode && num.status === 'code_received' && (
+            {/* Check SMS button when code received (to refresh latest code) */}
+            {hasCode && (
               <div className="flex gap-2 mt-2">
-                <Button
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => handleComplete(num.activation_id)}
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  Подтвердить
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   className="gap-1.5 text-xs"
-                  onClick={() => handleRetry(num.activation_id)}
+                  onClick={() => handleManualCheck(num.activation_id)}
+                  disabled={pollingIds.has(num.activation_id)}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Другой код
+                  {pollingIds.has(num.activation_id) ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  Проверить SMS
                 </Button>
               </div>
             )}
@@ -284,11 +386,9 @@ export const VirtualNumbersTab = () => {
               {num.price > 0 && <span>{num.price} ₽</span>}
             </div>
 
-            {/* Review button for completed */}
+            {/* Review form for completed */}
             {num.status === 'completed' && (
-              <div className="mt-2">
-                <ReviewForm />
-              </div>
+              <InlineReviewForm numberId={num.id} />
             )}
           </motion.div>
         );

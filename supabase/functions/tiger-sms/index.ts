@@ -171,10 +171,10 @@ serve(async (req) => {
       // Error responses
       const errorMap: Record<string, string> = {
         NO_NUMBERS: "Нет доступных номеров для этого сервиса и страны",
-        NO_BALANCE: "Недостаточно средств на балансе Tiger SMS",
+        NO_BALANCE: "Поставщик обновляет эту позицию. Попробуйте позже",
         BAD_SERVICE: "Неверный сервис",
-        BAD_KEY: "Неверный API ключ",
-        ERROR_SQL: "Ошибка сервера Tiger SMS",
+        BAD_KEY: "Сервис временно недоступен. Попробуйте позже",
+        ERROR_SQL: "Сервис временно недоступен. Попробуйте позже",
         NO_ACTIVATION: "Не удалось создать активацию",
       };
 
@@ -209,10 +209,43 @@ serve(async (req) => {
         return json({ status: "wait_resend" });
       }
       if (result === "STATUS_CANCEL") {
+        // Check if already cancelled to avoid double refund
+        const { data: vnRow } = await supabase
+          .from("virtual_numbers")
+          .select("user_id, price, status")
+          .eq("activation_id", activationId)
+          .single();
+
         await supabase
           .from("virtual_numbers")
           .update({ status: "cancelled" })
           .eq("activation_id", activationId);
+
+        // Refund if not already cancelled
+        if (vnRow && vnRow.status !== "cancelled" && vnRow.price > 0) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("balance")
+            .eq("id", vnRow.user_id)
+            .single();
+
+          if (profile) {
+            const newBalance = (profile.balance || 0) + vnRow.price;
+            await supabase
+              .from("profiles")
+              .update({ balance: newBalance })
+              .eq("id", vnRow.user_id);
+
+            await supabase.from("transactions").insert({
+              user_id: vnRow.user_id,
+              type: "refund",
+              amount: vnRow.price,
+              balance_after: newBalance,
+              description: "Возврат за виртуальный номер (отмена поставщиком)",
+            });
+          }
+        }
+
         return json({ status: "cancelled" });
       }
 
