@@ -22,7 +22,7 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: "wb", name: "WeChat", icon: "💬" },
   { code: "ds", name: "Discord", icon: "🎮" },
   { code: "me", name: "Line", icon: "💚" },
-  { code: "fu", name: "Signal", icon: "🔒" },
+  { code: "bw", name: "Signal", icon: "🔒" },
   { code: "qq", name: "Tencent QQ", icon: "💬" },
   { code: "kt", name: "KakaoTalk", icon: "💬" },
   // Соцсети
@@ -36,7 +36,7 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: "kf", name: "Weibo", icon: "📱" },
   { code: "sn", name: "Snapchat", icon: "👻" },
   { code: "pm", name: "Pinterest", icon: "📌" },
-  { code: "la", name: "LinkedIn", icon: "💼" },
+  { code: "tn", name: "LinkedIn", icon: "💼" },
   { code: "rd", name: "Reddit", icon: "🟧" },
   { code: "cr", name: "TenChat", icon: "💬" },
   // Почта и облако
@@ -231,7 +231,7 @@ export const TIGER_COUNTRIES: TigerCountry[] = [
   { code: "180", name: "Монтсеррат", flag: "ms" },
   { code: "37", name: "Марокко", flag: "ma" },
   { code: "80", name: "Мозамбик", flag: "mz" },
-  { code: "5", name: "Мьянма", flag: "" },
+  { code: "5", name: "Мьянма", flag: "mm" },
   { code: "138", name: "Намибия", flag: "na" },
   { code: "81", name: "Непал", flag: "np" },
   { code: "48", name: "Нидерланды", flag: "nl" },
