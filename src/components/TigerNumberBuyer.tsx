@@ -37,7 +37,8 @@ export const TigerNumberBuyer = () => {
     });
   }, [serviceSearch]);
 
-  // Get available countries for selected service from prices data
+  // Get available countries for selected service from prices data (with 10% markup)
+  const TIGER_MARKUP = 1.10;
   const availableCountries = useMemo(() => {
     if (!selectedService || !pricesData) return [];
 
@@ -49,11 +50,12 @@ export const TigerNumberBuyer = () => {
       .map(([code, serviceMap]) => {
         const known = getCountryByCode(code);
         const serviceData = serviceMap[selectedService];
+        const basePrice = parseFloat(serviceData.cost);
         return {
           code,
           name: known?.name || `Страна #${code}`,
           flag: known?.flag || '',
-          price: parseFloat(serviceData.cost),
+          price: Math.ceil(basePrice * TIGER_MARKUP * 100) / 100,
           count: serviceData.count,
         };
       })
