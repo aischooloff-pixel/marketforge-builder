@@ -60,8 +60,8 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: "hn", name: "1688", icon: "🛒" },
   // Дейтинг
   { code: "oi", name: "Tinder", icon: "🔥" },
-  { code: "yx", name: "Bumble", icon: "💛" },
-  { code: "bv", name: "Badoo", icon: "💜" },
+  { code: "mo", name: "Bumble", icon: "💛" },
+  { code: "qv", name: "Badoo", icon: "💜" },
   // Транспорт
   { code: "ub", name: "Uber", icon: "🚗" },
   { code: "rl", name: "Bolt/Taxify", icon: "🚕" },
