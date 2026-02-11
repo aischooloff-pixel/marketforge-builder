@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useMyVirtualNumbers, useCheckSmsStatus, useSetActivationStatus, TIGER_SERVICES } from '@/hooks/useTigerSms';
 import { useTelegram } from '@/contexts/TelegramContext';
+import { ServiceLogo } from '@/components/ServiceLogo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -159,7 +160,7 @@ export const VirtualNumbersTab = () => {
             {/* Header */}
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-lg">{serviceInfo.icon}</span>
+                <ServiceLogo serviceCode={num.service} fallbackEmoji={serviceInfo.icon} className="w-5 h-5" />
                 <div>
                   <p className="font-semibold text-sm">{num.service_name || serviceInfo.name}</p>
                   <p className="text-xs text-muted-foreground">{num.country_name || num.country}</p>

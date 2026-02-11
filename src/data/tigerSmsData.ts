@@ -3,7 +3,7 @@
 export interface TigerService {
   code: string;
   name: string;
-  icon?: string; // emoji fallback
+  icon: string; // emoji fallback
 }
 
 export interface TigerCountry {
@@ -12,7 +12,7 @@ export interface TigerCountry {
   flag: string; // ISO 2-letter for flag component
 }
 
-// ─── Popular services (sorted by popularity) ───
+// ─── Popular services (sorted by popularity, NO duplicate codes) ───
 export const TIGER_SERVICES: TigerService[] = [
   // Мессенджеры
   { code: 'tg', name: 'Telegram', icon: '💬' },
@@ -23,6 +23,7 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: 'me', name: 'Line', icon: '💚' },
   { code: 'fu', name: 'Signal', icon: '🔒' },
   { code: 'qq', name: 'Tencent QQ', icon: '💬' },
+  { code: 'kt', name: 'KakaoTalk', icon: '💬' },
   // Соцсети
   { code: 'ig', name: 'Instagram', icon: '📸' },
   { code: 'lf', name: 'TikTok/Douyin', icon: '🎵' },
@@ -34,16 +35,16 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: 'kf', name: 'Weibo', icon: '📱' },
   { code: 'sn', name: 'Snapchat', icon: '👻' },
   { code: 'pm', name: 'Pinterest', icon: '📌' },
-  { code: 'kt', name: 'KakaoTalk', icon: '💬' },
   { code: 'la', name: 'LinkedIn', icon: '💼' },
   { code: 'rd', name: 'Reddit', icon: '🟧' },
+  { code: 'cr', name: 'TenChat', icon: '💬' },
   // Почта и облако
   { code: 'go', name: 'Google/Gmail', icon: '🔍' },
   { code: 'hu', name: 'Ukrnet', icon: '📧' },
   { code: 'ya', name: 'Яндекс', icon: '🔴' },
   { code: 'mb', name: 'Microsoft/Outlook', icon: '💻' },
   { code: 'mm', name: 'Mail.ru', icon: '📧' },
-  { code: 'pm', name: 'ProtonMail', icon: '📧' },
+  { code: 'pt', name: 'ProtonMail', icon: '📧' },
   { code: 'ma', name: 'iCloud/Apple', icon: '🍎' },
   // Маркетплейсы
   { code: 'am', name: 'Amazon', icon: '📦' },
@@ -55,6 +56,7 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: 'an', name: 'Adidas', icon: '👟' },
   { code: 'xv', name: 'Wish', icon: '🛍️' },
   { code: 'wr', name: 'Walmart', icon: '🏪' },
+  { code: 'hn', name: '1688', icon: '🛒' },
   // Дейтинг
   { code: 'oi', name: 'Tinder', icon: '🔥' },
   { code: 'yx', name: 'Bumble', icon: '💛' },
@@ -66,6 +68,7 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: 'of', name: 'urent/jet', icon: '🛴' },
   { code: 'dg', name: 'DiDi', icon: '🚗' },
   { code: 'ly', name: 'Lyft', icon: '🚗' },
+  { code: 'cp', name: 'Uklon', icon: '🚕' },
   // Доставка еды
   { code: 'sg', name: 'Delivery Club', icon: '🍔' },
   { code: 'rr', name: 'Wolt', icon: '🍕' },
@@ -91,19 +94,15 @@ export const TIGER_SERVICES: TigerService[] = [
   // Путешествия
   { code: 'qx', name: 'Booking', icon: '🏨' },
   { code: 'gp', name: 'Ticketmaster', icon: '🎫' },
-  { code: 'ub', name: 'Uber', icon: '🚗' },
   // Сервисы
   { code: 'ot', name: 'Любой другой', icon: '📋' },
   { code: 'dp', name: 'OpenAI/ChatGPT', icon: '🤖' },
   { code: 'tl', name: 'Truecaller', icon: '📞' },
   { code: 'ee', name: 'Twilio', icon: '📱' },
-  { code: 'cp', name: 'Uklon', icon: '🚕' },
   { code: 'wj', name: '1xBet', icon: '🎰' },
   { code: 'lh', name: '24betting', icon: '🎰' },
   { code: 'ta', name: 'Wink', icon: '📺' },
-  { code: 'cr', name: 'TenChat', icon: '💬' },
   { code: 'sc', name: 'Voggt', icon: '🛍️' },
-  { code: 'hn', name: '1688', icon: '🛒' },
 ];
 
 // ─── All Tiger SMS countries ───
@@ -149,12 +148,12 @@ export const TIGER_COUNTRIES: TigerCountry[] = [
   { code: '38', name: 'Азербайджан', flag: 'az' },
   { code: '39', name: 'Латвия', flag: 'lv' },
   { code: '40', name: 'Германия', flag: 'de' },
-  { code: '41', name: 'Сербия', flag: 'rs' },
+  { code: '41', name: 'Черногория', flag: 'me' },
   { code: '42', name: 'Ямайка', flag: 'jm' },
   { code: '43', name: 'Мексика', flag: 'mx' },
   { code: '44', name: 'Чехия', flag: 'cz' },
   { code: '45', name: 'Саудовская Аравия', flag: 'sa' },
-  { code: '46', name: 'Нигерия', flag: 'ng' },
+  { code: '46', name: 'Камерун', flag: 'cm' },
   { code: '47', name: 'Австралия', flag: 'au' },
   { code: '48', name: 'Испания', flag: 'es' },
   { code: '49', name: 'Турция', flag: 'tr' },
@@ -162,7 +161,7 @@ export const TIGER_COUNTRIES: TigerCountry[] = [
   { code: '51', name: 'Бразилия', flag: 'br' },
   { code: '52', name: 'Румыния', flag: 'ro' },
   { code: '53', name: 'Ирак', flag: 'iq' },
-  { code: '54', name: 'Испания', flag: 'es' },
+  { code: '54', name: 'Испания (virtual)', flag: 'es' },
   { code: '55', name: 'Перу', flag: 'pe' },
   { code: '56', name: 'Аргентина', flag: 'ar' },
   { code: '57', name: 'Таджикистан', flag: 'tj' },
@@ -170,12 +169,12 @@ export const TIGER_COUNTRIES: TigerCountry[] = [
   { code: '59', name: 'Боливия', flag: 'bo' },
   { code: '60', name: 'Коста-Рика', flag: 'cr' },
   { code: '61', name: 'Гватемала', flag: 'gt' },
-  { code: '62', name: 'Бразилия', flag: 'br' },
+  { code: '62', name: 'Бразилия (virtual)', flag: 'br' },
   { code: '63', name: 'Швеция', flag: 'se' },
   { code: '64', name: 'Алжир', flag: 'dz' },
   { code: '65', name: 'ДР Конго', flag: 'cd' },
   { code: '66', name: 'Таиланд', flag: 'th' },
-  { code: '67', name: 'Вьетнам', flag: 'vn' },
+  { code: '67', name: 'Вьетнам (virtual)', flag: 'vn' },
   { code: '68', name: 'Сирия', flag: 'sy' },
   { code: '69', name: 'Папуа-Новая Гвинея', flag: 'pg' },
   { code: '70', name: 'Новая Зеландия', flag: 'nz' },
@@ -192,9 +191,9 @@ export const TIGER_COUNTRIES: TigerCountry[] = [
   { code: '81', name: 'Бенин', flag: 'bj' },
   { code: '82', name: 'Непал', flag: 'np' },
   { code: '83', name: 'Армения', flag: 'am' },
-  { code: '84', name: 'Молдова', flag: 'md' },
+  { code: '84', name: 'Молдова (virtual)', flag: 'md' },
   { code: '85', name: 'Южная Корея', flag: 'kr' },
-  { code: '86', name: 'Австралия', flag: 'au' },
+  { code: '86', name: 'Австралия (virtual)', flag: 'au' },
   { code: '87', name: 'Узбекистан', flag: 'uz' },
   { code: '88', name: 'Замбия', flag: 'zm' },
   { code: '89', name: 'Иордания', flag: 'jo' },
@@ -253,6 +252,7 @@ export const TIGER_COUNTRIES: TigerCountry[] = [
   { code: '142', name: 'Тринидад и Тобаго', flag: 'tt' },
   { code: '143', name: 'Кюрасао', flag: 'cw' },
   { code: '144', name: 'Куба', flag: 'cu' },
+  { code: '145', name: 'Ангилья', flag: 'ai' },
   { code: '146', name: 'Люксембург', flag: 'lu' },
   { code: '147', name: 'Исландия', flag: 'is' },
   { code: '148', name: 'Монако', flag: 'mc' },
@@ -266,6 +266,7 @@ export const TIGER_COUNTRIES: TigerCountry[] = [
   { code: '156', name: 'Черногория', flag: 'me' },
   { code: '157', name: 'Косово', flag: 'xk' },
   { code: '158', name: 'Мальдивы', flag: 'mv' },
+  { code: '159', name: 'Габон', flag: 'ga' },
   { code: '160', name: 'Свазиленд', flag: 'sz' },
   { code: '161', name: 'Руанда', flag: 'rw' },
   { code: '162', name: 'Бурунди', flag: 'bi' },
@@ -274,7 +275,7 @@ export const TIGER_COUNTRIES: TigerCountry[] = [
   { code: '165', name: 'Коморы', flag: 'km' },
   { code: '166', name: 'Фиджи', flag: 'fj' },
   { code: '167', name: 'Макао', flag: 'mo' },
-  { code: '168', name: 'Суринам', flag: 'sr' },
+  { code: '168', name: 'Суринам (virtual)', flag: 'sr' },
   { code: '169', name: 'Ботсвана', flag: 'bw' },
   { code: '170', name: 'Лесото', flag: 'ls' },
   { code: '171', name: 'Намибия', flag: 'na' },
@@ -310,11 +311,8 @@ export const TIGER_COUNTRIES: TigerCountry[] = [
   { code: '201', name: 'Экваториальная Гвинея', flag: 'gq' },
   { code: '202', name: 'Южный Судан', flag: 'ss' },
   { code: '203', name: 'Либерия', flag: 'lr' },
-  { code: '204', name: 'Габон', flag: 'ga' },
-  { code: '205', name: 'Маврикий', flag: 'mu' },
-  { code: '206', name: 'Сейшельские Острова', flag: 'sc' },
-  { code: '207', name: 'Коморы', flag: 'km' },
-  { code: '208', name: 'Йемен', flag: 'ye' },
+  { code: '204', name: 'Сейшельские Острова', flag: 'sc' },
+  { code: '205', name: 'Йемен', flag: 'ye' },
   { code: '1001', name: 'Ирландия (virtual)', flag: 'ie' },
 ];
 
