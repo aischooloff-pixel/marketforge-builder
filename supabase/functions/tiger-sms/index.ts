@@ -253,6 +253,17 @@ serve(async (req) => {
       return json({ error: result }, 400);
     }
 
+    // ── getCountries ── get country list from Tiger SMS
+    if (action === "getCountries") {
+      const result = await tigerRequest({ action: "getCountries" });
+      try {
+        const data = JSON.parse(result);
+        return json({ countries: data });
+      } catch {
+        return json({ error: result }, 400);
+      }
+    }
+
     // ── getMyNumbers ── get user's virtual numbers from DB
     if (action === "getMyNumbers") {
       if (!userId) return json({ error: "userId required" }, 400);
