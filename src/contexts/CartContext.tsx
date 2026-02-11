@@ -8,11 +8,12 @@ interface CartItem {
   selectedCountry?: string;
   selectedServices?: string[];
   selectedPeriod?: number;
+  selectedProtocol?: string;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (product: Product, options?: { country?: string; services?: string[]; period?: number }) => void;
+  addItem: (product: Product, options?: { country?: string; services?: string[]; period?: number; protocol?: string }) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -64,7 +65,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [items, isInitialized, user?.telegram_id]);
 
-  const addItem = (product: Product, options?: { country?: string; services?: string[]; period?: number }) => {
+  const addItem = (product: Product, options?: { country?: string; services?: string[]; period?: number; protocol?: string }) => {
     setItems(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
@@ -80,6 +81,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         selectedCountry: options?.country,
         selectedServices: options?.services,
         selectedPeriod: options?.period,
+        selectedProtocol: options?.protocol,
       }];
     });
   };

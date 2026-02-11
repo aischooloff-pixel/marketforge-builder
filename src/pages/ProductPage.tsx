@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
-import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2, Clock } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2, Clock, Globe } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 const ProductPage = () => {
   const {
     id
@@ -34,6 +35,7 @@ const ProductPage = () => {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('30');
+  const [selectedProtocol, setSelectedProtocol] = useState<string>('http');
 
   // Determine if this is an API proxy product and which version
   const isApiProduct = product?.tags?.some(t => t.startsWith('api:px6')) ?? false;
@@ -76,12 +78,12 @@ const ProductPage = () => {
   const needsPeriodSelector = isApiProduct;
 
   const periodOptions = [
-    { value: '3', label: '3 дня' },
-    { value: '7', label: '1 неделя' },
-    { value: '14', label: '2 недели' },
-    { value: '30', label: '1 месяц' },
-    { value: '60', label: '2 месяца' },
-    { value: '90', label: '3 месяца' },
+    { value: '5', label: '5 дней' },
+    { value: '10', label: '10 дней' },
+    { value: '20', label: '20 дней' },
+    { value: '30', label: '30 дней' },
+    { value: '60', label: '60 дней' },
+    { value: '90', label: '90 дней' },
   ];
 
   const handleAddToCart = () => {
@@ -104,6 +106,7 @@ const ProductPage = () => {
       country: selectedCountry || undefined,
       services: selectedServices.length > 0 ? selectedServices : undefined,
       period: needsPeriodSelector ? parseInt(selectedPeriod) : undefined,
+      protocol: isApiProduct ? selectedProtocol : undefined,
     });
   };
   const toggleService = (serviceId: string) => {
@@ -256,6 +259,22 @@ const ProductPage = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>}
+
+                  {/* Protocol Selector for API products */}
+                  {isApiProduct && !isOutOfStock && <div className="mb-6">
+                      <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        Протокол
+                      </label>
+                      <ToggleGroup type="single" value={selectedProtocol} onValueChange={(v) => v && setSelectedProtocol(v)} className="justify-start">
+                        <ToggleGroupItem value="http" className="px-4">
+                          HTTP/HTTPS
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="socks" className="px-4">
+                          SOCKS5
+                        </ToggleGroupItem>
+                      </ToggleGroup>
                     </div>}
 
                   {/* Service Selector for Virtual Numbers */}
