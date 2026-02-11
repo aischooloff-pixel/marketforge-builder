@@ -1,1 +1,4 @@
 project_id = "dhazezwjaqlqmnacgnim"
+
+[functions.profi-like]
+verify_jwt = false

@@ -189,8 +189,8 @@ const ProductPage = () => {
               </p>
 
               {/* Tags */}
-              {product.tags && product.tags.length > 0 && <div className="flex flex-wrap gap-2 mb-8">
-                  {product.tags.map(tag => <span key={tag} className="px-3 py-1 rounded-full bg-secondary text-sm">
+              {product.tags && product.tags.filter(t => !t.startsWith('api:')).length > 0 && <div className="flex flex-wrap gap-2 mb-8">
+                  {product.tags.filter(t => !t.startsWith('api:')).map(tag => <span key={tag} className="px-3 py-1 rounded-full bg-secondary text-sm">
                       {tag}
                     </span>)}
                 </div>}

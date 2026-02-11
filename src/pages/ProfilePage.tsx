@@ -11,8 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { User, Wallet, Package, Clock, Loader2, Copy, Check, Eye, EyeOff, Phone } from 'lucide-react';
+import { User, Wallet, Package, Clock, Loader2, Copy, Check, Eye, EyeOff, Phone, TrendingUp } from 'lucide-react';
 import { VirtualNumbersTab } from '@/components/VirtualNumbersTab';
+import { BoostOrdersTab } from '@/components/BoostOrdersTab';
 import SupportDialog from '@/components/SupportDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -273,7 +274,7 @@ const ProfilePage = () => {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
-            <TabsList className="w-full max-w-none grid grid-cols-3 h-10">
+            <TabsList className="w-full max-w-none grid grid-cols-4 h-10">
               <TabsTrigger value="orders" className="gap-1.5 text-xs md:text-sm">
                 <Package className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Заказы</span>
@@ -283,6 +284,11 @@ const ProfilePage = () => {
                 <Phone className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Номера</span>
                 <span className="sm:hidden">📱</span>
+              </TabsTrigger>
+              <TabsTrigger value="boosts" className="gap-1.5 text-xs md:text-sm">
+                <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Накрутки</span>
+                <span className="sm:hidden">🚀</span>
               </TabsTrigger>
               <TabsTrigger value="transactions" className="gap-1.5 text-xs md:text-sm">
                 <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -409,6 +415,11 @@ const ProfilePage = () => {
             {/* Virtual Numbers Tab */}
             <TabsContent value="numbers">
               <VirtualNumbersTab />
+            </TabsContent>
+
+            {/* Boost Orders Tab */}
+            <TabsContent value="boosts">
+              <BoostOrdersTab />
             </TabsContent>
 
             {/* Transactions Tab */}
