@@ -1,43 +1,81 @@
-import { useState } from 'react';
-import { useTigerPrices, useBuyNumber, TIGER_SERVICES, TIGER_COUNTRIES } from '@/hooks/useTigerSms';
+import { useState, useMemo } from 'react';
+import { useTigerPrices, useBuyNumber, TIGER_SERVICES, TIGER_COUNTRIES, getServiceByCode, getCountryByCode } from '@/hooks/useTigerSms';
 import { useTelegram } from '@/contexts/TelegramContext';
 import { CountryFlag } from '@/components/CountryFlags';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ShoppingCart, Phone, MessageSquare } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, ShoppingCart, Phone, MessageSquare, Search, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const TigerNumberBuyer = () => {
   const { user } = useTelegram();
   const navigate = useNavigate();
   const [selectedService, setSelectedService] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [countrySearch, setCountrySearch] = useState('');
   const buyNumber = useBuyNumber();
 
   const { data: pricesData, isLoading: pricesLoading } = useTigerPrices(
     selectedService || undefined
   );
 
-  // Prices come as { country_code: { service_code: { cost, count } } }
-  const getPrice = (): { price: number; count: number } | null => {
-    if (!pricesData || !selectedService || !selectedCountry) return null;
-    const countryData = pricesData[selectedCountry];
-    if (!countryData) return null;
-    const serviceData = countryData[selectedService];
-    if (!serviceData) return null;
-    return { price: Math.ceil(parseFloat(serviceData.cost)), count: serviceData.count };
-  };
+  // Filter services by search
+  const filteredServices = useMemo(() => {
+    const q = serviceSearch.toLowerCase().trim();
+    if (!q) return TIGER_SERVICES;
+    return TIGER_SERVICES.filter(s =>
+      s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q)
+    );
+  }, [serviceSearch]);
 
-  const priceInfo = getPrice();
-  const serviceInfo = TIGER_SERVICES.find(s => s.code === selectedService);
-  const countryInfo = TIGER_COUNTRIES.find(c => c.code === selectedCountry);
+  // Get available countries for selected service from prices data + merge with known names
+  const availableCountries = useMemo(() => {
+    if (!selectedService || !pricesData) return [];
+
+    const entries = Object.entries(pricesData)
+      .filter(([, serviceMap]) => {
+        const serviceData = serviceMap[selectedService];
+        return serviceData && serviceData.count > 0;
+      })
+      .map(([code, serviceMap]) => {
+        const known = getCountryByCode(code);
+        const serviceData = serviceMap[selectedService];
+        return {
+          code,
+          name: known?.name || `#${code}`,
+          flag: known?.flag || '',
+          price: Math.ceil(parseFloat(serviceData.cost)),
+          count: serviceData.count,
+        };
+      })
+      .sort((a, b) => a.price - b.price);
+
+    return entries;
+  }, [selectedService, pricesData]);
+
+  // Filter countries by search
+  const filteredCountries = useMemo(() => {
+    const q = countrySearch.toLowerCase().trim();
+    if (!q) return availableCountries;
+    return availableCountries.filter(c =>
+      c.name.toLowerCase().includes(q) || c.code.includes(q)
+    );
+  }, [countrySearch, availableCountries]);
+
+  // Get price for selected combination
+  const selectedCountryData = availableCountries.find(c => c.code === selectedCountry);
+  const serviceInfo = getServiceByCode(selectedService);
+  const countryInfo = getCountryByCode(selectedCountry);
 
   const handleBuy = async () => {
-    if (!user || !selectedService || !selectedCountry || !priceInfo) return;
+    if (!user || !selectedService || !selectedCountry || !selectedCountryData) return;
 
-    if (user.balance < priceInfo.price) {
+    if (user.balance < selectedCountryData.price) {
       toast.error('Недостаточно средств на балансе');
       return;
     }
@@ -49,7 +87,7 @@ export const TigerNumberBuyer = () => {
         country: selectedCountry,
         countryName: countryInfo?.name || selectedCountry,
         userId: user.id,
-        price: priceInfo.price,
+        price: selectedCountryData.price,
       },
       {
         onSuccess: (data) => {
@@ -66,129 +104,156 @@ export const TigerNumberBuyer = () => {
     );
   };
 
-  // Get available countries for selected service from prices data
-  const availableCountries = selectedService && pricesData
-    ? TIGER_COUNTRIES.filter(c => {
-        const countryData = pricesData[c.code];
-        if (!countryData) return false;
-        const serviceData = countryData[selectedService];
-        return serviceData && serviceData.count > 0;
-      }).sort((a, b) => {
-        const aPrice = parseFloat(pricesData[a.code]?.[selectedService]?.cost || '999');
-        const bPrice = parseFloat(pricesData[b.code]?.[selectedService]?.cost || '999');
-        return aPrice - bPrice;
-      })
-    : [];
-
-  // Also add countries from pricesData that we don't have in our static list
-  const extraCountries = selectedService && pricesData
-    ? Object.keys(pricesData)
-        .filter(code => {
-          const serviceData = pricesData[code]?.[selectedService];
-          return serviceData && serviceData.count > 0 && !TIGER_COUNTRIES.find(c => c.code === code);
-        })
-        .map(code => ({ code, name: `Страна #${code}`, flag: '' }))
-    : [];
-
-  const allCountries = [...availableCountries, ...extraCountries];
-
   return (
     <div className="space-y-4">
-      {/* Service Selector */}
+      {/* ── Service Selector ── */}
       <div>
         <label className="text-sm font-medium mb-2 block flex items-center gap-2">
           <MessageSquare className="h-4 w-4" />
           Сервис
         </label>
-        <Select value={selectedService} onValueChange={(v) => { setSelectedService(v); setSelectedCountry(''); }}>
-          <SelectTrigger>
-            <SelectValue placeholder="Выберите сервис..." />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            {TIGER_SERVICES.map(s => (
-              <SelectItem key={s.code} value={s.code}>
-                <span className="flex items-center gap-2">
-                  <span>{s.icon}</span>
-                  <span>{s.name}</span>
-                </span>
-              </SelectItem>
+        <div className="relative mb-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Поиск сервиса..."
+            value={serviceSearch}
+            onChange={(e) => setServiceSearch(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
+        <ScrollArea className="h-[200px] rounded-lg border bg-card">
+          <div className="p-1">
+            {filteredServices.map(s => (
+              <button
+                key={s.code}
+                onClick={() => {
+                  setSelectedService(s.code);
+                  setSelectedCountry('');
+                  setCountrySearch('');
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left ${
+                  selectedService === s.code
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-secondary'
+                }`}
+              >
+                <span className="text-base flex-shrink-0 w-6 text-center">{s.icon || '📱'}</span>
+                <span className="flex-1 truncate">{s.name}</span>
+                {selectedService === s.code && <Check className="h-4 w-4 flex-shrink-0" />}
+              </button>
             ))}
-          </SelectContent>
-        </Select>
+            {filteredServices.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Сервис не найден
+              </p>
+            )}
+          </div>
+        </ScrollArea>
       </div>
 
-      {/* Country Selector */}
-      {selectedService && (
-        <div>
-          <label className="text-sm font-medium mb-2 block flex items-center gap-2">
-            <Phone className="h-4 w-4" />
-            Страна
-          </label>
-          {pricesLoading ? (
-            <div className="flex items-center gap-2 py-3 text-muted-foreground text-sm">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Загрузка стран и цен...
-            </div>
-          ) : (
-            <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-              <SelectTrigger>
-                <SelectValue placeholder="Выберите страну...">
-                  {selectedCountry && countryInfo && (
-                    <div className="flex items-center gap-2">
-                      {countryInfo.flag && <CountryFlag countryCode={countryInfo.flag} className="h-4 w-6" />}
-                      <span>{countryInfo.name}</span>
-                    </div>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {allCountries.length === 0 ? (
-                  <div className="p-3 text-sm text-muted-foreground text-center">
-                    Нет доступных стран для этого сервиса
+      {/* ── Country Selector ── */}
+      <AnimatePresence>
+        {selectedService && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              Страна
+            </label>
+
+            {pricesLoading ? (
+              <div className="flex items-center gap-2 py-6 text-muted-foreground text-sm justify-center">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Загрузка стран и цен...
+              </div>
+            ) : (
+              <>
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Поиск страны..."
+                    value={countrySearch}
+                    onChange={(e) => setCountrySearch(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <ScrollArea className="h-[220px] rounded-lg border bg-card">
+                  <div className="p-1">
+                    {filteredCountries.map(c => (
+                      <button
+                        key={c.code}
+                        onClick={() => setSelectedCountry(c.code)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left ${
+                          selectedCountry === c.code
+                            ? 'bg-primary text-primary-foreground'
+                            : 'hover:bg-secondary'
+                        }`}
+                      >
+                        {c.flag ? (
+                          <CountryFlag countryCode={c.flag} className="h-4 w-5 flex-shrink-0" />
+                        ) : (
+                          <span className="w-5 text-center text-xs">🌍</span>
+                        )}
+                        <span className="flex-1 truncate">{c.name}</span>
+                        <span className={`text-xs flex-shrink-0 ${
+                          selectedCountry === c.code ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                        }`}>
+                          {c.price} ₽ · {c.count} шт
+                        </span>
+                        {selectedCountry === c.code && <Check className="h-4 w-4 flex-shrink-0" />}
+                      </button>
+                    ))}
+                    {filteredCountries.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        {availableCountries.length === 0
+                          ? 'Нет доступных стран для этого сервиса'
+                          : 'Страна не найдена'}
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  allCountries.map(c => {
-                    const info = pricesData?.[c.code]?.[selectedService];
-                    const price = info ? Math.ceil(parseFloat(info.cost)) : 0;
-                    return (
-                      <SelectItem key={c.code} value={c.code}>
-                        <div className="flex items-center gap-2 w-full">
-                          {c.flag && <CountryFlag countryCode={c.flag} className="h-4 w-6" />}
-                          <span className="flex-1">{c.name}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {price} ₽ · {info?.count} шт
-                          </span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })
-                )}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      )}
+                </ScrollArea>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Price Display */}
-      {priceInfo && (
-        <div className="p-3 rounded-lg bg-secondary/50 border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Стоимость номера</p>
-              <p className="text-2xl font-bold">{priceInfo.price} <span className="text-lg text-muted-foreground">₽</span></p>
+      {/* ── Price Display ── */}
+      <AnimatePresence>
+        {selectedCountryData && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3 rounded-lg bg-secondary/50 border"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Стоимость номера</p>
+                <p className="text-2xl font-bold">
+                  {selectedCountryData.price} <span className="text-lg text-muted-foreground">₽</span>
+                </p>
+              </div>
+              <div className="text-right">
+                <Badge variant="outline" className="text-xs mb-1">
+                  {selectedCountryData.count} шт
+                </Badge>
+                <p className="text-xs text-muted-foreground">
+                  {serviceInfo?.icon} {serviceInfo?.name} · {countryInfo?.name || `#${selectedCountry}`}
+                </p>
+              </div>
             </div>
-            <Badge variant="outline" className="text-xs">
-              Доступно: {priceInfo.count}
-            </Badge>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Buy Button */}
+      {/* ── Buy Button ── */}
       <Button
         size="lg"
         className="w-full gap-2"
-        disabled={!selectedService || !selectedCountry || !priceInfo || priceInfo.count === 0 || buyNumber.isPending}
+        disabled={!selectedService || !selectedCountry || !selectedCountryData || selectedCountryData.count === 0 || buyNumber.isPending}
         onClick={handleBuy}
       >
         {buyNumber.isPending ? (
@@ -199,7 +264,7 @@ export const TigerNumberBuyer = () => {
         ) : (
           <>
             <ShoppingCart className="h-5 w-5" />
-            {priceInfo ? `Купить за ${priceInfo.price} ₽` : 'Выберите сервис и страну'}
+            {selectedCountryData ? `Купить за ${selectedCountryData.price} ₽` : 'Выберите сервис и страну'}
           </>
         )}
       </Button>
