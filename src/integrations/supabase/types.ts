@@ -522,6 +522,68 @@ export type Database = {
           },
         ]
       }
+      social_boost_orders: {
+        Row: {
+          category: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          link: string
+          order_id: string | null
+          price: number
+          quantity: number
+          remains: number | null
+          service_id: number
+          service_name: string
+          start_count: number | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          link: string
+          order_id?: string | null
+          price?: number
+          quantity: number
+          remains?: number | null
+          service_id: number
+          service_name: string
+          start_count?: number | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          link?: string
+          order_id?: string | null
+          price?: number
+          quantity?: number
+          remains?: number | null
+          service_id?: number
+          service_name?: string
+          start_count?: number | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_boost_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           admin_reply: string | null
