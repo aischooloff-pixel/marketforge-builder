@@ -22,7 +22,7 @@ export const TIGER_SERVICES: TigerService[] = [
   { code: "wb", name: "WeChat", icon: "💬" },
   { code: "ds", name: "Discord", icon: "🎮" },
   { code: "me", name: "Line", icon: "💚" },
-  { code: "fu", name: "Signal", icon: "🔒" },
+  { code: "bw", name: "Signal", icon: "🔒" },
   { code: "qq", name: "Tencent QQ", icon: "💬" },
   { code: "kt", name: "KakaoTalk", icon: "💬" },
   // Соцсети
