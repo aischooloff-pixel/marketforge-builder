@@ -82,13 +82,14 @@ serve(async (req) => {
 
       if (isApiPx6) {
         // Buy proxy via px6.me API
-        const options = item.options as { country?: string; period?: number } | null;
+        const options = item.options as { country?: string; period?: number; protocol?: string } | null;
         const country = options?.country || "ru";
         const period = options?.period || 30;
+        const protocol = options?.protocol || "http";
         // Determine proxy version from tags: api:px6:v3=shared, api:px6:v4=ipv4, default=ipv6
         const proxyVersion = tags.includes("api:px6:v3") ? 3 : tags.includes("api:px6:v4") ? 4 : 6;
 
-        console.log(`[ProcessOrder] API product (px6): buying ${quantity} v${proxyVersion} proxy for ${country}, period ${period}`);
+        console.log(`[ProcessOrder] API product (px6): buying ${quantity} v${proxyVersion} proxy for ${country}, period ${period}, protocol ${protocol}`);
 
         try {
           const px6Url = `${supabaseUrl}/functions/v1/px6-buy-proxy`;
@@ -104,6 +105,7 @@ serve(async (req) => {
               period,
               count: quantity,
               version: proxyVersion,
+              type: protocol,
             }),
           });
 

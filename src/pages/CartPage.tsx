@@ -28,6 +28,7 @@ const CartItemRow = ({
     selectedCountry?: string;
     selectedServices?: string[];
     selectedPeriod?: number;
+    selectedProtocol?: string;
   };
   index: number;
   updateQuantity: (id: string, qty: number) => void;
@@ -62,7 +63,10 @@ const CartItemRow = ({
             Страна: {item.selectedCountry.toUpperCase()}
           </p>}
         {item.selectedPeriod && <p className="text-sm mt-1">
-            Период: {item.selectedPeriod === 3 ? '3 дня' : item.selectedPeriod === 7 ? '1 неделя' : item.selectedPeriod === 14 ? '2 недели' : item.selectedPeriod === 30 ? '1 месяц' : item.selectedPeriod === 60 ? '2 месяца' : item.selectedPeriod === 90 ? '3 месяца' : `${item.selectedPeriod} дн.`}
+            Период: {`${item.selectedPeriod} дн.`}
+          </p>}
+        {item.selectedProtocol && <p className="text-sm mt-1">
+            Протокол: {item.selectedProtocol === 'socks' ? 'SOCKS5' : 'HTTP/HTTPS'}
           </p>}
         {item.selectedServices && item.selectedServices.length > 0 && <p className="text-sm mt-1">
             Сервисы: {item.selectedServices.join(', ')}
@@ -160,6 +164,7 @@ const CartPage = () => {
         country: item.selectedCountry,
         services: item.selectedServices,
         period: item.selectedPeriod,
+        protocol: item.selectedProtocol,
       }
     }));
     const result = await payWithCryptoBot(cartItems, discountedTotal, balanceToUse);
@@ -188,6 +193,7 @@ const CartPage = () => {
         country: item.selectedCountry,
         services: item.selectedServices,
         period: item.selectedPeriod,
+        protocol: item.selectedProtocol,
       }
     }));
     const result = await payWithBalance(cartItems, discountedTotal);

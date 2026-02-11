@@ -18,9 +18,10 @@ serve(async (req) => {
       throw new Error("PX6_API_KEY is not configured");
     }
 
-    const { action, country, period, count, version } = await req.json();
+    const { action, country, period, count, version, type } = await req.json();
     // version: 6=IPv6, 4=IPv4, 3=IPv4 Shared
     const proxyVersion = version || 3;
+    const proxyType = type === "socks" ? "socks" : "http";
 
     // Action: getcountry — list available countries
     if (action === "getcountry") {
@@ -87,7 +88,7 @@ serve(async (req) => {
       console.log(`[px6] Buying ${proxyCount} v${proxyVersion} proxy for ${country}, period: ${proxyPeriod} days`);
 
       const res = await fetch(
-        `${PX6_BASE}/${apiKey}/buy?count=${proxyCount}&period=${proxyPeriod}&country=${country}&version=${proxyVersion}&type=http`
+        `${PX6_BASE}/${apiKey}/buy?count=${proxyCount}&period=${proxyPeriod}&country=${country}&version=${proxyVersion}&type=${proxyType}`
       );
       const data = await res.json();
 
