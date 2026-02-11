@@ -157,8 +157,10 @@ export const SocialBoostBuyer = () => {
     });
   }, [typedServices, serviceSearch]);
 
-  // Calculate price
-  const rate = selectedService ? parseFloat(selectedService.rate) : 0;
+  // Calculate price with 25% markup
+  const BOOST_MARKUP = 1.25;
+  const baseRate = selectedService ? parseFloat(selectedService.rate) : 0;
+  const rate = Math.ceil(baseRate * BOOST_MARKUP * 10000) / 10000; // marked-up rate
   const qty = parseInt(quantity) || 0;
   const calculatedPrice = Math.ceil((rate * qty / 1000) * 100) / 100;
   const isValidQuantity = selectedService
@@ -350,7 +352,7 @@ export const SocialBoostBuyer = () => {
                           : 'text-muted-foreground'
                       }`}
                     >
-                      {s.rate} ₽/1K
+                      {(Math.ceil(parseFloat(s.rate) * 1.25 * 100) / 100).toFixed(2)} ₽/1K
                     </span>
                     {selectedService?.service === s.service && (
                       <Check className="h-4 w-4 flex-shrink-0" />
