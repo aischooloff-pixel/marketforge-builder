@@ -8,37 +8,101 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, ShoppingCart, Search, Check, Link2, Hash, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SocialIcon } from '@/components/SocialIcons';
 
-// Social network icons
-const SOCIAL_ICONS: Record<string, string> = {
-  Instagram: '📸',
-  YouTube: '▶️',
-  TikTok: '🎵',
-  Telegram: '✈️',
-  Twitter: '🐦',
-  Facebook: '👤',
-  VK: '🔵',
-  'VK Play': '🎮',
-  Discord: '💬',
-  Spotify: '🎧',
-  SoundCloud: '🔊',
-  Twitch: '🟣',
-  Likee: '❤️',
-  Pinterest: '📌',
-  LinkedIn: '💼',
-  Snapchat: '👻',
-  Reddit: '🤖',
-  Clubhouse: '🏠',
-  Kick: '🟢',
-  Threads: '🧵',
-  OK: '🟠',
-  Yandex: '🔍',
-  'Google Maps': '📍',
-  Shazam: '🎶',
-  Rumble: '📺',
-  'Apple Music': '🍎',
-  Deezer: '🎵',
+// ── Service type detection & translation ──
+const SERVICE_TYPE_KEYWORDS: Record<string, string[]> = {
+  'Подписчики': ['follower', 'subscribe', 'подписчик', 'subscribers', 'фолловер', 'members', 'участник', 'member'],
+  'Лайки': ['like', 'лайк', 'heart', 'сердц', 'thumb', 'upvote', 'нравится'],
+  'Просмотры': ['view', 'просмотр', 'watch', 'impression', 'показ', 'views', 'plays', 'прослушиван'],
+  'Комментарии': ['comment', 'комментар', 'отзыв', 'review'],
+  'Репосты': ['repost', 'share', 'репост', 'retweet', 'ретвит', 'forward', 'пересыл'],
+  'Реакции': ['reaction', 'реакци', 'emoji', 'эмодзи', 'vote', 'голос'],
+  'Сохранения': ['save', 'сохранен', 'bookmark', 'закладк', 'favorite', 'избранн'],
+  'Охват': ['reach', 'охват', 'traffic', 'трафик', 'visit', 'посещен', 'click', 'клик'],
 };
+
+function detectServiceType(name: string): string {
+  const lower = name.toLowerCase();
+  for (const [type, keywords] of Object.entries(SERVICE_TYPE_KEYWORDS)) {
+    if (keywords.some(kw => lower.includes(kw))) return type;
+  }
+  return 'Другое';
+}
+
+// ── Translation map for common English terms in service names ──
+const TRANSLATION_MAP: [RegExp, string][] = [
+  [/\bFollowers?\b/gi, 'Подписчики'],
+  [/\bSubscribers?\b/gi, 'Подписчики'],
+  [/\bMembers?\b/gi, 'Участники'],
+  [/\bLikes?\b/gi, 'Лайки'],
+  [/\bViews?\b/gi, 'Просмотры'],
+  [/\bComments?\b/gi, 'Комментарии'],
+  [/\bShares?\b/gi, 'Репосты'],
+  [/\bReposts?\b/gi, 'Репосты'],
+  [/\bRetweets?\b/gi, 'Ретвиты'],
+  [/\bReactions?\b/gi, 'Реакции'],
+  [/\bSaves?\b/gi, 'Сохранения'],
+  [/\bImpressions?\b/gi, 'Показы'],
+  [/\bPlays?\b/gi, 'Прослушивания'],
+  [/\bVisits?\b/gi, 'Посещения'],
+  [/\bClicks?\b/gi, 'Клики'],
+  [/\bTraffic\b/gi, 'Трафик'],
+  [/\bWatching\b/gi, 'Зрители'],
+  [/\bReal\b/gi, 'Живые'],
+  [/\bPremium\b/gi, 'Премиум'],
+  [/\bFast\b/gi, 'Быстрые'],
+  [/\bSlow\b/gi, 'Медленные'],
+  [/\bInstant\b/gi, 'Мгновенные'],
+  [/\bHigh Quality\b/gi, 'Высокое качество'],
+  [/\bLow Quality\b/gi, 'Низкое качество'],
+  [/\bBot\b/gi, 'Бот'],
+  [/\bNo Drop\b/gi, 'Без списания'],
+  [/\bRefill\b/gi, 'С гарантией'],
+  [/\bLifetime\b/gi, 'Навсегда'],
+  [/\bPost\b/gi, 'Пост'],
+  [/\bStory\b/gi, 'Сторис'],
+  [/\bStories\b/gi, 'Сторис'],
+  [/\bReel\b/gi, 'Рилс'],
+  [/\bReels\b/gi, 'Рилс'],
+  [/\bShorts\b/gi, 'Шортс'],
+  [/\bLive\b/gi, 'Прямой эфир'],
+  [/\bStream\b/gi, 'Стрим'],
+  [/\bChannel\b/gi, 'Канал'],
+  [/\bGroup\b/gi, 'Группа'],
+  [/\bPage\b/gi, 'Страница'],
+  [/\bProfile\b/gi, 'Профиль'],
+  [/\bVideo\b/gi, 'Видео'],
+  [/\bAudio\b/gi, 'Аудио'],
+  [/\bMusic\b/gi, 'Музыка'],
+  [/\bPhoto\b/gi, 'Фото'],
+  [/\bDaily\b/gi, 'Ежедневно'],
+  [/\bMonthly\b/gi, 'Ежемесячно'],
+  [/\bCustom\b/gi, 'Пользовательские'],
+  [/\bRandom\b/gi, 'Случайные'],
+  [/\bTargeted\b/gi, 'Целевые'],
+  [/\bMixed\b/gi, 'Смешанные'],
+  [/\bGlobal\b/gi, 'Глобальные'],
+  [/\bWorldwide\b/gi, 'Мировые'],
+  [/\bFemale\b/gi, 'Женские'],
+  [/\bMale\b/gi, 'Мужские'],
+  [/\bActive\b/gi, 'Активные'],
+  [/\bOrganic\b/gi, 'Органические'],
+  [/\bServer\b/gi, 'Сервер'],
+  [/\bOnline\b/gi, 'Онлайн'],
+  [/\bUpvotes?\b/gi, 'Голоса'],
+  [/\bDownvotes?\b/gi, 'Дизлайки'],
+  [/\bFavorites?\b/gi, 'Избранное'],
+  [/\bBookmarks?\b/gi, 'Закладки'],
+];
+
+function translateServiceName(name: string): string {
+  let translated = name;
+  for (const [pattern, replacement] of TRANSLATION_MAP) {
+    translated = translated.replace(pattern, replacement);
+  }
+  return translated;
+}
 
 export const SocialBoostBuyer = () => {
   const { user, refreshUser } = useTelegram();
@@ -47,6 +111,7 @@ export const SocialBoostBuyer = () => {
   const createOrder = useCreateBoostOrder();
 
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedType, setSelectedType] = useState('');
   const [selectedService, setSelectedService] = useState<ProfiService | null>(null);
   const [link, setLink] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -66,12 +131,31 @@ export const SocialBoostBuyer = () => {
     return services.filter((s) => s.category === selectedCategory);
   }, [selectedCategory, services]);
 
-  // Filter services
+  // Extract service types for the selected category
+  const serviceTypes = useMemo(() => {
+    const types = new Set(categoryServices.map(s => detectServiceType(s.name)));
+    return Array.from(types).sort((a, b) => {
+      if (a === 'Другое') return 1;
+      if (b === 'Другое') return -1;
+      return a.localeCompare(b);
+    });
+  }, [categoryServices]);
+
+  // Services filtered by type
+  const typedServices = useMemo(() => {
+    if (!selectedType) return [];
+    return categoryServices.filter(s => detectServiceType(s.name) === selectedType);
+  }, [categoryServices, selectedType]);
+
+  // Filter services by search
   const filteredServices = useMemo(() => {
     const q = serviceSearch.toLowerCase().trim();
-    if (!q) return categoryServices;
-    return categoryServices.filter((s) => s.name.toLowerCase().includes(q));
-  }, [categoryServices, serviceSearch]);
+    if (!q) return typedServices;
+    return typedServices.filter((s) => {
+      const translated = translateServiceName(s.name).toLowerCase();
+      return translated.includes(q) || s.name.toLowerCase().includes(q);
+    });
+  }, [typedServices, serviceSearch]);
 
   // Calculate price
   const rate = selectedService ? parseFloat(selectedService.rate) : 0;
@@ -104,11 +188,10 @@ export const SocialBoostBuyer = () => {
           toast.success('Заказ на накрутку создан!', {
             description: `Заказ #${data.orderId} — ${calculatedPrice} ₽`,
           });
-          // Reset form
           setSelectedService(null);
+          setSelectedType('');
           setLink('');
           setQuantity('');
-          // Refresh user balance
           refreshUser();
         },
         onError: (err) => {
@@ -151,6 +234,7 @@ export const SocialBoostBuyer = () => {
                 key={cat}
                 onClick={() => {
                   setSelectedCategory(cat);
+                  setSelectedType('');
                   setSelectedService(null);
                   setServiceSearch('');
                   setLink('');
@@ -162,7 +246,7 @@ export const SocialBoostBuyer = () => {
                     : 'hover:bg-secondary'
                 }`}
               >
-                <span className="text-base flex-shrink-0">{SOCIAL_ICONS[cat] || '📱'}</span>
+                <SocialIcon name={cat} className="h-4 w-4 flex-shrink-0" />
                 <span className="flex-1 truncate">{cat}</span>
                 {selectedCategory === cat && <Check className="h-4 w-4 flex-shrink-0" />}
               </button>
@@ -174,9 +258,54 @@ export const SocialBoostBuyer = () => {
         </ScrollArea>
       </div>
 
+      {/* ── Service Type Selector ── */}
+      <AnimatePresence>
+        {selectedCategory && serviceTypes.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <label className="text-sm font-medium mb-2 flex items-center gap-2">
+              <Hash className="h-4 w-4" />
+              Тип услуги
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {serviceTypes.map((type) => {
+                const count = categoryServices.filter(s => detectServiceType(s.name) === type).length;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      setSelectedType(type);
+                      setSelectedService(null);
+                      setServiceSearch('');
+                      setLink('');
+                      setQuantity('');
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
+                      selectedType === type
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card hover:bg-secondary border-border'
+                    }`}
+                  >
+                    {type}
+                    <span className={`ml-1 text-xs ${
+                      selectedType === type ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Service Selector ── */}
       <AnimatePresence>
-        {selectedCategory && (
+        {selectedType && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -186,7 +315,7 @@ export const SocialBoostBuyer = () => {
               <Hash className="h-4 w-4" />
               Услуга
               <span className="text-xs text-muted-foreground font-normal">
-                ({categoryServices.length} доступно)
+                ({typedServices.length} доступно)
               </span>
             </label>
             <div className="relative mb-2">
@@ -213,7 +342,7 @@ export const SocialBoostBuyer = () => {
                         : 'hover:bg-secondary'
                     }`}
                   >
-                    <span className="flex-1 truncate">{s.name}</span>
+                    <span className="flex-1 truncate">{translateServiceName(s.name)}</span>
                     <span
                       className={`text-xs flex-shrink-0 ${
                         selectedService?.service === s.service
@@ -304,7 +433,7 @@ export const SocialBoostBuyer = () => {
                   {qty.toLocaleString()} шт
                 </Badge>
                 <p className="text-xs text-muted-foreground">
-                  {selectedCategory} · {selectedService.name}
+                  {selectedCategory} · {selectedType}
                 </p>
               </div>
             </div>
