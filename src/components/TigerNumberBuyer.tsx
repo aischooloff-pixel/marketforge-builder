@@ -99,7 +99,7 @@ export const TigerNumberBuyer = () => {
             `Номер получен: +${data.phoneNumber}`,
             { description: 'Перейдите в "Номера" в профиле для приёма SMS' }
           );
-          navigate('/profile');
+          navigate('/profile?tab=numbers');
         },
         onError: (err) => {
           toast.error(err.message);
