@@ -29,7 +29,7 @@ export const useProfiServices = () => {
 
 export const useProfiCategories = (services: ProfiService[] | undefined) => {
   if (!services) return [];
-  const cats = new Set(services.map((s) => s.category));
+  const cats = new Set(services.map((s) => s.category).filter((c) => c && c.trim() !== ''));
   return Array.from(cats).sort();
 };
 
