@@ -447,28 +447,10 @@ export const SocialBoostBuyer = () => {
       <Button
         size="lg"
         className="w-full gap-2"
-        disabled={
-          !selectedService ||
-          !link.trim() ||
-          !isValidQuantity ||
-          calculatedPrice <= 0 ||
-          createOrder.isPending
-        }
-        onClick={handleBuy}
+        disabled
       >
-        {createOrder.isPending ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Создаём заказ...
-          </>
-        ) : (
-          <>
-            <ShoppingCart className="h-5 w-5" />
-            {selectedService && isValidQuantity && link.trim()
-              ? `Купить за ${calculatedPrice.toFixed(2)} ₽`
-              : 'Заполните все поля'}
-          </>
-        )}
+        <ShoppingCart className="h-5 w-5" />
+        Пока не доступно
       </Button>
 
       <p className="text-xs text-muted-foreground text-center">
