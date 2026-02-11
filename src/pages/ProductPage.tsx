@@ -184,9 +184,9 @@ const ProductPage = () => {
                 {product.short_desc}
               </p>
 
-              <p className="text-sm md:text-base text-foreground mb-6 md:mb-8 leading-relaxed">
+              <div className="text-sm md:text-base text-foreground mb-6 md:mb-8 leading-relaxed whitespace-pre-line">
                 {product.long_desc}
-              </p>
+              </div>
 
               {/* Tags */}
               {product.tags && product.tags.filter(t => !t.startsWith('api:')).length > 0 && <div className="flex flex-wrap gap-2 mb-8">
