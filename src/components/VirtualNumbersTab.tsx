@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useMyVirtualNumbers, useCheckSmsStatus, useSetActivationStatus, TIGER_SERVICES } from '@/hooks/useTigerSms';
 import { useTelegram } from '@/contexts/TelegramContext';
 import { ServiceLogo } from '@/components/ServiceLogo';
+import { ReviewForm } from '@/components/ReviewForm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Phone, MessageSquare, Copy, Check, RefreshCw, X, Loader2 } from 'lucide-react';
+import { Phone, MessageSquare, Copy, Check, RefreshCw, X, Loader2, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 
 const getServiceInfo = (code: string) =>
   TIGER_SERVICES.find(s => s.code === code) || { code, name: code, icon: '📱' };
@@ -22,6 +24,7 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
 };
 
 export const VirtualNumbersTab = () => {
+  const queryClient = useQueryClient();
   const { user } = useTelegram();
   const { data: numbers, isLoading, refetch } = useMyVirtualNumbers(user?.id);
   const checkStatus = useCheckSmsStatus();
@@ -64,12 +67,16 @@ export const VirtualNumbersTab = () => {
       {
         onSuccess: () => {
           refetch();
-          toast.info('Активация отменена');
+          // Invalidate profile/user data to reflect refunded balance
+          queryClient.invalidateQueries({ queryKey: ['telegram-user'] });
+          queryClient.invalidateQueries({ queryKey: ['transactions'] });
+          toast.success('Активация отменена, средства возвращены');
         },
         onError: (err) => toast.error(err.message),
       }
     );
   };
+
 
   const handleComplete = (activationId: string) => {
     setStatus.mutate(
@@ -276,6 +283,13 @@ export const VirtualNumbersTab = () => {
               <span>{new Date(num.created_at).toLocaleString('ru-RU')}</span>
               {num.price > 0 && <span>{num.price} ₽</span>}
             </div>
+
+            {/* Review button for completed */}
+            {num.status === 'completed' && (
+              <div className="mt-2">
+                <ReviewForm />
+              </div>
+            )}
           </motion.div>
         );
       })}

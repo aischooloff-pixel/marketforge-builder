@@ -266,7 +266,10 @@ const ProfilePage = () => {
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="orders" className="space-y-4 md:space-y-6">
+          <Tabs defaultValue={(() => {
+            const sp = (window.Telegram?.WebApp as any)?.initDataUnsafe?.start_param;
+            return sp === 'numbers' || sp === 'review' ? 'numbers' : 'orders';
+          })()} className="space-y-4 md:space-y-6">
             <TabsList className="w-full max-w-none grid grid-cols-3 h-10">
               <TabsTrigger value="orders" className="gap-1.5 text-xs md:text-sm">
                 <Package className="h-3.5 w-3.5 md:h-4 md:w-4" />

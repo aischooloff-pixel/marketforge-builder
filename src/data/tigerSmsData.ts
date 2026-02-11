@@ -17,9 +17,7 @@ export interface TigerCountry {
 export const TIGER_SERVICES: TigerService[] = [
   // Мессенджеры
   { code: 'tg', name: 'Telegram', icon: '💬' },
-  { code: 'eh', name: 'Telegram 2.0', icon: '💬' },
   { code: 'wa', name: 'WhatsApp', icon: '💬' },
-  { code: 'wa2', name: 'WhatsApp2', icon: '💬' },
   { code: 'vi', name: 'Viber', icon: '💜' },
   { code: 'wb', name: 'WeChat', icon: '💬' },
   { code: 'ds', name: 'Discord', icon: '🎮' },
