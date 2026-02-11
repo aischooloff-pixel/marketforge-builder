@@ -34,7 +34,7 @@ const ProductPage = () => {
   } = useCart();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('7');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [selectedProtocol, setSelectedProtocol] = useState<string>('http');
 
   // Determine if this is an API proxy product and which version
@@ -77,16 +77,37 @@ const ProductPage = () => {
   }
   const needsPeriodSelector = isApiProduct;
 
-  const periodOptions = [
-    { value: '7', label: 'Неделя', price: 49 },
-    { value: '14', label: '2 недели', price: 79 },
-    { value: '30', label: 'Месяц', price: 139 },
-    { value: '60', label: '2 месяца', price: 279 },
-    { value: '90', label: '3 месяца', price: 389 },
-  ];
+  const periodOptionsMap: Record<number, { value: string; label: string; price: number }[]> = {
+    4: [ // IPv4
+      { value: '7', label: 'Неделя', price: 49 },
+      { value: '14', label: '2 недели', price: 79 },
+      { value: '30', label: 'Месяц', price: 139 },
+      { value: '60', label: '2 месяца', price: 279 },
+      { value: '90', label: '3 месяца', price: 389 },
+    ],
+    6: [ // IPv6
+      { value: '3', label: '3 дня', price: 9 },
+      { value: '7', label: 'Неделя', price: 12 },
+      { value: '14', label: '2 недели', price: 19 },
+      { value: '30', label: 'Месяц', price: 29 },
+      { value: '60', label: '2 месяца', price: 49 },
+      { value: '90', label: '3 месяца', price: 69 },
+    ],
+    3: [ // IPv4 Shared
+      { value: '7', label: 'Неделя', price: 15 },
+      { value: '14', label: '2 недели', price: 25 },
+      { value: '30', label: 'Месяц', price: 39 },
+      { value: '60', label: '2 месяца', price: 69 },
+      { value: '90', label: '3 месяца', price: 99 },
+    ],
+  };
+
+  const periodOptions = periodOptionsMap[proxyVersion] || periodOptionsMap[4];
+  const defaultPeriod = periodOptions[0]?.value || '7';
+  const activePeriod = selectedPeriod || defaultPeriod;
 
   const currentPeriodPrice = isApiProduct
-    ? (periodOptions.find(p => p.value === selectedPeriod)?.price || 139)
+    ? (periodOptions.find(p => p.value === activePeriod)?.price || periodOptions[0]?.price || 49)
     : product.price;
 
   const handleAddToCart = () => {
@@ -108,7 +129,7 @@ const ProductPage = () => {
     }, {
       country: selectedCountry || undefined,
       services: selectedServices.length > 0 ? selectedServices : undefined,
-      period: needsPeriodSelector ? parseInt(selectedPeriod) : undefined,
+      period: needsPeriodSelector ? parseInt(activePeriod) : undefined,
       protocol: isApiProduct ? selectedProtocol : undefined,
     });
   };
@@ -250,7 +271,7 @@ const ProductPage = () => {
                         <Clock className="h-4 w-4" />
                         Период
                       </label>
-                      <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                      <Select value={activePeriod} onValueChange={setSelectedPeriod}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
