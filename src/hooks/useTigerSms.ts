@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 export { TIGER_SERVICES, TIGER_COUNTRIES, getServiceByCode, getCountryByCode } from '@/data/tigerSmsData';
@@ -54,8 +55,19 @@ export const useBuyNumber = () => {
       const { data, error } = await supabase.functions.invoke('tiger-sms', {
         body: { action: 'getNumber', ...params },
       });
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        let msg = 'Ошибка при покупке номера';
+        if (error instanceof FunctionsHttpError) {
+          try {
+            const errBody = await error.context.json();
+            if (errBody?.error) msg = errBody.error;
+          } catch { /* ignore */ }
+        } else if (error.message) {
+          msg = error.message;
+        }
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(data.error);
       return data as { success: boolean; activationId: string; phoneNumber: string };
     },
     onSuccess: () => {
