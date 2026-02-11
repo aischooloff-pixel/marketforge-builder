@@ -34,7 +34,7 @@ const ProductPage = () => {
   } = useCart();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('30');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('7');
   const [selectedProtocol, setSelectedProtocol] = useState<string>('http');
 
   // Determine if this is an API proxy product and which version
@@ -78,13 +78,16 @@ const ProductPage = () => {
   const needsPeriodSelector = isApiProduct;
 
   const periodOptions = [
-    { value: '5', label: '5 дней' },
-    { value: '10', label: '10 дней' },
-    { value: '20', label: '20 дней' },
-    { value: '30', label: '30 дней' },
-    { value: '60', label: '60 дней' },
-    { value: '90', label: '90 дней' },
+    { value: '7', label: 'Неделя', price: 49 },
+    { value: '14', label: '2 недели', price: 79 },
+    { value: '30', label: 'Месяц', price: 139 },
+    { value: '60', label: '2 месяца', price: 279 },
+    { value: '90', label: '3 месяца', price: 389 },
   ];
+
+  const currentPeriodPrice = isApiProduct
+    ? (periodOptions.find(p => p.value === selectedPeriod)?.price || 139)
+    : product.price;
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
@@ -94,7 +97,7 @@ const ProductPage = () => {
       name: product.name,
       shortDesc: product.short_desc || '',
       longDesc: product.long_desc || '',
-      price: product.price,
+      price: currentPeriodPrice,
       type: product.type || 'one-time',
       category: product.categories?.slug || '',
       tags: product.tags || [],
@@ -254,7 +257,7 @@ const ProductPage = () => {
                         <SelectContent>
                           {periodOptions.map(opt => (
                             <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label}
+                              {opt.label} — {opt.price} ₽
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -286,7 +289,7 @@ const ProductPage = () => {
                   <div className="mb-4 md:mb-6">
                     <div className="flex items-baseline gap-2">
                       <span className="text-3xl md:text-4xl font-bold">
-                        {product.price.toLocaleString('ru-RU')}
+                        {currentPeriodPrice.toLocaleString('ru-RU')}
                       </span>
                       <span className="text-lg md:text-xl text-muted-foreground">₽</span>
                       {product.type === 'subscription' && <span className="text-muted-foreground text-sm">/мес</span>}
