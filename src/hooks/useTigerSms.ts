@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 export { TIGER_SERVICES, TIGER_COUNTRIES, getServiceByCode, getCountryByCode } from '@/data/tigerSmsData';
@@ -52,22 +51,22 @@ export const useBuyNumber = () => {
       price: number;
       orderId?: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke('tiger-sms', {
-        body: { action: 'getNumber', ...params },
+      // Use fetch directly to avoid supabase SDK swallowing the error body
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const res = await fetch(`${supabaseUrl}/functions/v1/tiger-sms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({ action: 'getNumber', ...params }),
       });
-      if (error) {
-        let msg = 'Ошибка при покупке номера';
-        if (error instanceof FunctionsHttpError) {
-          try {
-            const errBody = await error.context.json();
-            if (errBody?.error) msg = errBody.error;
-          } catch { /* ignore */ }
-        } else if (error.message) {
-          msg = error.message;
-        }
-        throw new Error(msg);
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Ошибка при покупке номера');
       }
-      if (data?.error) throw new Error(data.error);
       return data as { success: boolean; activationId: string; phoneNumber: string };
     },
     onSuccess: () => {
