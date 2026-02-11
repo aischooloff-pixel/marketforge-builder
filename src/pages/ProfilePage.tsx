@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { User, Wallet, Package, Clock, Loader2, Copy, Check, Eye, EyeOff } from 'lucide-react';
+import { User, Wallet, Package, Clock, Loader2, Copy, Check, Eye, EyeOff, Phone } from 'lucide-react';
+import { VirtualNumbersTab } from '@/components/VirtualNumbersTab';
 import SupportDialog from '@/components/SupportDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -266,24 +267,21 @@ const ProfilePage = () => {
 
           {/* Tabs */}
           <Tabs defaultValue="orders" className="space-y-4 md:space-y-6">
-            <TabsList className="w-full max-w-none grid grid-cols-2 h-10">
+            <TabsList className="w-full max-w-none grid grid-cols-3 h-10">
               <TabsTrigger value="orders" className="gap-1.5 text-xs md:text-sm">
                 <Package className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                Заказы
-                {orders.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">
-                    {orders.length}
-                  </Badge>
-                )}
+                <span className="hidden sm:inline">Заказы</span>
+                <span className="sm:hidden">📦</span>
+              </TabsTrigger>
+              <TabsTrigger value="numbers" className="gap-1.5 text-xs md:text-sm">
+                <Phone className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Номера</span>
+                <span className="sm:hidden">📱</span>
               </TabsTrigger>
               <TabsTrigger value="transactions" className="gap-1.5 text-xs md:text-sm">
                 <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                История
-                {transactions.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">
-                    {transactions.length}
-                  </Badge>
-                )}
+                <span className="hidden sm:inline">История</span>
+                <span className="sm:hidden">💰</span>
               </TabsTrigger>
             </TabsList>
 
@@ -400,6 +398,11 @@ const ProfilePage = () => {
                   ))
                 )}
               </motion.div>
+            </TabsContent>
+
+            {/* Virtual Numbers Tab */}
+            <TabsContent value="numbers">
+              <VirtualNumbersTab />
             </TabsContent>
 
             {/* Transactions Tab */}

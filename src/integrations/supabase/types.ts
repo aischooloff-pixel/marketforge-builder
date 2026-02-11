@@ -659,6 +659,81 @@ export type Database = {
           },
         ]
       }
+      virtual_numbers: {
+        Row: {
+          activation_id: string
+          completed_at: string | null
+          country: string
+          country_name: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          order_id: string | null
+          phone_number: string
+          price: number
+          service: string
+          service_name: string | null
+          sms_code: string | null
+          sms_full: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activation_id: string
+          completed_at?: string | null
+          country: string
+          country_name?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          order_id?: string | null
+          phone_number: string
+          price?: number
+          service: string
+          service_name?: string | null
+          sms_code?: string | null
+          sms_full?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activation_id?: string
+          completed_at?: string | null
+          country?: string
+          country_name?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          order_id?: string | null
+          phone_number?: string
+          price?: number
+          service?: string
+          service_name?: string | null
+          sms_code?: string | null
+          sms_full?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_numbers_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "virtual_numbers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
