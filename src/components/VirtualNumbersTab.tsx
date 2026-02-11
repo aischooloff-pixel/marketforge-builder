@@ -24,7 +24,7 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
   cancelled: { label: 'Отменено', variant: 'destructive' },
 };
 
-const CANCEL_TIMER_MS = 3 * 60 * 1000; // 3 minutes
+const CANCEL_WINDOW_MS = 3 * 60 * 1000; // 3 minutes before cancel allowed
 
 const InlineReviewForm = ({ numberId }: { numberId: string }) => {
   const { user } = useTelegram();
@@ -106,22 +106,18 @@ const InlineReviewForm = ({ numberId }: { numberId: string }) => {
   );
 };
 
-const CancelTimer = ({ createdAt, onExpired }: { createdAt: string; onExpired: () => void }) => {
+const useCancelTimer = (createdAt: string) => {
   const [remaining, setRemaining] = useState(() => {
-    const diff = CANCEL_TIMER_MS - (Date.now() - new Date(createdAt).getTime());
+    const diff = CANCEL_WINDOW_MS - (Date.now() - new Date(createdAt).getTime());
     return Math.max(0, diff);
   });
 
   useEffect(() => {
-    if (remaining <= 0) {
-      onExpired();
-      return;
-    }
+    if (remaining <= 0) return;
     const interval = setInterval(() => {
-      const diff = CANCEL_TIMER_MS - (Date.now() - new Date(createdAt).getTime());
+      const diff = CANCEL_WINDOW_MS - (Date.now() - new Date(createdAt).getTime());
       if (diff <= 0) {
         setRemaining(0);
-        onExpired();
         clearInterval(interval);
       } else {
         setRemaining(diff);
@@ -130,15 +126,12 @@ const CancelTimer = ({ createdAt, onExpired }: { createdAt: string; onExpired: (
     return () => clearInterval(interval);
   }, [createdAt]);
 
-  if (remaining <= 0) return null;
-
+  const canCancel = remaining <= 0;
   const mins = Math.floor(remaining / 60000);
   const secs = Math.floor((remaining % 60000) / 1000);
-  return (
-    <span className="text-xs text-muted-foreground tabular-nums">
-      {mins}:{secs.toString().padStart(2, '0')}
-    </span>
-  );
+  const label = remaining > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : null;
+
+  return { canCancel, timerLabel: label };
 };
 
 export const VirtualNumbersTab = () => {
@@ -149,7 +142,6 @@ export const VirtualNumbersTab = () => {
   const setStatus = useSetActivationStatus();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pollingIds, setPollingIds] = useState<Set<string>>(new Set());
-  const [expiredIds, setExpiredIds] = useState<Set<string>>(new Set());
 
   // Auto-poll for waiting numbers
   useEffect(() => {
@@ -225,10 +217,6 @@ export const VirtualNumbersTab = () => {
     });
   };
 
-  const handleTimerExpired = useCallback((activationId: string) => {
-    setExpiredIds(prev => new Set(prev).add(activationId));
-  }, []);
-
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -254,145 +242,115 @@ export const VirtualNumbersTab = () => {
 
   return (
     <div className="space-y-3">
-      {numbers.map((num, index) => {
-        const serviceInfo = getServiceInfo(num.service);
-        const statusInfo = statusLabels[num.status] || statusLabels.waiting;
-        const isActive = ['waiting', 'ready', 'retry'].includes(num.status);
-        const hasCode = num.status === 'code_received' && num.sms_code;
-        const canCancel = isActive && !expiredIds.has(num.activation_id);
-
-        return (
-          <motion.div
-            key={num.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="p-4 rounded-xl border bg-card"
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <ServiceLogo serviceCode={num.service} fallbackEmoji={serviceInfo.icon} className="w-5 h-5" />
-                <div>
-                  <p className="font-semibold text-sm">{num.service_name || serviceInfo.name}</p>
-                  <p className="text-xs text-muted-foreground">{num.country_name || num.country}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {isActive && (
-                  <CancelTimer
-                    createdAt={num.created_at}
-                    onExpired={() => handleTimerExpired(num.activation_id)}
-                  />
-                )}
-                <Badge variant={statusInfo.variant} className="text-xs">
-                  {statusInfo.label}
-                </Badge>
-              </div>
-            </div>
-
-            {/* Phone number */}
-            <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-secondary/50">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span className="font-mono text-sm flex-1">+{num.phone_number}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => handleCopy(num.phone_number, `phone-${num.id}`)}
-              >
-                {copiedId === `phone-${num.id}` ? (
-                  <Check className="h-3.5 w-3.5 text-primary" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-              </Button>
-            </div>
-
-            {/* SMS Code */}
-            {hasCode && (
-              <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-primary/10 border border-primary/20">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                <span className="font-mono text-lg font-bold flex-1">{num.sms_code}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => handleCopy(num.sms_code!, `code-${num.id}`)}
-                >
-                  {copiedId === `code-${num.id}` ? (
-                    <Check className="h-3.5 w-3.5 text-primary" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* Actions for active numbers */}
-            {isActive && (
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => handleManualCheck(num.activation_id)}
-                  disabled={pollingIds.has(num.activation_id)}
-                >
-                  {pollingIds.has(num.activation_id) ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                  Проверить SMS
-                </Button>
-                {canCancel && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs text-destructive"
-                    onClick={() => handleCancel(num.activation_id)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Отменить
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* Check SMS button when code received (to refresh latest code) */}
-            {hasCode && (
-              <div className="flex gap-2 mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => handleManualCheck(num.activation_id)}
-                  disabled={pollingIds.has(num.activation_id)}
-                >
-                  {pollingIds.has(num.activation_id) ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                  Проверить SMS
-                </Button>
-              </div>
-            )}
-
-            {/* Meta */}
-            <div className="flex items-center justify-between mt-3 pt-2 border-t text-xs text-muted-foreground">
-              <span>{new Date(num.created_at).toLocaleString('ru-RU')}</span>
-              {num.price > 0 && <span>{num.price} ₽</span>}
-            </div>
-
-            {/* Review form for completed */}
-            {num.status === 'completed' && (
-              <InlineReviewForm numberId={num.id} />
-            )}
-          </motion.div>
-        );
-      })}
+      {numbers.map((num, index) => (
+        <NumberCard
+          key={num.id}
+          num={num}
+          index={index}
+          copiedId={copiedId}
+          pollingIds={pollingIds}
+          onCopy={handleCopy}
+          onCancel={handleCancel}
+          onManualCheck={handleManualCheck}
+        />
+      ))}
     </div>
+  );
+};
+
+const NumberCard = ({
+  num, index, copiedId, pollingIds, onCopy, onCancel, onManualCheck,
+}: {
+  num: any; index: number; copiedId: string | null; pollingIds: Set<string>;
+  onCopy: (t: string, id: string) => void; onCancel: (id: string) => void; onManualCheck: (id: string) => void;
+}) => {
+  const serviceInfo = getServiceInfo(num.service);
+  const statusInfo = statusLabels[num.status] || statusLabels.waiting;
+  const isActive = ['waiting', 'ready', 'retry'].includes(num.status);
+  const hasCode = num.status === 'code_received' && num.sms_code;
+  const { canCancel, timerLabel } = useCancelTimer(num.created_at);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="p-4 rounded-xl border bg-card"
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2">
+          <ServiceLogo serviceCode={num.service} fallbackEmoji={serviceInfo.icon} className="w-5 h-5" />
+          <div>
+            <p className="font-semibold text-sm">{num.service_name || serviceInfo.name}</p>
+            <p className="text-xs text-muted-foreground">{num.country_name || num.country}</p>
+          </div>
+        </div>
+        <Badge variant={statusInfo.variant} className="text-xs">
+          {statusInfo.label}
+        </Badge>
+      </div>
+
+      {/* Phone number */}
+      <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-secondary/50">
+        <Phone className="h-4 w-4 text-muted-foreground" />
+        <span className="font-mono text-sm flex-1">+{num.phone_number}</span>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onCopy(num.phone_number, `phone-${num.id}`)}>
+          {copiedId === `phone-${num.id}` ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+        </Button>
+      </div>
+
+      {/* SMS Code */}
+      {hasCode && (
+        <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-primary/10 border border-primary/20">
+          <MessageSquare className="h-4 w-4 text-primary" />
+          <span className="font-mono text-lg font-bold flex-1">{num.sms_code}</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onCopy(num.sms_code!, `code-${num.id}`)}>
+            {copiedId === `code-${num.id}` ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+          </Button>
+        </div>
+      )}
+
+      {/* Actions for active numbers */}
+      {isActive && (
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => onManualCheck(num.activation_id)} disabled={pollingIds.has(num.activation_id)}>
+            {pollingIds.has(num.activation_id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            Проверить SMS
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs text-destructive"
+            onClick={() => onCancel(num.activation_id)}
+            disabled={!canCancel}
+          >
+            <X className="h-3.5 w-3.5" />
+            Отменить{timerLabel ? ` (${timerLabel})` : ''}
+          </Button>
+        </div>
+      )}
+
+      {/* Check SMS button when code received */}
+      {hasCode && (
+        <div className="flex gap-2 mt-2">
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => onManualCheck(num.activation_id)} disabled={pollingIds.has(num.activation_id)}>
+            {pollingIds.has(num.activation_id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            Проверить SMS
+          </Button>
+        </div>
+      )}
+
+      {/* Meta */}
+      <div className="flex items-center justify-between mt-3 pt-2 border-t text-xs text-muted-foreground">
+        <span>{new Date(num.created_at).toLocaleString('ru-RU')}</span>
+        {num.price > 0 && <span>{num.price} ₽</span>}
+      </div>
+
+      {/* Review form for code_received and completed */}
+      {(num.status === 'code_received' || num.status === 'completed') && (
+        <InlineReviewForm numberId={num.id} />
+      )}
+    </motion.div>
   );
 };
