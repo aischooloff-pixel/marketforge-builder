@@ -23,7 +23,7 @@ export const useProxyAvailability = (version: number = 3, enabled: boolean = tru
       return data as ProxyAvailability;
     },
     enabled,
-    staleTime: 1000 * 60 * 2, // 2 minutes cache
-    refetchInterval: 1000 * 60 * 5, // refetch every 5 minutes
+    staleTime: 1000 * 30, // 30 seconds cache
+    refetchInterval: 1000 * 60, // refetch every 1 minute
   });
 };
