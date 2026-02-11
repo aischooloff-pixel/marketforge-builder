@@ -116,11 +116,11 @@ serve(async (req) => {
             console.log(`[ProcessOrder] px6 proxy purchased successfully`);
           } else {
             console.error("[ProcessOrder] px6 buy failed:", px6Data);
-            deliveredItems.push(`📦 ${item.product_name}:\n❌ Ошибка покупки прокси: ${px6Data.error || "Неизвестная ошибка"}. Обратитесь в поддержку.`);
+            deliveredItems.push(`📦 ${item.product_name}:\n❌ Произошла ошибка при покупке прокси. Пожалуйста, напишите в поддержку магазина для решения проблемы.`);
           }
         } catch (px6Error) {
           console.error("[ProcessOrder] px6 API error:", px6Error);
-          deliveredItems.push(`📦 ${item.product_name}:\n❌ Ошибка API прокси. Обратитесь в поддержку.`);
+          deliveredItems.push(`📦 ${item.product_name}:\n❌ Произошла ошибка при покупке прокси. Пожалуйста, напишите в поддержку магазина для решения проблемы.`);
         }
         continue;
       }
