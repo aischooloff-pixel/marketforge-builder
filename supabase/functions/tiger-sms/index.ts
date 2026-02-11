@@ -138,10 +138,12 @@ serve(async (req) => {
           status: "waiting",
         });
 
-        // Send Telegram notification
+        // Send Telegram notification with review via bot (like regular products)
         const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
         if (telegramBotToken && profile.telegram_id) {
           try {
+            // Create a pseudo order_id for the review callback
+            const reviewId = activId;
             await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -151,7 +153,7 @@ serve(async (req) => {
                 reply_markup: {
                   inline_keyboard: [
                     [{ text: "📱 Мои номера", url: "https://t.me/Temka_Store_Bot/app?startapp=numbers" }],
-                    [{ text: "⭐ Оставить отзыв", url: "https://t.me/Temka_Store_Bot/app?startapp=review" }],
+                    [{ text: "⭐ Оставить отзыв", callback_data: `review_start:${reviewId}` }],
                   ],
                 },
               }),
