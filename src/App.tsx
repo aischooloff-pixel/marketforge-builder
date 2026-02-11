@@ -2,12 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { TelegramProvider, useTelegram } from "@/contexts/TelegramContext";
 import { BannedScreen } from "@/components/BannedScreen";
+import { useEffect } from "react";
 import Index from "./pages/Index";
 import CatalogPage from "./pages/CatalogPage";
 import ProductPage from "./pages/ProductPage";
@@ -18,6 +19,18 @@ import InfoPage from "./pages/InfoPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const StartAppRedirect = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const startParam = window.Telegram?.WebApp?.initDataUnsafe &&
+      (window.Telegram.WebApp as any).initDataUnsafe?.start_param;
+    if (startParam === 'numbers' || startParam === 'review') {
+      navigate('/profile', { replace: true });
+    }
+  }, [navigate]);
+  return null;
+};
 
 const AppContent = () => {
   const { user, isLoading } = useTelegram();
@@ -33,6 +46,7 @@ const AppContent = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <StartAppRedirect />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/catalog" element={<CatalogPage />} />

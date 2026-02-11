@@ -149,9 +149,10 @@ serve(async (req) => {
                 chat_id: profile.telegram_id,
                 text: `📱 Виртуальный номер получен!\n\n📋 Сервис: ${body.serviceName || service}\n📞 Номер: +${phone}\n💰 Стоимость: ${price} ₽\n\nОткройте приложение для приёма SMS-кода.`,
                 reply_markup: {
-                  inline_keyboard: [[
-                    { text: "📱 Открыть приложение", url: "https://t.me/Temka_Store_Bot/app" }
-                  ]],
+                  inline_keyboard: [
+                    [{ text: "📱 Мои номера", url: "https://t.me/Temka_Store_Bot/app?startapp=numbers" }],
+                    [{ text: "⭐ Оставить отзыв", url: "https://t.me/Temka_Store_Bot/app?startapp=review" }],
+                  ],
                 },
               }),
             });
@@ -246,6 +247,39 @@ serve(async (req) => {
             ...(newStatus === "completed" ? { completed_at: new Date().toISOString() } : {}),
           })
           .eq("activation_id", activationId);
+
+        // Refund balance on cancel
+        if (code === "8") {
+          const { data: vnRow } = await supabase
+            .from("virtual_numbers")
+            .select("user_id, price")
+            .eq("activation_id", activationId)
+            .single();
+
+          if (vnRow && vnRow.price > 0) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("balance")
+              .eq("id", vnRow.user_id)
+              .single();
+
+            if (profile) {
+              const newBalance = (profile.balance || 0) + vnRow.price;
+              await supabase
+                .from("profiles")
+                .update({ balance: newBalance })
+                .eq("id", vnRow.user_id);
+
+              await supabase.from("transactions").insert({
+                user_id: vnRow.user_id,
+                type: "refund",
+                amount: vnRow.price,
+                balance_after: newBalance,
+                description: `Возврат за виртуальный номер (отмена)`,
+              });
+            }
+          }
+        }
 
         return json({ success: true, status: newStatus });
       }
