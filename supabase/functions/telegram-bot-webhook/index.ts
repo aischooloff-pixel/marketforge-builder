@@ -17,9 +17,9 @@ const CAPTCHA_ITEMS: [string, string][] = [
   ["🎲", "кубик"],
 ];
 
-function buildWelcomeMessage(username?: string, firstName?: string) {
-  const displayName = username ? `<a href="https://t.me/${username}">${firstName || username}</a>` : (firstName || "Темщик");
-  return `👋 <b>${displayName}</b>, добро пожаловать в <b><a href="https://t.me/Temka_Store_Bot/app">TEMKA.STORE</a></b>!
+function buildWelcomeMessage(username?: string) {
+  const nameLink = username ? `<a href="https://t.me/${username}">Темщик</a>` : "Темщик";
+  return `👋 <b>${nameLink}</b>, добро пожаловать в <b><a href="https://t.me/Temka_Store_Bot/app">TEMKA.STORE</a></b>!
 
 Здесь ты можешь приобрести цифровые товары для себя или работы быстро и дешево.
 
@@ -110,7 +110,8 @@ serve(async (req) => {
         }
 
         await tg(botToken, "sendMessage", {
-          chat_id: chatId, text: buildWelcomeMessage(callback.from?.username, callback.from?.first_name), parse_mode: "HTML",
+          chat_id: chatId, text: buildWelcomeMessage(callback.from?.username), parse_mode: "HTML",
+          disable_web_page_preview: true,
           reply_markup: { inline_keyboard: [
             [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
             [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
@@ -242,7 +243,8 @@ serve(async (req) => {
 
       if (isVerified) {
         await tg(botToken, "sendMessage", {
-          chat_id: chatId, text: buildWelcomeMessage(message.from?.username, message.from?.first_name), parse_mode: "HTML",
+          chat_id: chatId, text: buildWelcomeMessage(message.from?.username), parse_mode: "HTML",
+          disable_web_page_preview: true,
           reply_markup: { inline_keyboard: [
             [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
             [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
