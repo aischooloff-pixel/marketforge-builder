@@ -1,6 +1,28 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const CAPTCHA_ITEMS: [string, string][] = [
+  ["🍎", "яблоко"],
+  ["🍕", "пиццу"],
+  ["🚀", "ракету"],
+  ["🎸", "гитару"],
+  ["🐱", "кота"],
+  ["⚽", "мяч"],
+  ["🌟", "звезду"],
+  ["🎲", "кубик"],
+];
+
+const WELCOME_MESSAGE = `<b>👋 Добро пожаловать в TEMKA.STORE!</b>
+
+Здесь вы можете приобрести цифровые товары быстро и безопасно.
+
+🛍 Нажмите кнопку ниже, чтобы открыть магазин.`;
+
 function buildCaptcha() {
   const shuffled = [...CAPTCHA_ITEMS].sort(() => Math.random() - 0.5);
   const options = shuffled.slice(0, 3);
@@ -120,12 +142,9 @@ serve(async (req) => {
         const orderId = parts[1];
         const rating = parseInt(parts[2], 10);
 
-        // Store pending review in DB (persistent across function invocations)
-        // Delete any old pending reviews for this user first
         await supabase.from("pending_reviews").delete().eq("telegram_id", fromId);
         await supabase.from("pending_reviews").insert({ telegram_id: fromId, rating, order_id: orderId });
 
-        // Delete rating buttons
         await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
         await tg(botToken, "answerCallbackQuery", { callback_query_id: callback.id });
 
@@ -159,10 +178,8 @@ serve(async (req) => {
     const pending = pendingArr?.[0];
 
     if (telegramId && pending && text && !text.startsWith("/")) {
-      // Delete the pending review record
       await supabase.from("pending_reviews").delete().eq("id", pending.id);
 
-      // Get user profile id
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, first_name, username")
@@ -171,12 +188,10 @@ serve(async (req) => {
       const userProfile = profiles?.[0];
       const userId = userProfile?.id;
 
-      // Build author display name
       const authorName = [userProfile?.first_name, userProfile?.username ? `@${userProfile.username}` : null]
         .filter(Boolean).join(" ") || "Пользователь";
 
       if (userId) {
-        // Insert review with status=pending
         const { error: reviewErr } = await supabase
           .from("reviews")
           .insert({
