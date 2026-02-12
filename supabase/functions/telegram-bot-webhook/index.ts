@@ -17,11 +17,14 @@ const CAPTCHA_ITEMS: [string, string][] = [
   ["🎲", "кубик"],
 ];
 
-const WELCOME_MESSAGE = `<b>👋 Добро пожаловать в TEMKA.STORE!</b>
+function buildWelcomeMessage(username?: string, firstName?: string) {
+  const displayName = username ? `<a href="https://t.me/${username}">${firstName || username}</a>` : (firstName || "Темщик");
+  return `👋 <b>${displayName}</b>, добро пожаловать в <b><a href="https://t.me/Temka_Store_Bot/app">TEMKA.STORE</a></b>!
 
-Здесь вы можете приобрести цифровые товары быстро и безопасно.
+Здесь ты можешь приобрести цифровые товары для себя или работы быстро и дешево.
 
-🛍 Нажмите кнопку ниже, чтобы открыть магазин.`;
+🛍 Нажми кнопку ниже, чтобы открыть приложение магазина.`;
+}
 
 function buildCaptcha() {
   const shuffled = [...CAPTCHA_ITEMS].sort(() => Math.random() - 0.5);
@@ -107,7 +110,7 @@ serve(async (req) => {
         }
 
         await tg(botToken, "sendMessage", {
-          chat_id: chatId, text: WELCOME_MESSAGE, parse_mode: "HTML",
+          chat_id: chatId, text: buildWelcomeMessage(callback.from?.username, callback.from?.first_name), parse_mode: "HTML",
           reply_markup: { inline_keyboard: [
             [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
             [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
@@ -239,7 +242,7 @@ serve(async (req) => {
 
       if (isVerified) {
         await tg(botToken, "sendMessage", {
-          chat_id: chatId, text: WELCOME_MESSAGE, parse_mode: "HTML",
+          chat_id: chatId, text: buildWelcomeMessage(message.from?.username, message.from?.first_name), parse_mode: "HTML",
           reply_markup: { inline_keyboard: [
             [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
             [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
