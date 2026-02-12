@@ -449,7 +449,42 @@ serve(async (req) => {
         });
       }
 
-      // ============ PROMO CODES ============
+      case path.startsWith("/categories/") && method === "PUT": {
+        const categoryId = path.split("/")[2];
+        const categoryData = body.category || body;
+        const updateFields: Record<string, unknown> = {};
+        if (categoryData.name !== undefined) updateFields.name = categoryData.name;
+        if (categoryData.slug !== undefined) updateFields.slug = categoryData.slug;
+        if (categoryData.icon !== undefined) updateFields.icon = categoryData.icon || null;
+        if (categoryData.description !== undefined) updateFields.description = categoryData.description || null;
+        if (categoryData.is_active !== undefined) updateFields.is_active = categoryData.is_active;
+        if (categoryData.sort_order !== undefined) updateFields.sort_order = categoryData.sort_order;
+
+        const { data, error } = await supabase
+          .from("categories")
+          .update(updateFields)
+          .eq("id", categoryId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/categories/") && method === "DELETE": {
+        const categoryId = path.split("/")[2];
+        const { error } = await supabase
+          .from("categories")
+          .delete()
+          .eq("id", categoryId);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       case path === "/promos" && method === "GET": {
         const { data, error } = await supabase
           .from("promo_codes")

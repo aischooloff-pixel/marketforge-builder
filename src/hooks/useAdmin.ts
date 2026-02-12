@@ -245,10 +245,22 @@ export const useAdmin = () => {
     return invokeAdminApi('/categories', 'GET');
   }, [invokeAdminApi]);
 
-  const createCategory = useCallback(async (category: { name: string; slug: string; icon?: string }) => {
+  const createCategory = useCallback(async (category: { name: string; slug: string; icon?: string; description?: string }) => {
     const result = await invokeAdminApi('/categories', 'POST', { category });
     if (result) toast.success('Категория создана');
     return result;
+  }, [invokeAdminApi]);
+
+  const updateCategory = useCallback(async (categoryId: string, category: Record<string, unknown>) => {
+    const result = await invokeAdminApi(`/categories/${categoryId}`, 'PUT', { category });
+    if (result) toast.success('Категория обновлена');
+    return result;
+  }, [invokeAdminApi]);
+
+  const deleteCategory = useCallback(async (categoryId: string) => {
+    const result = await invokeAdminApi<{ success: boolean }>(`/categories/${categoryId}`, 'DELETE');
+    if (result?.success) toast.success('Категория удалена');
+    return result?.success || false;
   }, [invokeAdminApi]);
 
   // Promo Codes
@@ -376,6 +388,8 @@ export const useAdmin = () => {
     // Categories
     fetchCategories,
     createCategory,
+    updateCategory,
+    deleteCategory,
     // Promo Codes
     fetchPromos,
     createPromo,

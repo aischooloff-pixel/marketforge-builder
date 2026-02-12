@@ -123,6 +123,7 @@ const AdminPage = () => {
   const [productItemsOpen, setProductItemsOpen] = useState(false);
   const [selectedProductForItems, setSelectedProductForItems] = useState<Product | null>(null);
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [promoFormOpen, setPromoFormOpen] = useState(false);
 
   // Check access: either admin role (Telegram) or password auth
@@ -213,7 +214,24 @@ const AdminPage = () => {
   };
 
   const handleCategorySubmit = async (categoryData: Partial<Category>) => {
-    await admin.createCategory(categoryData as { name: string; slug: string; icon?: string });
+    if (editingCategory) {
+      await admin.updateCategory(editingCategory.id, categoryData);
+    } else {
+      await admin.createCategory(categoryData as { name: string; slug: string; icon?: string; description?: string });
+    }
+    const updated = await admin.fetchCategories();
+    if (updated) setCategories(updated as Category[]);
+    setEditingCategory(null);
+  };
+
+  const handleOpenCategoryForm = (category?: Category) => {
+    setEditingCategory(category || null);
+    setCategoryFormOpen(true);
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm('Удалить категорию? Товары в ней не будут удалены.')) return;
+    await admin.deleteCategory(categoryId);
     const updated = await admin.fetchCategories();
     if (updated) setCategories(updated as Category[]);
   };
@@ -483,7 +501,7 @@ const AdminPage = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <h2 className="text-lg font-semibold">Категории ({categories.length})</h2>
-                    <Button size="sm" onClick={() => setCategoryFormOpen(true)}>
+                    <Button size="sm" onClick={() => handleOpenCategoryForm()}>
                       <Plus className="h-4 w-4 mr-1" />
                       Добавить
                     </Button>
@@ -496,7 +514,7 @@ const AdminPage = () => {
                       <Button 
                         variant="outline" 
                         className="mt-4"
-                        onClick={() => setCategoryFormOpen(true)}
+                        onClick={() => handleOpenCategoryForm()}
                       >
                         Создать первую категорию
                       </Button>
@@ -513,9 +531,28 @@ const AdminPage = () => {
                                 <p className="text-xs text-muted-foreground">/{cat.slug}</p>
                               </div>
                             </div>
-                            <Badge variant="secondary">
-                              {products.filter(p => p.category_id === cat.id).length} товаров
-                            </Badge>
+                            <div className="flex items-center gap-1">
+                              <Badge variant="secondary">
+                                {products.filter(p => p.category_id === cat.id).length} товаров
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenCategoryForm(cat)}
+                                title="Редактировать"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteCategory(cat.id)}
+                                disabled={admin.isLoading}
+                                title="Удалить"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </Card>
                       ))}
@@ -750,7 +787,11 @@ const AdminPage = () => {
 
       <CategoryFormDialog
         open={categoryFormOpen}
-        onOpenChange={setCategoryFormOpen}
+        onOpenChange={(open) => {
+          setCategoryFormOpen(open);
+          if (!open) setEditingCategory(null);
+        }}
+        category={editingCategory}
         onSubmit={handleCategorySubmit}
         isLoading={admin.isLoading}
       />
