@@ -87,26 +87,26 @@ const ProductPage = () => {
 
   const periodOptionsMap: Record<number, { value: string; label: string; price: number }[]> = {
     4: [ // IPv4
-      { value: '7', label: 'Неделя', price: 49 },
-      { value: '14', label: '2 недели', price: 79 },
-      { value: '30', label: 'Месяц', price: 139 },
-      { value: '60', label: '2 месяца', price: 279 },
-      { value: '90', label: '3 месяца', price: 389 },
+      { value: '7', label: 'Неделя', price: 0.54 },
+      { value: '14', label: '2 недели', price: 0.88 },
+      { value: '30', label: 'Месяц', price: 1.54 },
+      { value: '60', label: '2 месяца', price: 3.10 },
+      { value: '90', label: '3 месяца', price: 4.32 },
     ],
     6: [ // IPv6
-      { value: '3', label: '3 дня', price: 9 },
-      { value: '7', label: 'Неделя', price: 12 },
-      { value: '14', label: '2 недели', price: 19 },
-      { value: '30', label: 'Месяц', price: 29 },
-      { value: '60', label: '2 месяца', price: 49 },
-      { value: '90', label: '3 месяца', price: 69 },
+      { value: '3', label: '3 дня', price: 0.10 },
+      { value: '7', label: 'Неделя', price: 0.13 },
+      { value: '14', label: '2 недели', price: 0.21 },
+      { value: '30', label: 'Месяц', price: 0.32 },
+      { value: '60', label: '2 месяца', price: 0.54 },
+      { value: '90', label: '3 месяца', price: 0.77 },
     ],
     3: [ // IPv4 Shared
-      { value: '7', label: 'Неделя', price: 15 },
-      { value: '14', label: '2 недели', price: 25 },
-      { value: '30', label: 'Месяц', price: 39 },
-      { value: '60', label: '2 месяца', price: 69 },
-      { value: '90', label: '3 месяца', price: 99 },
+      { value: '7', label: 'Неделя', price: 0.17 },
+      { value: '14', label: '2 недели', price: 0.28 },
+      { value: '30', label: 'Месяц', price: 0.43 },
+      { value: '60', label: '2 месяца', price: 0.77 },
+      { value: '90', label: '3 месяца', price: 1.10 },
     ],
   };
 
@@ -306,7 +306,7 @@ const ProductPage = () => {
                           <SelectContent>
                             {periodOptions.map(opt => (
                               <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label} — {opt.price} ₽
+                                {opt.label} — {opt.price} $
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -336,7 +336,7 @@ const ProductPage = () => {
 
                     {/* Price */}
                     <div className="mb-4 md:mb-6">
-                      <PriceDisplay priceRub={currentPeriodPrice} size="xl" suffix={product.type === 'subscription' ? '/мес' : undefined} />
+                      <PriceDisplay priceUsd={currentPeriodPrice} size="xl" suffix={product.type === 'subscription' ? '/мес' : undefined} />
                     </div>
 
                     {/* Add to Cart */}

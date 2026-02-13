@@ -14,15 +14,15 @@ export const useExchangeRate = () => {
       }
       return data.rate as number;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 };
 
-/** Convert RUB price to USD using the exchange rate */
-export const rubToUsd = (rubPrice: number, rate: number): number => {
-  return Math.round((rubPrice / rate) * 100) / 100;
+/** Convert USD price to RUB */
+export const usdToRub = (usdPrice: number, rate: number): number => {
+  return Math.round(usdPrice * rate);
 };
 
 /** Format USD price */

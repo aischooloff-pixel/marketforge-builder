@@ -59,6 +59,7 @@ async function verifyTelegramInitData(
 }
 
 // ============ MAIN HANDLER ============
+// Amount is now in USDT (USD). No conversion needed.
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -115,19 +116,8 @@ serve(async (req) => {
     const userId = profile.id;
     const webhookUrl = `${supabaseUrl}/functions/v1/cryptobot-webhook`;
 
-    // Fetch current exchange rate from CryptoBot
-    const rateResponse = await fetch(`${CRYPTOBOT_API_URL}/getExchangeRates`, {
-      method: "GET",
-      headers: { "Crypto-Pay-API-Token": cryptoBotToken },
-    });
-    const rateData = await rateResponse.json();
-    let usdtRubRate = 90; // fallback
-    if (rateData.ok) {
-      const found = rateData.result.find(
-        (r: any) => r.source === "USDT" && r.target === "RUB" && r.is_valid
-      );
-      if (found) usdtRubRate = parseFloat(found.rate);
-    }
+    // Amount is already in USDT — pass directly to CryptoBot
+    const invoiceAmount = parseFloat(amount).toFixed(2);
 
     // Create invoice via CryptoBot API
     const invoiceResponse = await fetch(`${CRYPTOBOT_API_URL}/createInvoice`, {
@@ -138,12 +128,12 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         asset: "USDT",
-        amount: (amount / usdtRubRate).toFixed(2),
+        amount: invoiceAmount,
         description: description || `Пополнение баланса TEMKA.STORE`,
         hidden_message: `Спасибо за пополнение! Баланс обновлён.`,
         paid_btn_name: "callback",
         paid_btn_url: webhookUrl,
-        payload: JSON.stringify({ userId, orderId, amountRub: amount, balanceToUse: balanceToUse || 0 }),
+        payload: JSON.stringify({ userId, orderId, amountUsd: amount, balanceToUse: balanceToUse || 0 }),
         allow_comments: false,
         allow_anonymous: false,
         expires_in: 3600,
@@ -176,10 +166,10 @@ serve(async (req) => {
         .from("orders")
         .update({ payment_id: invoice.invoice_id.toString() })
         .eq("id", orderId)
-        .eq("user_id", userId); // SECURITY: ensure order belongs to user
+        .eq("user_id", userId);
     }
 
-    console.log(`Invoice created: ${invoice.invoice_id} for user ${userId}`);
+    console.log(`Invoice created: ${invoice.invoice_id} for user ${userId}, amount: ${invoiceAmount} USDT`);
 
     return new Response(
       JSON.stringify({
