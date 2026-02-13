@@ -362,30 +362,43 @@ serve(async (req) => {
 
         if (starsErr || !starsOrder) throw starsErr || new Error("Order not found");
 
+        // Collect all Stars items info
+        const starsItems = (starsOrder.order_items || []).filter(
+          (i: any) => i.product_name === "Telegram Stars"
+        );
+
+        // Build Stars summary lines
+        const starsLines = starsItems.map((item: any) => {
+          const opts = item.options as { country?: string; services?: string[] } | null;
+          const starCount = opts?.services?.[0] || "0";
+          const targetUser = opts?.country || "unknown";
+          return `${starCount} ⭐ → @${targetUser}`;
+        });
+
+        // Update delivered_content: mark Stars as completed
+        const updatedContent = (starsOrder.delivered_content || "")
+          .replace(/взят в обработку\. Ожидайте пополнения\./g, "выполнен ✅");
+
         // Update to completed
         await supabase
           .from("orders")
           .update({
             status: "completed",
             completed_at: new Date().toISOString(),
-            delivered_content: (starsOrder.delivered_content || "").replace("взят в обработку. Ожидайте пополнения.", "выполнен ✅"),
+            delivered_content: updatedContent,
           })
           .eq("id", orderId);
 
         // Send Telegram notification
         const chatId = starsOrder.profiles?.telegram_id;
         if (botToken && chatId) {
-          const item = starsOrder.order_items?.[0];
-          const options = item?.options as { country?: string; services?: string[] } | null;
-          const starCount = options?.services?.[0] || "0";
-          const targetUsername = options?.country || "";
-
+          const starsText = starsLines.join("\n");
           await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chat_id: chatId,
-              text: `✅ Заказ #${orderId.substring(0, 8)} выполнен!\n\n${starCount} ⭐ звёзд отправлены @${targetUsername}.\n\nСпасибо за покупку! Будем рады видеть вас снова.`,
+              text: `✅ Заказ #${orderId.substring(0, 8)} — звёзды отправлены!\n\n${starsText}\n\nСпасибо за покупку! Будем рады видеть вас снова.`,
               reply_markup: {
                 inline_keyboard: [
                   [{ text: "⭐ Оставить отзыв", callback_data: `review_start:${orderId.substring(0, 8)}` }],

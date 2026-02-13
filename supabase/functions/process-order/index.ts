@@ -194,28 +194,22 @@ serve(async (req) => {
             ? `${statusEmoji} Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}`
             : `${statusEmoji} Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}\n\n🙏 Спасибо за покупку! Будем рады видеть вас снова.\n⭐ Оставьте, пожалуйста, отзыв — нам важно ваше мнение!`;
           const textMessage = statusText;
+
+          const buttons = hasStarsItems
+            ? [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }]]
+            : [
+                [{ text: "⭐ Оставить отзыв", callback_data: `review_start:${orderId.substring(0, 8)}` }],
+                [{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+              ];
+
           await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chat_id: telegramChatId,
               text: textMessage.substring(0, 4096),
-              parse_mode: "HTML",
               reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: "⭐ Оставить отзыв",
-                      callback_data: `review_start:${orderId.substring(0, 8)}`,
-                    },
-                  ],
-                  [
-                    {
-                      text: "🛍 Вернуться в магазин",
-                      url: "https://t.me/Temka_Store_Bot/app",
-                    },
-                  ],
-                ],
+                inline_keyboard: buttons,
               },
             }),
           });
