@@ -9,7 +9,7 @@ import { Loader2, ShoppingCart, X, User, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
-import telegramStarsIcon from '@/assets/telegram-stars.webp';
+import telegramStarsIcon from '@/assets/telegram-stars.png';
 
 const STAR_RATE = 1.4; // RUB per star
 
