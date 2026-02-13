@@ -33,6 +33,7 @@ serve(async (req) => {
     // Normalize
     let cleaned = username.trim();
     cleaned = cleaned.replace(/^https?:\/\/(t\.me|telegram\.me)\//i, "");
+    cleaned = cleaned.replace(/^(t\.me|telegram\.me)\//i, "");
     cleaned = cleaned.replace(/^@/, "");
     cleaned = cleaned.split("/")[0];
     cleaned = cleaned.split("?")[0];
