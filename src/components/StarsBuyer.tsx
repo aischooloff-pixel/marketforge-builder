@@ -16,12 +16,13 @@ const STAR_RATE = 1.4; // RUB per star
 const STAR_PACKAGES = [50, 250, 500, 1000, 2500];
 
 interface ResolvedUser {
-  id: number;
+  id: number | null;
   username: string;
   first_name: string;
   last_name: string | null;
   photo_url: string | null;
   type: string;
+  source?: string;
 }
 
 interface StarsBuyerProps {
@@ -52,17 +53,7 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
       });
 
       if (res.error) {
-        // supabase.functions.invoke puts non-2xx body into error
-        const errBody = typeof res.error === 'object' && 'context' in res.error
-          ? null : res.error;
-        let msg = 'Не удалось найти пользователя';
-        try {
-          if (errBody && typeof errBody === 'object') {
-            const parsed = JSON.parse(JSON.stringify(errBody));
-            if (parsed?.error) msg = parsed.error;
-          }
-        } catch {}
-        toast.error(msg);
+        toast.error('Не удалось найти пользователя');
         setResolvedUser(null);
       } else if (res.data?.error) {
         toast.error(res.data.error);
