@@ -105,8 +105,15 @@ export const ProductFormDialog = ({
     },
   });
 
+  // API tags that must be preserved and hidden from the editable field
+  const API_TAG_PREFIX = 'api:';
+  const [protectedTags, setProtectedTags] = useState<string[]>([]);
+
   useEffect(() => {
     if (product) {
+      const apiTags = product.tags?.filter(t => t.startsWith(API_TAG_PREFIX)) || [];
+      const userTags = product.tags?.filter(t => !t.startsWith(API_TAG_PREFIX)) || [];
+      setProtectedTags(apiTags);
       form.reset({
         name: product.name,
         short_desc: product.short_desc || '',
@@ -116,11 +123,12 @@ export const ProductFormDialog = ({
         type: product.type as 'one-time' | 'subscription',
         is_active: product.is_active,
         is_popular: product.is_popular,
-        tags: product.tags?.join(', ') || '',
+        tags: userTags.join(', '),
         max_per_user: product.max_per_user ?? 0,
       });
       setMediaUrls(product.media_urls || []);
     } else {
+      setProtectedTags([]);
       form.reset({
         name: '',
         short_desc: '',
@@ -191,6 +199,9 @@ export const ProductFormDialog = ({
   };
 
   const handleSubmit = async (data: ProductFormData) => {
+    const userTags = data.tags ? data.tags.split(',').map(t => t.trim()).filter(t => Boolean(t) && !t.startsWith(API_TAG_PREFIX)) : [];
+    const mergedTags = [...protectedTags, ...userTags];
+
     const productData: Partial<Product> = {
       name: data.name,
       short_desc: data.short_desc,
@@ -200,7 +211,7 @@ export const ProductFormDialog = ({
       type: data.type,
       is_active: data.is_active,
       is_popular: data.is_popular,
-      tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      tags: mergedTags,
       media_urls: mediaUrls,
       max_per_user: data.max_per_user,
     };
