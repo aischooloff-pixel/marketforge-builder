@@ -84,7 +84,7 @@ interface Order {
   total: number;
   created_at: string;
   profiles?: { username: string; first_name: string; telegram_id: number };
-  order_items?: Array<{ product_name: string; price: number; quantity: number }>;
+  order_items?: Array<{ product_name: string; price: number; quantity: number; options?: Record<string, unknown> }>;
 }
 
 interface User {
@@ -175,6 +175,12 @@ const AdminPage = () => {
 
   const handleUpdateOrderStatus = async (orderId: string, status: 'pending' | 'paid' | 'completed' | 'cancelled' | 'refunded') => {
     await admin.updateOrderStatus(orderId, status);
+    const updated = await admin.fetchOrders();
+    if (updated) setOrders(updated);
+  };
+
+  const handleCompleteStarsOrder = async (orderId: string) => {
+    await admin.completeStarsOrder(orderId);
     const updated = await admin.fetchOrders();
     if (updated) setOrders(updated);
   };
@@ -650,10 +656,45 @@ const AdminPage = () => {
                         </div>
                         {order.order_items && order.order_items.length > 0 && (
                           <div className="text-xs text-muted-foreground mb-2">
-                            {order.order_items.map(item => item.product_name).join(', ')}
+                            {order.order_items.map((item, idx) => {
+                              const opts = item.options as { country?: string; services?: string[] } | null;
+                              const isStars = item.product_name === 'Telegram Stars';
+                              const starCount = isStars ? opts?.services?.[0] : null;
+                              const targetUser = isStars ? opts?.country : null;
+                              return (
+                                <span key={idx}>
+                                  {item.product_name}
+                                  {isStars && starCount && (
+                                    <span> — {starCount} ⭐ →{' '}
+                                      <a
+                                        href={`https://t.me/${targetUser}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline"
+                                      >
+                                        @{targetUser}
+                                      </a>
+                                    </span>
+                                  )}
+                                  {idx < (order.order_items?.length || 0) - 1 ? ', ' : ''}
+                                </span>
+                              );
+                            })}
                           </div>
                         )}
-                        {order.status === 'paid' && (
+                        {/* Stars order: dedicated complete button */}
+                        {order.status === 'paid' && order.order_items?.some(i => i.product_name === 'Telegram Stars') && (
+                          <Button
+                            size="sm"
+                            className="w-full mt-2 gap-1"
+                            onClick={() => handleCompleteStarsOrder(order.id)}
+                            disabled={admin.isLoading}
+                          >
+                            ⭐ Выполнено
+                          </Button>
+                        )}
+                        {/* Regular order complete */}
+                        {order.status === 'paid' && !order.order_items?.some(i => i.product_name === 'Telegram Stars') && (
                           <Button
                             size="sm"
                             className="w-full mt-2"

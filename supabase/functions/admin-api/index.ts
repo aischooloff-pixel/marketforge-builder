@@ -349,6 +349,58 @@ serve(async (req) => {
         });
       }
 
+      case path.startsWith("/orders/") && path.endsWith("/complete-stars") && method === "POST": {
+        const orderId = path.split("/")[2];
+        const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+
+        // Get order with items
+        const { data: starsOrder, error: starsErr } = await supabase
+          .from("orders")
+          .select("*, order_items(*), profiles(telegram_id, username, first_name)")
+          .eq("id", orderId)
+          .single();
+
+        if (starsErr || !starsOrder) throw starsErr || new Error("Order not found");
+
+        // Update to completed
+        await supabase
+          .from("orders")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            delivered_content: (starsOrder.delivered_content || "").replace("взят в обработку. Ожидайте пополнения.", "выполнен ✅"),
+          })
+          .eq("id", orderId);
+
+        // Send Telegram notification
+        const chatId = starsOrder.profiles?.telegram_id;
+        if (botToken && chatId) {
+          const item = starsOrder.order_items?.[0];
+          const options = item?.options as { country?: string; services?: string[] } | null;
+          const starCount = options?.services?.[0] || "0";
+          const targetUsername = options?.country || "";
+
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: `✅ Заказ #${orderId.substring(0, 8)} выполнен!\n\n${starCount} ⭐ звёзд отправлены @${targetUsername}.\n\nСпасибо за покупку! Будем рады видеть вас снова.`,
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "⭐ Оставить отзыв", callback_data: `review_start:${orderId.substring(0, 8)}` }],
+                  [{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+                ],
+              },
+            }),
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       case path.startsWith("/orders/") && method === "PUT": {
         const orderId = path.split("/")[2];
         const { data, error } = await supabase
