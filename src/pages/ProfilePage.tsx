@@ -472,10 +472,10 @@ const ProfilePage = () => {
                             : 'text-destructive'
                         }`}>
                           {isPositiveTransaction(transaction.type) ? '+' : '-'}
-                          {Math.abs(transaction.amount).toLocaleString('ru-RU')} ₽
+                          {formatUsd(Math.abs(transaction.amount))} $
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Баланс: {parseFloat(String(transaction.balance_after)).toLocaleString('ru-RU')} ₽
+                          Баланс: {formatUsd(parseFloat(String(transaction.balance_after)))} $
                         </p>
                       </div>
                     </motion.div>
