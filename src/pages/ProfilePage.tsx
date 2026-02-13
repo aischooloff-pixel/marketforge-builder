@@ -473,9 +473,13 @@ const ProfilePage = () => {
                         }`}>
                           {isPositiveTransaction(transaction.type) ? '+' : '-'}
                           {formatUsd(Math.abs(transaction.amount))} $
+                          <span className="text-xs text-muted-foreground font-normal ml-1">
+                            {usdToRub(Math.abs(transaction.amount), rate).toLocaleString('ru-RU')} ₽
+                          </span>
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Баланс: {formatUsd(parseFloat(String(transaction.balance_after)))} $
+                          <span className="ml-1">{usdToRub(parseFloat(String(transaction.balance_after)), rate).toLocaleString('ru-RU')} ₽</span>
                         </p>
                       </div>
                     </motion.div>
