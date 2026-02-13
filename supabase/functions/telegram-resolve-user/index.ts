@@ -6,6 +6,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function extractMeta(html: string, property: string): string | null {
+  // Match both property="..." and name="..." attributes
+  const regex = new RegExp(
+    `<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']+)["']|<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${property}["']`,
+    "i"
+  );
+  const match = html.match(regex);
+  return match ? (match[1] || match[2] || null) : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -20,7 +30,7 @@ serve(async (req) => {
       );
     }
 
-    // Normalize: strip https://t.me/, @, etc.
+    // Normalize
     let cleaned = username.trim();
     cleaned = cleaned.replace(/^https?:\/\/(t\.me|telegram\.me)\//i, "");
     cleaned = cleaned.replace(/^@/, "");
@@ -34,7 +44,7 @@ serve(async (req) => {
       );
     }
 
-    // 1) First try: search in our DB (all mini app users are registered)
+    // 1) Check our DB first
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
@@ -60,53 +70,41 @@ serve(async (req) => {
       );
     }
 
-    // 2) Second try: Telegram Bot API getChat
-    const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-    if (botToken) {
-      try {
-        const chatRes = await fetch(`https://api.telegram.org/bot${botToken}/getChat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: `@${cleaned}` }),
-        });
-        const chatData = await chatRes.json();
+    // 2) Parse t.me/username page for og:title and og:image
+    try {
+      const tmeRes = await fetch(`https://t.me/${cleaned}`, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; TelegramBot/1.0)",
+        },
+      });
 
-        if (chatData.ok) {
-          const chat = chatData.result;
-          let photoUrl: string | null = null;
-          if (chat.photo?.big_file_id) {
-            try {
-              const fileRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ file_id: chat.photo.big_file_id }),
-              });
-              const fileData = await fileRes.json();
-              if (fileData.ok && fileData.result?.file_path) {
-                photoUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
-              }
-            } catch {}
-          }
+      if (tmeRes.ok) {
+        const html = await tmeRes.text();
+        const ogTitle = extractMeta(html, "og:title");
+        const ogImage = extractMeta(html, "og:image");
+        const ogDesc = extractMeta(html, "og:description");
 
+        // Check if it's a valid user/channel page (not "Telegram" default)
+        if (ogTitle && ogTitle !== "Telegram" && ogTitle !== "Telegram: Contact @" + cleaned) {
           return new Response(
             JSON.stringify({
-              id: chat.id,
-              username: chat.username || cleaned,
-              first_name: chat.first_name || chat.title || cleaned,
-              last_name: chat.last_name || null,
-              photo_url: photoUrl,
-              type: chat.type,
-              source: "telegram",
+              id: null,
+              username: cleaned,
+              first_name: ogTitle,
+              last_name: null,
+              photo_url: ogImage || null,
+              type: ogDesc?.includes("channel") ? "channel" : ogDesc?.includes("group") ? "group" : "private",
+              source: "t.me",
             }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-      } catch (e) {
-        console.error("Telegram API error:", e);
       }
+    } catch (e) {
+      console.error("t.me parse error:", e);
     }
 
-    // 3) Fallback: accept username without verification
+    // 3) Fallback: accept without verification
     return new Response(
       JSON.stringify({
         id: null,
