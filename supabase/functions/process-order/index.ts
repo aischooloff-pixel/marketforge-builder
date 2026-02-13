@@ -70,16 +70,22 @@ serve(async (req) => {
     for (const item of order.order_items) {
       const quantity = item.quantity || 1;
 
-      // Check if this is an API-based product (e.g., px6 proxy)
-      const { data: productData } = await supabase
-        .from("products")
-        .select("tags")
-        .eq("id", item.product_id)
-        .single();
+      // Detect Stars items by product_name (product_id is null for Stars)
+      const isStarsByName = item.product_name === "Telegram Stars";
 
-      const tags: string[] = productData?.tags || [];
+      // Check if this is an API-based product (e.g., px6 proxy)
+      let tags: string[] = [];
+      if (item.product_id) {
+        const { data: productData } = await supabase
+          .from("products")
+          .select("tags")
+          .eq("id", item.product_id)
+          .single();
+        tags = productData?.tags || [];
+      }
+
       const isApiPx6 = tags.includes("api:px6");
-      const isApiStars = tags.includes("api:stars");
+      const isApiStars = tags.includes("api:stars") || isStarsByName;
 
       // Telegram Stars: manual fulfillment — add to delivered items but don't auto-complete
       if (isApiStars) {
