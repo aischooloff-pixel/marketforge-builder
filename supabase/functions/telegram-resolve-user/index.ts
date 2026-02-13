@@ -105,18 +105,10 @@ serve(async (req) => {
       console.error("t.me parse error:", e);
     }
 
-    // 3) Fallback: accept without verification
+    // 3) Not found
     return new Response(
-      JSON.stringify({
-        id: null,
-        username: cleaned,
-        first_name: cleaned,
-        last_name: null,
-        photo_url: null,
-        type: "unverified",
-        source: "input",
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Такого пользователя не существует" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Resolve user error:", error);
