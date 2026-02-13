@@ -66,7 +66,7 @@ serve(async (req) => {
     // Process each order item
     const deliveredItems: string[] = [];
     const fileUrls: string[] = [];
-
+    let hasStarsItems = false;
     for (const item of order.order_items) {
       const quantity = item.quantity || 1;
 
@@ -81,7 +81,7 @@ serve(async (req) => {
       const isApiPx6 = tags.includes("api:px6");
       const isApiStars = tags.includes("api:stars");
 
-      // Telegram Stars: manual fulfillment — keep order in "paid" status
+      // Telegram Stars: manual fulfillment — add to delivered items but don't auto-complete
       if (isApiStars) {
         const options = item.options as { country?: string; services?: string[] } | null;
         const targetUsername = options?.country || "unknown";
@@ -89,40 +89,8 @@ serve(async (req) => {
 
         console.log(`[ProcessOrder] Stars order: ${starCount} stars for @${targetUsername}`);
         deliveredItems.push(`⭐ ${item.product_name}:\nЗаказ на ${starCount} звёзд для @${targetUsername} взят в обработку. Ожидайте пополнения.`);
-        
-        // Send notification and keep order in "paid" status (admin completes manually)
-        const starsContent = deliveredItems.join("\n\n---\n\n");
-        
-        await supabase
-          .from("orders")
-          .update({
-            status: "paid",
-            delivered_content: starsContent,
-          })
-          .eq("id", orderId);
-
-        // Send Telegram notification
-        if (telegramBotToken && telegramChatId) {
-          const textMessage = `⭐ Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаш заказ на ${starCount} звёзд для @${targetUsername} взят в обработку.\nОжидайте пополнения!`;
-          await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              chat_id: telegramChatId,
-              text: textMessage,
-              reply_markup: {
-                inline_keyboard: [[
-                  { text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" },
-                ]],
-              },
-            }),
-          });
-        }
-
-        return new Response(
-          JSON.stringify({ success: true, orderId, itemsDelivered: 1, filesDelivered: 0, deliveredContent: starsContent }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        hasStarsItems = true;
+        continue;
       }
 
       if (isApiPx6) {
@@ -198,13 +166,16 @@ serve(async (req) => {
     }
 
     // Update order status
+    // If order has Stars items, keep as "paid" (admin completes Stars manually)
+    // If order has ONLY regular items (no Stars), mark as "completed"
     const deliveredContent = deliveredItems.join("\n\n---\n\n");
+    const finalStatus = hasStarsItems ? "paid" : "completed";
     
     const { error: updateOrderError } = await supabase
       .from("orders")
       .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
+        status: finalStatus,
+        ...(finalStatus === "completed" ? { completed_at: new Date().toISOString() } : {}),
         delivered_content: deliveredContent,
       })
       .eq("id", orderId);
@@ -218,7 +189,11 @@ serve(async (req) => {
       try {
         // Send text content
         if (deliveredContent) {
-          const textMessage = `✅ Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}\n\n🙏 Спасибо за покупку! Будем рады видеть вас снова.\n⭐ Оставьте, пожалуйста, отзыв — нам важно ваше мнение!`;
+          const statusEmoji = hasStarsItems ? '⏳' : '✅';
+          const statusText = hasStarsItems
+            ? `${statusEmoji} Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}`
+            : `${statusEmoji} Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}\n\n🙏 Спасибо за покупку! Будем рады видеть вас снова.\n⭐ Оставьте, пожалуйста, отзыв — нам важно ваше мнение!`;
+          const textMessage = statusText;
           await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

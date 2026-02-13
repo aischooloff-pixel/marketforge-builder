@@ -15,7 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
-import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2, Clock, Globe } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2, Clock, Globe, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 const ProductPage = () => {
   const {
@@ -39,7 +40,7 @@ const ProductPage = () => {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [selectedProtocol, setSelectedProtocol] = useState<string>('http');
-
+  const [addedToCart, setAddedToCart] = useState(false);
   // Determine product type
   const isApiProduct = product?.tags?.some(t => t.startsWith('api:px6')) ?? false;
   const isTigerProduct = product?.tags?.includes('api:tiger') ?? false;
@@ -138,6 +139,9 @@ const ProductPage = () => {
       period: needsPeriodSelector ? parseInt(activePeriod) : undefined,
       protocol: isApiProduct ? selectedProtocol : undefined,
     });
+    toast.success(`${product.name} добавлен в корзину`);
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 3000);
   };
   const toggleService = (serviceId: string) => {
     setSelectedServices(prev => prev.includes(serviceId) ? prev.filter(s => s !== serviceId) : [...prev, serviceId]);
@@ -345,6 +349,9 @@ const ProductPage = () => {
                       {isOutOfStock ? <>
                           <PackageX className="h-5 w-5" />
                           Нет в наличии
+                        </> : addedToCart ? <>
+                          <Check className="h-5 w-5" />
+                          Добавлено в корзину
                         </> : <>
                           <ShoppingCart className="h-5 w-5" />
                           Добавить в корзину
