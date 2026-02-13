@@ -112,6 +112,8 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
   const [isOpen, setIsOpen] = useState(false);
   const hasMultipleItems = (order.order_items?.length || 0) > 1;
   const hasStars = order.order_items?.some(i => i.product_name === 'Telegram Stars');
+  const hasNonStars = order.order_items?.some(i => i.product_name !== 'Telegram Stars');
+  const isMixed = hasStars && hasNonStars;
 
   return (
     <Card className="p-4">
@@ -198,6 +200,13 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
               );
             })}
           </div>
+          
+          {/* Mixed order info */}
+          {isMixed && order.status === 'paid' && (
+            <p className="text-xs text-muted-foreground mt-2">
+              ℹ️ Обычные товары выданы автоматически. Нажмите «⭐ Stars выполнено» после отправки звёзд.
+            </p>
+          )}
         </CollapsibleContent>
 
         {/* Stars order: dedicated complete button */}
@@ -208,7 +217,7 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
             onClick={onComplete}
             disabled={isLoading}
           >
-            ⭐ Выполнено
+            ⭐ Stars выполнено
           </Button>
         )}
         {/* Regular order complete */}

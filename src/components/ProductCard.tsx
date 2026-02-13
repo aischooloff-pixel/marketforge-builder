@@ -4,8 +4,10 @@ import { useCart } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Plus, PackageX } from 'lucide-react';
+import { ShoppingCart, Plus, PackageX, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useState } from 'react';
 
 interface ProductCardProps {
   product: Product;
@@ -13,16 +15,17 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
-  const { addItem } = useCart();
+  const { addItem, items } = useCart();
   const { data: stockCount = 0 } = useProductStock(product.id);
+  const [justAdded, setJustAdded] = useState(false);
+
+  const isInCart = items.some(item => item.product.id === product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // stockCount: -1 = unlimited (file-based), 0 = out of stock, >0 = limited
     if (stockCount === 0) return;
     
-    // Convert DB product to cart format
     addItem({
       id: product.id,
       name: product.name,
@@ -37,6 +40,9 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
       countries: product.countries || undefined,
       services: product.services || undefined,
     });
+    toast.success(`${product.name} добавлен в корзину`);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 2000);
   };
 
   const categoryIcon = product.categories?.icon || '📦';
@@ -71,15 +77,15 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 whileHover={{ scale: 1 }}
-                className="absolute top-2 right-2 md:top-3 md:right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                className={`absolute top-2 right-2 md:top-3 md:right-3 transition-opacity ${isInCart || justAdded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
               >
                 <Button
                   size="icon"
-                  variant="secondary"
-                  className="h-8 w-8 md:h-10 md:w-10 rounded-full shadow-lg bg-background/90 backdrop-blur-sm hover:bg-background"
+                  variant={isInCart || justAdded ? "default" : "secondary"}
+                  className="h-8 w-8 md:h-10 md:w-10 rounded-full shadow-lg"
                   onClick={handleAddToCart}
                 >
-                  <Plus className="h-4 w-4 md:h-5 md:w-5" />
+                  {isInCart || justAdded ? <Check className="h-4 w-4 md:h-5 md:w-5" /> : <Plus className="h-4 w-4 md:h-5 md:w-5" />}
                 </Button>
               </motion.div>
             )}
