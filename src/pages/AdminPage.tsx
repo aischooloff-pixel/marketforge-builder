@@ -35,8 +35,12 @@ import {
   MessageCircle,
   Eye,
   Star,
-  Send
+  Send,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Stats {
   users: number;
@@ -97,6 +101,131 @@ interface User {
   created_at: string;
   user_roles?: Array<{ role: string }>;
 }
+
+// Expandable order card component
+const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
+  order: Order;
+  onComplete: () => void;
+  onUpdateStatus: (status: 'pending' | 'paid' | 'completed' | 'cancelled' | 'refunded') => void;
+  isLoading: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const hasMultipleItems = (order.order_items?.length || 0) > 1;
+  const hasStars = order.order_items?.some(i => i.product_name === 'Telegram Stars');
+
+  return (
+    <Card className="p-4">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-medium">#{order.id.slice(0, 8)}</p>
+            <p className="text-xs text-muted-foreground">
+              {order.profiles?.username ? `@${order.profiles.username}` : order.profiles?.first_name}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-right">
+              <p className="font-bold">{parseFloat(String(order.total)).toLocaleString('ru-RU')} ₽</p>
+              <Badge
+                variant={
+                  order.status === 'completed' ? 'default' :
+                  order.status === 'paid' ? 'secondary' :
+                  'outline'
+                }
+                className="text-xs"
+              >
+                {order.status === 'completed' ? 'Выполнен' :
+                 order.status === 'paid' ? 'Оплачен' :
+                 order.status === 'pending' ? 'Не оплачен' : order.status}
+              </Badge>
+            </div>
+            {(hasMultipleItems || hasStars) && (
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+              </CollapsibleTrigger>
+            )}
+          </div>
+        </div>
+
+        {/* Compact summary when collapsed */}
+        {!isOpen && order.order_items && order.order_items.length > 0 && (
+          <p className="text-xs text-muted-foreground mb-2">
+            {order.order_items.map(i => i.product_name).join(', ')}
+            {hasMultipleItems && ` (${order.order_items.length} позиций)`}
+          </p>
+        )}
+
+        {/* Expanded details */}
+        <CollapsibleContent>
+          <div className="mt-3 space-y-2 border-t pt-3">
+            {order.order_items?.map((item, idx) => {
+              const opts = item.options as { country?: string; services?: string[] } | null;
+              const isStars = item.product_name === 'Telegram Stars';
+              const starCount = isStars ? opts?.services?.[0] : null;
+              const targetUser = isStars ? opts?.country : null;
+
+              return (
+                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{item.product_name}</p>
+                    {isStars && starCount && targetUser && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className="text-xs text-muted-foreground">{starCount} ⭐ →</span>
+                        <a
+                          href={`https://t.me/${targetUser}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary hover:underline inline-flex items-center gap-0.5"
+                        >
+                          @{targetUser}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    )}
+                    {!isStars && opts?.country && (
+                      <p className="text-xs text-muted-foreground">Страна: {opts.country}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{parseFloat(String(item.price)).toLocaleString('ru-RU')} ₽</p>
+                    {(item.quantity || 1) > 1 && (
+                      <p className="text-xs text-muted-foreground">×{item.quantity}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CollapsibleContent>
+
+        {/* Stars order: dedicated complete button */}
+        {order.status === 'paid' && hasStars && (
+          <Button
+            size="sm"
+            className="w-full mt-2 gap-1"
+            onClick={onComplete}
+            disabled={isLoading}
+          >
+            ⭐ Выполнено
+          </Button>
+        )}
+        {/* Regular order complete */}
+        {order.status === 'paid' && !hasStars && (
+          <Button
+            size="sm"
+            className="w-full mt-2"
+            onClick={() => onUpdateStatus('completed')}
+            disabled={isLoading}
+          >
+            Выполнить заказ
+          </Button>
+        )}
+      </Collapsible>
+    </Card>
+  );
+};
 
 const AdminPage = () => {
   const { user, isAdmin, isLoading: authLoading } = useTelegram();
@@ -630,81 +759,13 @@ const AdminPage = () => {
                     </div>
                   ) : (
                     orders.map((order) => (
-                      <Card key={order.id} className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <p className="font-medium">#{order.id.slice(0, 8)}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {order.profiles?.username || order.profiles?.first_name}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold">{parseFloat(String(order.total)).toLocaleString('ru-RU')} ₽</p>
-                            <Badge
-                              variant={
-                                order.status === 'completed' ? 'default' :
-                                order.status === 'paid' ? 'secondary' :
-                                'outline'
-                              }
-                              className="text-xs"
-                            >
-                              {order.status === 'completed' ? 'Выполнен' :
-                               order.status === 'paid' ? 'Оплачен' :
-                               order.status === 'pending' ? 'Не оплачен' : order.status}
-                            </Badge>
-                          </div>
-                        </div>
-                        {order.order_items && order.order_items.length > 0 && (
-                          <div className="text-xs text-muted-foreground mb-2">
-                            {order.order_items.map((item, idx) => {
-                              const opts = item.options as { country?: string; services?: string[] } | null;
-                              const isStars = item.product_name === 'Telegram Stars';
-                              const starCount = isStars ? opts?.services?.[0] : null;
-                              const targetUser = isStars ? opts?.country : null;
-                              return (
-                                <span key={idx}>
-                                  {item.product_name}
-                                  {isStars && starCount && (
-                                    <span> — {starCount} ⭐ →{' '}
-                                      <a
-                                        href={`https://t.me/${targetUser}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-primary hover:underline"
-                                      >
-                                        @{targetUser}
-                                      </a>
-                                    </span>
-                                  )}
-                                  {idx < (order.order_items?.length || 0) - 1 ? ', ' : ''}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
-                        {/* Stars order: dedicated complete button */}
-                        {order.status === 'paid' && order.order_items?.some(i => i.product_name === 'Telegram Stars') && (
-                          <Button
-                            size="sm"
-                            className="w-full mt-2 gap-1"
-                            onClick={() => handleCompleteStarsOrder(order.id)}
-                            disabled={admin.isLoading}
-                          >
-                            ⭐ Выполнено
-                          </Button>
-                        )}
-                        {/* Regular order complete */}
-                        {order.status === 'paid' && !order.order_items?.some(i => i.product_name === 'Telegram Stars') && (
-                          <Button
-                            size="sm"
-                            className="w-full mt-2"
-                            onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
-                            disabled={admin.isLoading}
-                          >
-                            Выполнить заказ
-                          </Button>
-                        )}
-                      </Card>
+                      <OrderCard
+                        key={order.id}
+                        order={order}
+                        onComplete={() => handleCompleteStarsOrder(order.id)}
+                        onUpdateStatus={(status) => handleUpdateOrderStatus(order.id, status)}
+                        isLoading={admin.isLoading}
+                      />
                     ))
                   )}
                 </div>

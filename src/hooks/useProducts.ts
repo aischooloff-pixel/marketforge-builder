@@ -153,10 +153,12 @@ export const useProduct = (id: string | undefined) => {
 };
 
 export const useProductStock = (productId: string | undefined) => {
+  // Skip query for non-UUID IDs (e.g. Stars items like "stars-username-500-timestamp")
+  const isValidUuid = !!productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
   return useQuery({
     queryKey: ['product-stock', productId],
     queryFn: async (): Promise<number> => {
-      if (!productId) return 0;
+      if (!productId || !isValidUuid) return -1;
 
       // Stock is now read from the products table (stock column)
       // product_items is locked by RLS; stock is maintained server-side
@@ -175,7 +177,7 @@ export const useProductStock = (productId: string | undefined) => {
       // stock = -1 means unlimited (file-based products)
       return data.stock ?? 0;
     },
-    enabled: !!productId,
+    enabled: isValidUuid,
     staleTime: 1000 * 30,
   });
 };
