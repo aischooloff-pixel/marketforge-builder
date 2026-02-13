@@ -184,6 +184,12 @@ export const useAdmin = () => {
     return result;
   }, [invokeAdminApi]);
 
+  const completeStarsOrder = useCallback(async (orderId: string): Promise<boolean> => {
+    const result = await invokeAdminApi<{ success: boolean }>(`/orders/${orderId}/complete-stars`, 'POST');
+    if (result?.success) toast.success('Заказ на звёзды выполнен, уведомление отправлено');
+    return result?.success || false;
+  }, [invokeAdminApi]);
+
   // Users
   const fetchUsers = useCallback(async (): Promise<User[] | null> => {
     return invokeAdminApi<User[]>('/users', 'GET');
@@ -372,6 +378,7 @@ export const useAdmin = () => {
     // Orders
     fetchOrders,
     updateOrderStatus,
+    completeStarsOrder,
     // Users
     fetchUsers,
     toggleUserBan,

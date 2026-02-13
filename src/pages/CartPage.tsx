@@ -59,16 +59,21 @@ const CartItemRow = ({
         <p className="text-sm text-muted-foreground mt-1">
           {item.product.shortDesc}
         </p>
-        {item.selectedCountry && <p className="text-sm mt-2">
+        {item.selectedCountry && !item.product.tags?.includes('api:stars') && <p className="text-sm mt-2">
             Страна: {item.selectedCountry.toUpperCase()}
           </p>}
+        {item.product.tags?.includes('api:stars') && item.selectedCountry && (
+          <p className="text-sm mt-2">
+            Получатель: @{item.selectedCountry} · {item.selectedServices?.[0]} ⭐
+          </p>
+        )}
         {item.selectedPeriod && <p className="text-sm mt-1">
             Период: {`${item.selectedPeriod} дн.`}
           </p>}
         {item.selectedProtocol && <p className="text-sm mt-1">
             Протокол: {item.selectedProtocol === 'socks' ? 'SOCKS5' : 'HTTP/HTTPS'}
           </p>}
-        {item.selectedServices && item.selectedServices.length > 0 && <p className="text-sm mt-1">
+        {item.selectedServices && item.selectedServices.length > 0 && !item.product.tags?.includes('api:stars') && <p className="text-sm mt-1">
             Сервисы: {item.selectedServices.join(', ')}
           </p>}
         {maxQty > 0 && maxQty < 99 && item.quantity > maxQty && <p className="text-xs text-destructive mt-1">

@@ -9,6 +9,7 @@ import { CountrySelector, ServiceSelector } from '@/components/CountrySelector';
 import { ProxyCountrySelector } from '@/components/ProxyCountrySelector';
 import { TigerNumberBuyer } from '@/components/TigerNumberBuyer';
 import { SocialBoostBuyer } from '@/components/SocialBoostBuyer';
+import { StarsBuyer } from '@/components/StarsBuyer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,6 +44,7 @@ const ProductPage = () => {
   const isApiProduct = product?.tags?.some(t => t.startsWith('api:px6')) ?? false;
   const isTigerProduct = product?.tags?.includes('api:tiger') ?? false;
   const isProfiLikeProduct = product?.tags?.includes('api:profilike') ?? false;
+  const isStarsProduct = product?.tags?.includes('api:stars') ?? false;
   const proxyVersion = product?.tags?.includes('api:px6:v3') ? 3 : product?.tags?.includes('api:px6:v4') ? 4 : 6;
 
   const { data: proxyData, isLoading: proxyLoading } = useProxyAvailability(proxyVersion, isApiProduct);
@@ -256,8 +258,13 @@ const ProductPage = () => {
                     <SocialBoostBuyer />
                   )}
 
+                  {/* Telegram Stars Product */}
+                  {isStarsProduct && !isOutOfStock && (
+                    <StarsBuyer productId={product.id} />
+                  )}
+
                   {/* Non-API products: standard purchase flow */}
-                  {!isTigerProduct && !isProfiLikeProduct && <>
+                  {!isTigerProduct && !isProfiLikeProduct && !isStarsProduct && <>
                     {/* Stock info */}
                     {!stockLoading && !isOutOfStock && <div className="mb-4">
                         <p className="text-sm text-muted-foreground">

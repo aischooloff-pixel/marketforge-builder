@@ -79,6 +79,51 @@ serve(async (req) => {
 
       const tags: string[] = productData?.tags || [];
       const isApiPx6 = tags.includes("api:px6");
+      const isApiStars = tags.includes("api:stars");
+
+      // Telegram Stars: manual fulfillment — keep order in "paid" status
+      if (isApiStars) {
+        const options = item.options as { country?: string; services?: string[] } | null;
+        const targetUsername = options?.country || "unknown";
+        const starCount = options?.services?.[0] || "0";
+
+        console.log(`[ProcessOrder] Stars order: ${starCount} stars for @${targetUsername}`);
+        deliveredItems.push(`⭐ ${item.product_name}:\nЗаказ на ${starCount} звёзд для @${targetUsername} взят в обработку. Ожидайте пополнения.`);
+        
+        // Send notification and keep order in "paid" status (admin completes manually)
+        const starsContent = deliveredItems.join("\n\n---\n\n");
+        
+        await supabase
+          .from("orders")
+          .update({
+            status: "paid",
+            delivered_content: starsContent,
+          })
+          .eq("id", orderId);
+
+        // Send Telegram notification
+        if (telegramBotToken && telegramChatId) {
+          const textMessage = `⭐ Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаш заказ на ${starCount} звёзд для @${targetUsername} взят в обработку.\nОжидайте пополнения!`;
+          await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: telegramChatId,
+              text: textMessage,
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" },
+                ]],
+              },
+            }),
+          });
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, orderId, itemsDelivered: 1, filesDelivered: 0, deliveredContent: starsContent }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       if (isApiPx6) {
         // Always buy via px6 API — even if product_items exist, API products are fulfilled via API
