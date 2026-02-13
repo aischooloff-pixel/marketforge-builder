@@ -47,15 +47,28 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
     if (!input.trim()) return;
     setIsResolving(true);
     try {
-      const { data, error } = await supabase.functions.invoke('telegram-resolve-user', {
+      const res = await supabase.functions.invoke('telegram-resolve-user', {
         body: { username: input.trim() },
       });
 
-      if (error || data?.error) {
-        toast.error(data?.error || 'Не удалось найти пользователя');
+      if (res.error) {
+        // supabase.functions.invoke puts non-2xx body into error
+        const errBody = typeof res.error === 'object' && 'context' in res.error
+          ? null : res.error;
+        let msg = 'Не удалось найти пользователя';
+        try {
+          if (errBody && typeof errBody === 'object') {
+            const parsed = JSON.parse(JSON.stringify(errBody));
+            if (parsed?.error) msg = parsed.error;
+          }
+        } catch {}
+        toast.error(msg);
         setResolvedUser(null);
-      } else {
-        setResolvedUser(data);
+      } else if (res.data?.error) {
+        toast.error(res.data.error);
+        setResolvedUser(null);
+      } else if (res.data) {
+        setResolvedUser(res.data);
         setStep('quantity');
       }
     } catch {
