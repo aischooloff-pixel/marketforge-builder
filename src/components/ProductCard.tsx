@@ -8,6 +8,7 @@ import { ShoppingCart, Plus, PackageX, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { PriceDisplay, PriceInline } from '@/components/PriceDisplay';
 
 interface ProductCardProps {
   product: Product;
@@ -143,15 +144,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 
             {/* Price - aligned to bottom */}
             <div className="flex items-end justify-between mt-auto pt-1 md:pt-0">
-              <div>
-                <span className="text-base md:text-2xl font-bold">
-                  {product.price.toLocaleString('ru-RU')}
-                </span>
-                <span className="text-xs md:text-sm text-muted-foreground ml-0.5">₽</span>
-                {product.type === 'subscription' && (
-                  <span className="text-[10px] md:text-xs text-muted-foreground">/мес</span>
-                )}
-              </div>
+              <PriceDisplay priceRub={product.price} size="md" suffix={product.type === 'subscription' ? '/мес' : undefined} />
             </div>
           </div>
         </div>
@@ -188,9 +181,7 @@ export const ProductCardCompact = ({ product }: ProductCardProps) => {
         </div>
         
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="font-bold text-sm whitespace-nowrap">
-            {product.price.toLocaleString('ru-RU')} ₽
-          </span>
+          <PriceInline priceRub={product.price} className="text-sm whitespace-nowrap" />
           {!isOutOfStock && (
             <Button 
               size="icon" 
