@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
+import { useExchangeRate, rubToUsd, formatUsd } from '@/hooks/useExchangeRate';
 
 // Cart item row with stock-aware quantity limits
 const CartItemRow = ({
@@ -37,6 +38,7 @@ const CartItemRow = ({
   const {
     data: stockCount = 0
   } = useProductStock(item.product.id);
+  const { data: rate = 90 } = useExchangeRate();
   const isStarsItem = item.product.tags?.includes('api:stars');
   const maxQty = isStarsItem ? 99 : (stockCount === -1 ? 99 : stockCount);
   return <motion.div key={item.product.id} initial={{
@@ -99,10 +101,13 @@ const CartItemRow = ({
         </div>
         <div className="text-right">
           <p className="font-bold">
-            {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
+            {formatUsd(rubToUsd(item.product.price * item.quantity, rate))} $
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {Math.round(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
           </p>
           {item.quantity > 1 && <p className="text-xs text-muted-foreground">
-              {item.product.price.toLocaleString('ru-RU')} ₽ × {item.quantity}
+              {formatUsd(rubToUsd(item.product.price, rate))} $ × {item.quantity}
             </p>}
         </div>
         <Button variant="ghost" size="icon" onClick={() => removeItem(item.product.id)}>
@@ -120,6 +125,7 @@ const CartPage = () => {
     total,
     itemCount
   } = useCart();
+  const { data: rate = 90 } = useExchangeRate();
   const {
     user,
     webApp,
@@ -300,16 +306,19 @@ const CartPage = () => {
                     {promoDiscount > 0 && <>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Сумма</span>
-                          <span className="line-through text-muted-foreground">{total.toLocaleString('ru-RU')} ₽</span>
+                          <span className="line-through text-muted-foreground">{formatUsd(rubToUsd(total, rate))} $</span>
                         </div>
                         <div className="flex justify-between text-sm text-green-500">
                           <span>Скидка ({promoDiscount}%)</span>
-                          <span>-{(total - discountedTotal).toLocaleString('ru-RU')} ₽</span>
+                          <span>-{formatUsd(rubToUsd(total - discountedTotal, rate))} $</span>
                         </div>
                       </>}
                     <div className="flex justify-between text-lg font-bold pt-3 border-t">
                       <span>К оплате</span>
-                      <span>{discountedTotal.toLocaleString('ru-RU')} ₽</span>
+                      <div className="text-right">
+                        <span>{formatUsd(rubToUsd(discountedTotal, rate))} $</span>
+                        <span className="text-xs text-muted-foreground font-normal ml-2">{Math.round(discountedTotal).toLocaleString('ru-RU')} ₽</span>
+                      </div>
                     </div>
                   </div>
 
@@ -323,16 +332,16 @@ const CartPage = () => {
                             Списать с баланса
                           </label>
                         </div>
-                        <span className="text-sm font-medium">{userBalance.toLocaleString('ru-RU')} ₽</span>
+                        <span className="text-sm font-medium">{formatUsd(rubToUsd(userBalance, rate))} $ <span className="text-xs text-muted-foreground">{Math.round(userBalance).toLocaleString('ru-RU')} ₽</span></span>
                       </div>
                       {useBalance && <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                           <div className="flex justify-between">
                             <span>Списание с баланса</span>
-                            <span>−{balanceToUse.toLocaleString('ru-RU')} ₽</span>
+                            <span>−{formatUsd(rubToUsd(balanceToUse, rate))} $</span>
                           </div>
                           {cryptoAmount > 0 && <div className="flex justify-between font-medium text-foreground">
                               <span>Доплата через CryptoBot</span>
-                              <span>{cryptoAmount.toLocaleString('ru-RU')} ₽</span>
+                              <span>{formatUsd(rubToUsd(cryptoAmount, rate))} $</span>
                             </div>}
                         </div>}
                     </div>}
@@ -366,7 +375,7 @@ const CartPage = () => {
                   {useBalance && canPayWithBalance && <Button size="lg" className="w-full gap-3 mb-3" disabled={!agreedToTerms || isProcessing} onClick={handlePayWithBalance}>
                       {isProcessing ? 'Обработка...' : <>
                           <Wallet className="h-5 w-5" />
-                          Оплатить с баланса ({discountedTotal.toLocaleString('ru-RU')} ₽)
+                          Оплатить с баланса ({formatUsd(rubToUsd(discountedTotal, rate))} $)
                         </>}
                     </Button>}
 
@@ -374,7 +383,7 @@ const CartPage = () => {
                   {!(useBalance && canPayWithBalance) && <Button size="lg" className="w-full gap-3" disabled={!agreedToTerms || isProcessing} onClick={handlePayWithCrypto}>
                       {isProcessing ? 'Создание счёта...' : <>
                           <img src={cryptoBotLogo} alt="CryptoBot" className="w-5 h-5 rounded-full" />
-                          {useBalance && balanceToUse > 0 ? `Доплатить ${cryptoAmount.toLocaleString('ru-RU')} ₽ через CryptoBot` : `Оплатить ${discountedTotal.toLocaleString('ru-RU')} ₽ через CryptoBot`}
+                          {useBalance && balanceToUse > 0 ? `Доплатить ${formatUsd(rubToUsd(cryptoAmount, rate))} $ через CryptoBot` : `Оплатить ${formatUsd(rubToUsd(discountedTotal, rate))} $ через CryptoBot`}
                         </>}
                     </Button>}
 

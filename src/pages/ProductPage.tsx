@@ -18,6 +18,7 @@ import { motion } from 'framer-motion';
 import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2, Clock, Globe, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { PriceDisplay } from '@/components/PriceDisplay';
 const ProductPage = () => {
   const {
     id
@@ -335,13 +336,7 @@ const ProductPage = () => {
 
                     {/* Price */}
                     <div className="mb-4 md:mb-6">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl md:text-4xl font-bold">
-                          {currentPeriodPrice.toLocaleString('ru-RU')}
-                        </span>
-                        <span className="text-lg md:text-xl text-muted-foreground">₽</span>
-                        {product.type === 'subscription' && <span className="text-muted-foreground text-sm">/мес</span>}
-                      </div>
+                      <PriceDisplay priceRub={currentPeriodPrice} size="xl" suffix={product.type === 'subscription' ? '/мес' : undefined} />
                     </div>
 
                     {/* Add to Cart */}
