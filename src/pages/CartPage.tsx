@@ -37,7 +37,8 @@ const CartItemRow = ({
   const {
     data: stockCount = 0
   } = useProductStock(item.product.id);
-  const maxQty = stockCount === -1 ? 99 : stockCount;
+  const isStarsItem = item.product.tags?.includes('api:stars');
+  const maxQty = isStarsItem ? 99 : (stockCount === -1 ? 99 : stockCount);
   return <motion.div key={item.product.id} initial={{
     opacity: 0,
     y: 20
@@ -62,7 +63,7 @@ const CartItemRow = ({
         {item.selectedCountry && !item.product.tags?.includes('api:stars') && <p className="text-sm mt-2">
             Страна: {item.selectedCountry.toUpperCase()}
           </p>}
-        {item.product.tags?.includes('api:stars') && item.selectedCountry && (
+        {isStarsItem && item.selectedCountry && (
           <p className="text-sm mt-2">
             Получатель: @{item.selectedCountry} · {item.selectedServices?.[0]} ⭐
           </p>
@@ -82,13 +83,19 @@ const CartItemRow = ({
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border rounded-lg">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.product.id, item.quantity - 1)}>
-            <Minus className="h-3 w-3" />
-          </Button>
-          <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={item.quantity >= maxQty} onClick={() => updateQuantity(item.product.id, Math.min(item.quantity + 1, maxQty))}>
-            <Plus className="h-3 w-3" />
-          </Button>
+          {isStarsItem ? (
+            <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+          ) : (
+            <>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.product.id, item.quantity - 1)}>
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={item.quantity >= maxQty} onClick={() => updateQuantity(item.product.id, Math.min(item.quantity + 1, maxQty))}>
+                <Plus className="h-3 w-3" />
+              </Button>
+            </>
+          )}
         </div>
         <div className="text-right">
           <p className="font-bold">
