@@ -74,11 +74,9 @@ serve(async (req) => {
 
     const invoice = update.payload;
     const payloadData = JSON.parse(invoice.payload || "{}");
-    const { userId, orderId, amountUsd, amountRub, balanceToUse } = payloadData;
-    // Support both new (amountUsd) and legacy (amountRub) payloads
-    const depositAmount = amountUsd || amountRub;
+    const { userId, orderId, amountRub, balanceToUse } = payloadData;
 
-    if (!userId || !depositAmount) {
+    if (!userId || !amountRub) {
       console.error("Missing payload data");
       return new Response("Invalid payload", { status: 400 });
     }
@@ -113,7 +111,7 @@ serve(async (req) => {
     const currentBalance = parseFloat(profile.balance) || 0;
     const balanceDeduction = parseFloat(balanceToUse) || 0;
 
-    const afterDeposit = currentBalance + depositAmount;
+    const afterDeposit = currentBalance + amountRub;
     const finalBalance = afterDeposit - balanceDeduction;
 
     const { error: updateError } = await supabase
@@ -130,7 +128,7 @@ serve(async (req) => {
     await supabase.from("transactions").insert({
       user_id: userId,
       type: "deposit",
-      amount: depositAmount,
+      amount: amountRub,
       balance_after: afterDeposit,
       description: `Пополнение через CryptoBot`,
       payment_id: invoice.invoice_id.toString(),
@@ -162,7 +160,7 @@ serve(async (req) => {
       user_id: userId,
       event_type: "payment_completed",
       event_data: {
-        amount: depositAmount,
+        amount: amountRub,
         payment_id: invoice.invoice_id,
         currency: invoice.asset,
       },
@@ -175,7 +173,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Payment processed: ${depositAmount} USD for user ${userId}`);
+    console.log(`Payment processed: ${amountRub} RUB for user ${userId}`);
 
     return new Response("OK", { status: 200 });
   } catch (error) {

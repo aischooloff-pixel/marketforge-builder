@@ -335,7 +335,7 @@ export const ProductFormDialog = ({
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Цена ($) *</FormLabel>
+                    <FormLabel>Цена (₽) *</FormLabel>
                     <FormControl>
                       <Input type="number" min="0" step="0.01" {...field} />
                     </FormControl>

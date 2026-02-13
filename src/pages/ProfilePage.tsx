@@ -17,11 +17,9 @@ import SupportDialog from '@/components/SupportDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
-import { useExchangeRate, usdToRub, formatUsd } from '@/hooks/useExchangeRate';
 
 const ProfilePage = () => {
   const { user, isAuthenticated, isLoading: authLoading, webApp } = useTelegram();
-  const { data: rate = 90 } = useExchangeRate();
   const { data: orders = [], isLoading: ordersLoading } = useOrders();
   const { data: transactions = [], isLoading: transactionsLoading } = useTransactions();
   
@@ -38,8 +36,8 @@ const ProfilePage = () => {
   const [visibleContent, setVisibleContent] = useState<Record<string, boolean>>({});
 
   const handleTopUp = async () => {
-    const amount = parseFloat(topUpAmount);
-    if (!amount || amount < 1 || !user) return;
+    const amount = parseInt(topUpAmount);
+    if (!amount || amount < 100 || !user) return;
 
     setIsProcessing(true);
 
@@ -48,7 +46,7 @@ const ProfilePage = () => {
         body: {
           userId: user.id,
           amount,
-          description: `Пополнение баланса на ${amount} $`,
+          description: `Пополнение баланса на ${amount} ₽`,
         },
       });
 
@@ -182,10 +180,7 @@ const ProfilePage = () => {
             <div className="flex items-center justify-between gap-4 pt-4 border-t">
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Баланс</p>
-                <div className="flex items-baseline gap-1.5">
-                  <p className="text-xl md:text-2xl font-bold">{formatUsd(user.balance)} $</p>
-                  <p className="text-xs text-muted-foreground">{usdToRub(user.balance, rate).toLocaleString('ru-RU')} ₽</p>
-                </div>
+                <p className="text-xl md:text-2xl font-bold">{user.balance.toLocaleString('ru-RU')} ₽</p>
               </div>
               <Dialog open={isTopUpOpen} onOpenChange={setIsTopUpOpen}>
                 <DialogTrigger asChild>
@@ -202,18 +197,17 @@ const ProfilePage = () => {
                   <div className="space-y-4 pt-2">
                     {/* Amount */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Сумма пополнения ($)</label>
+                      <label className="text-sm font-medium">Сумма пополнения</label>
                       <Input
                         type="number"
-                        placeholder="Минимум 1 $"
+                        placeholder="Минимум 100 ₽"
                         value={topUpAmount}
                         onChange={(e) => setTopUpAmount(e.target.value)}
-                        min={1}
-                        step="0.01"
+                        min={100}
                         className="h-10"
                       />
                       <div className="grid grid-cols-4 gap-2">
-                        {[5, 10, 25, 50].map(amount => (
+                        {[500, 1000, 3000, 5000].map(amount => (
                           <Button
                             key={amount}
                             variant="outline"
@@ -221,7 +215,7 @@ const ProfilePage = () => {
                             onClick={() => setTopUpAmount(amount.toString())}
                             className="text-xs h-8"
                           >
-                            {amount}$
+                            {amount}₽
                           </Button>
                         ))}
                       </div>
@@ -243,7 +237,7 @@ const ProfilePage = () => {
                     {/* Submit */}
                     <Button
                       className="w-full gap-2"
-                      disabled={!topUpAmount || parseFloat(topUpAmount) < 1 || isProcessing}
+                      disabled={!topUpAmount || parseInt(topUpAmount) < 100 || isProcessing}
                       onClick={handleTopUp}
                     >
                       {isProcessing ? (
@@ -258,7 +252,7 @@ const ProfilePage = () => {
                             alt="" 
                             className="w-4 h-4 rounded-full"
                           />
-                          Пополнить на {topUpAmount || '0'} $
+                          Пополнить на {topUpAmount || '0'} ₽
                         </>
                       )}
                     </Button>
@@ -342,7 +336,7 @@ const ProfilePage = () => {
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-base md:text-lg">
-                            {formatUsd(parseFloat(String(order.total)))} $
+                            {parseFloat(String(order.total)).toLocaleString('ru-RU')} ₽
                           </p>
                         </div>
                       </div>
@@ -359,7 +353,7 @@ const ProfilePage = () => {
                                 )}
                               </span>
                               <span className="text-muted-foreground flex-shrink-0">
-                                {formatUsd(parseFloat(String(item.price)))} $
+                                {parseFloat(String(item.price)).toLocaleString('ru-RU')} ₽
                               </span>
                             </li>
                           ))}
@@ -472,14 +466,10 @@ const ProfilePage = () => {
                             : 'text-destructive'
                         }`}>
                           {isPositiveTransaction(transaction.type) ? '+' : '-'}
-                          {formatUsd(Math.abs(transaction.amount))} $
-                          <span className="text-xs text-muted-foreground font-normal ml-1">
-                            {usdToRub(Math.abs(transaction.amount), rate).toLocaleString('ru-RU')} ₽
-                          </span>
+                          {Math.abs(transaction.amount).toLocaleString('ru-RU')} ₽
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Баланс: {formatUsd(parseFloat(String(transaction.balance_after)))} $
-                          <span className="ml-1">{usdToRub(parseFloat(String(transaction.balance_after)), rate).toLocaleString('ru-RU')} ₽</span>
+                          Баланс: {parseFloat(String(transaction.balance_after)).toLocaleString('ru-RU')} ₽
                         </p>
                       </div>
                     </motion.div>

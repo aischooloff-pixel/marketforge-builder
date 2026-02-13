@@ -8,7 +8,6 @@ import { ShoppingCart, Plus, PackageX, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useState } from 'react';
-import { PriceDisplay, PriceInline } from '@/components/PriceDisplay';
 
 interface ProductCardProps {
   product: Product;
@@ -73,6 +72,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               </span>
             )}
             
+            {/* Quick Add Button - appears on hover */}
             {!isOutOfStock && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -90,6 +90,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               </motion.div>
             )}
 
+            {/* Out of stock overlay */}
             {isOutOfStock && (
               <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
                 <Badge variant="secondary" className="gap-1">
@@ -99,12 +100,14 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               </div>
             )}
 
+            {/* Type badge */}
             {product.type === 'subscription' && (
               <div className="absolute top-2 left-2 md:top-3 md:left-3 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md bg-foreground text-background text-[10px] md:text-xs font-medium">
                 Подписка
               </div>
             )}
 
+            {/* Popular badge */}
             {product.is_popular && !isOutOfStock && (
               <div className="absolute bottom-2 left-2 md:bottom-3 md:left-3">
                 <Badge variant="default" className="text-[10px] md:text-xs">
@@ -114,15 +117,19 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             )}
           </div>
 
+          {/* Content */}
           <div className="flex-1 flex flex-col min-h-0">
+            {/* Title */}
             <h3 className="font-bold text-sm md:text-lg leading-tight mb-0.5 md:mb-1 group-hover:text-foreground transition-colors line-clamp-2">
               {product.name}
             </h3>
             
+            {/* Description - hidden on mobile to save space */}
             <p className="hidden md:block text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
               {product.short_desc}
             </p>
 
+            {/* Stock indicator */}
             {!isOutOfStock && stockCount > 0 && stockCount <= 5 && (
               <p className="text-xs text-orange-500 mb-1">
                 Осталось: {stockCount} шт
@@ -134,8 +141,17 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               </p>
             )}
 
+            {/* Price - aligned to bottom */}
             <div className="flex items-end justify-between mt-auto pt-1 md:pt-0">
-              <PriceDisplay priceUsd={product.price} size="md" suffix={product.type === 'subscription' ? '/мес' : undefined} />
+              <div>
+                <span className="text-base md:text-2xl font-bold">
+                  {product.price.toLocaleString('ru-RU')}
+                </span>
+                <span className="text-xs md:text-sm text-muted-foreground ml-0.5">₽</span>
+                {product.type === 'subscription' && (
+                  <span className="text-[10px] md:text-xs text-muted-foreground">/мес</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -158,6 +174,7 @@ export const ProductCardCompact = ({ product }: ProductCardProps) => {
         whileHover={{ scale: 1.02 }}
         className={`group flex items-center gap-3 p-3 rounded-xl border bg-card hover:shadow-md transition-all ${isOutOfStock ? 'opacity-60' : ''}`}
       >
+        {/* Mini icon */}
         <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
           <span className="text-2xl">{categoryIcon}</span>
         </div>
@@ -171,7 +188,9 @@ export const ProductCardCompact = ({ product }: ProductCardProps) => {
         </div>
         
         <div className="flex items-center gap-2 flex-shrink-0">
-          <PriceInline priceUsd={product.price} className="text-sm whitespace-nowrap" />
+          <span className="font-bold text-sm whitespace-nowrap">
+            {product.price.toLocaleString('ru-RU')} ₽
+          </span>
           {!isOutOfStock && (
             <Button 
               size="icon" 

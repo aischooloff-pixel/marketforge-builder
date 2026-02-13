@@ -10,9 +10,8 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import telegramStarsIcon from '@/assets/telegram-stars.png';
-import { useExchangeRate, usdToRub, formatUsd } from '@/hooks/useExchangeRate';
 
-const STAR_RATE_USD = 0.016; // USD per star
+const STAR_RATE = 1.4; // RUB per star
 
 const STAR_PACKAGES = [50, 250, 500, 1000, 2500];
 
@@ -33,7 +32,6 @@ interface StarsBuyerProps {
 export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
   const { user } = useTelegram();
   const { addItem } = useCart();
-  const { data: rate = 90 } = useExchangeRate();
 
   const [step, setStep] = useState<'username' | 'quantity'>('username');
   const [usernameInput, setUsernameInput] = useState('');
@@ -45,7 +43,7 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
   const [addedToCart, setAddedToCart] = useState(false);
 
   const starCount = selectedPackage || (parseInt(customAmount) || 0);
-  const totalPrice = Math.round(starCount * STAR_RATE_USD * 100) / 100;
+  const totalPrice = Math.ceil(starCount * STAR_RATE);
 
   const resolveUsername = useCallback(async (input: string) => {
     if (!input.trim()) return;
@@ -128,7 +126,7 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
         <img src={telegramStarsIcon} alt="Telegram Stars" className="w-8 h-8" />
         <div>
           <p className="text-sm font-medium">Telegram Stars</p>
-          <p className="text-xs text-muted-foreground">Курс: {STAR_RATE_USD} $ за звезду</p>
+          <p className="text-xs text-muted-foreground">Курс: {STAR_RATE} ₽ за звезду</p>
         </div>
       </div>
 
@@ -257,7 +255,7 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
                   <p className={`text-xs ${
                     selectedPackage === pkg ? 'text-primary-foreground/70' : 'text-muted-foreground'
                   }`}>
-                    {formatUsd(Math.round(pkg * STAR_RATE_USD * 100) / 100)} $
+                    {Math.ceil(pkg * STAR_RATE)} ₽
                   </p>
                 </button>
               ))}
@@ -307,10 +305,9 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
                   <div>
                     <p className="text-sm text-muted-foreground">Итого</p>
                     <p className="text-2xl font-bold">
-                      {formatUsd(totalPrice)}{' '}
-                      <span className="text-lg text-muted-foreground">$</span>
+                      {totalPrice.toLocaleString('ru-RU')}{' '}
+                      <span className="text-lg text-muted-foreground">₽</span>
                     </p>
-                    <p className="text-xs text-muted-foreground">{usdToRub(totalPrice, rate).toLocaleString('ru-RU')} ₽</p>
                   </div>
                   <Badge variant="outline">
                     {starCount.toLocaleString()} ⭐

@@ -14,7 +14,6 @@ import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
-import { useExchangeRate, usdToRub, formatUsd } from '@/hooks/useExchangeRate';
 
 // Cart item row with stock-aware quantity limits
 const CartItemRow = ({
@@ -35,26 +34,52 @@ const CartItemRow = ({
   updateQuantity: (id: string, qty: number) => void;
   removeItem: (id: string) => void;
 }) => {
-  const { data: stockCount = 0 } = useProductStock(item.product.id);
-  const { data: rate = 90 } = useExchangeRate();
+  const {
+    data: stockCount = 0
+  } = useProductStock(item.product.id);
   const isStarsItem = item.product.tags?.includes('api:stars');
   const maxQty = isStarsItem ? 99 : (stockCount === -1 ? 99 : stockCount);
-  const itemTotal = item.product.price * item.quantity;
-
-  return <motion.div key={item.product.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -100 }} transition={{ delay: index * 0.1 }} className="p-6 rounded-xl border bg-card flex flex-col sm:flex-row gap-4">
+  return <motion.div key={item.product.id} initial={{
+    opacity: 0,
+    y: 20
+  }} animate={{
+    opacity: 1,
+    y: 0
+  }} exit={{
+    opacity: 0,
+    x: -100
+  }} transition={{
+    delay: index * 0.1
+  }} className="p-6 rounded-xl border bg-card flex flex-col sm:flex-row gap-4">
       <div className="flex-1">
         <Link to={`/product/${item.product.id}`}>
-          <h3 className="font-semibold hover:underline">{item.product.name}</h3>
+          <h3 className="font-semibold hover:underline">
+            {item.product.name}
+          </h3>
         </Link>
-        <p className="text-sm text-muted-foreground mt-1">{item.product.shortDesc}</p>
-        {item.selectedCountry && !isStarsItem && <p className="text-sm mt-2">Страна: {item.selectedCountry.toUpperCase()}</p>}
+        <p className="text-sm text-muted-foreground mt-1">
+          {item.product.shortDesc}
+        </p>
+        {item.selectedCountry && !item.product.tags?.includes('api:stars') && <p className="text-sm mt-2">
+            Страна: {item.selectedCountry.toUpperCase()}
+          </p>}
         {isStarsItem && item.selectedCountry && (
-          <p className="text-sm mt-2">Получатель: @{item.selectedCountry} · {item.selectedServices?.[0]} ⭐</p>
+          <p className="text-sm mt-2">
+            Получатель: @{item.selectedCountry} · {item.selectedServices?.[0]} ⭐
+          </p>
         )}
-        {item.selectedPeriod && <p className="text-sm mt-1">Период: {`${item.selectedPeriod} дн.`}</p>}
-        {item.selectedProtocol && <p className="text-sm mt-1">Протокол: {item.selectedProtocol === 'socks' ? 'SOCKS5' : 'HTTP/HTTPS'}</p>}
-        {item.selectedServices && item.selectedServices.length > 0 && !isStarsItem && <p className="text-sm mt-1">Сервисы: {item.selectedServices.join(', ')}</p>}
-        {maxQty > 0 && maxQty < 99 && item.quantity > maxQty && <p className="text-xs text-destructive mt-1">В наличии только {maxQty} шт</p>}
+        {item.selectedPeriod && <p className="text-sm mt-1">
+            Период: {`${item.selectedPeriod} дн.`}
+          </p>}
+        {item.selectedProtocol && <p className="text-sm mt-1">
+            Протокол: {item.selectedProtocol === 'socks' ? 'SOCKS5' : 'HTTP/HTTPS'}
+          </p>}
+        {item.selectedServices && item.selectedServices.length > 0 && !item.product.tags?.includes('api:stars') && <p className="text-sm mt-1">
+            Сервисы: {item.selectedServices.join(', ')}
+          </p>}
+        {maxQty > 0 && maxQty < 99 && item.quantity > maxQty && <p className="text-xs text-destructive mt-1">
+            В наличии только {maxQty} шт
+          </p>}
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border rounded-lg">
@@ -73,9 +98,12 @@ const CartItemRow = ({
           )}
         </div>
         <div className="text-right">
-          <p className="font-bold">{formatUsd(itemTotal)} $</p>
-          <p className="text-xs text-muted-foreground">{usdToRub(itemTotal, rate).toLocaleString('ru-RU')} ₽</p>
-          {item.quantity > 1 && <p className="text-xs text-muted-foreground">{formatUsd(item.product.price)} $ × {item.quantity}</p>}
+          <p className="font-bold">
+            {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
+          </p>
+          {item.quantity > 1 && <p className="text-xs text-muted-foreground">
+              {item.product.price.toLocaleString('ru-RU')} ₽ × {item.quantity}
+            </p>}
         </div>
         <Button variant="ghost" size="icon" onClick={() => removeItem(item.product.id)}>
           <Trash2 className="h-4 w-4" />
@@ -83,13 +111,28 @@ const CartItemRow = ({
       </div>
     </motion.div>;
 };
-
 const CartPage = () => {
-  const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
-  const { data: rate = 90 } = useExchangeRate();
-  const { user, webApp, hapticFeedback } = useTelegram();
-  const { payWithCryptoBot, payWithBalance, isProcessing } = usePayment();
-  const { validatePromo } = useAdmin();
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    total,
+    itemCount
+  } = useCart();
+  const {
+    user,
+    webApp,
+    hapticFeedback
+  } = useTelegram();
+  const {
+    payWithCryptoBot,
+    payWithBalance,
+    isProcessing
+  } = usePayment();
+  const {
+    validatePromo
+  } = useAdmin();
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [useBalance, setUseBalance] = useState(false);
@@ -98,14 +141,11 @@ const CartPage = () => {
   const [promoId, setPromoId] = useState<string | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState('');
-
-  // total is already in USD
-  const discountedTotal = promoDiscount > 0 ? Math.round(total * (1 - promoDiscount / 100) * 100) / 100 : total;
+  const discountedTotal = promoDiscount > 0 ? Math.round(total * (1 - promoDiscount / 100)) : total;
   const userBalance = user?.balance || 0;
   const canPayWithBalance = userBalance >= discountedTotal && discountedTotal > 0;
   const balanceToUse = useBalance ? Math.min(userBalance, discountedTotal) : 0;
-  const cryptoAmount = Math.round((discountedTotal - balanceToUse) * 100) / 100;
-
+  const cryptoAmount = discountedTotal - balanceToUse;
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
     setPromoLoading(true);
@@ -124,7 +164,6 @@ const CartPage = () => {
     }
     setPromoLoading(false);
   };
-
   const handlePayWithCrypto = async () => {
     if (!agreedToTerms || !user) return;
     hapticFeedback('medium');
@@ -154,7 +193,6 @@ const CartPage = () => {
       toast.error(result.error || 'Ошибка создания счёта');
     }
   };
-
   const handlePayWithBalance = async () => {
     if (!agreedToTerms || !user) return;
     hapticFeedback('medium');
@@ -181,21 +219,39 @@ const CartPage = () => {
       toast.error(result.error || 'Ошибка оплаты');
     }
   };
-
   if (orderComplete) {
     return <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-1 pt-20">
           <div className="container mx-auto px-4 py-16">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md mx-auto text-center">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring' }} className="w-20 h-20 mx-auto mb-6 rounded-full bg-foreground text-background flex items-center justify-center">
+            <motion.div initial={{
+            opacity: 0,
+            scale: 0.9
+          }} animate={{
+            opacity: 1,
+            scale: 1
+          }} className="max-w-md mx-auto text-center">
+              <motion.div initial={{
+              scale: 0
+            }} animate={{
+              scale: 1
+            }} transition={{
+              delay: 0.2,
+              type: 'spring'
+            }} className="w-20 h-20 mx-auto mb-6 rounded-full bg-foreground text-background flex items-center justify-center">
                 <Check className="h-10 w-10" />
               </motion.div>
               <h1 className="text-2xl font-bold mb-4">Заказ оплачен!</h1>
-              <p className="text-muted-foreground mb-8">Товары выданы автоматически. Посмотреть их можно в профиле.</p>
+              <p className="text-muted-foreground mb-8">
+                Товары выданы автоматически. Посмотреть их можно в профиле.
+              </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/profile"><Button>Перейти в профиль</Button></Link>
-                <Link to="/catalog"><Button variant="outline">Продолжить покупки</Button></Link>
+                <Link to="/profile">
+                  <Button>Перейти в профиль</Button>
+                </Link>
+                <Link to="/catalog">
+                  <Button variant="outline">Продолжить покупки</Button>
+                </Link>
               </div>
             </motion.div>
           </div>
@@ -203,25 +259,35 @@ const CartPage = () => {
         <Footer />
       </div>;
   }
-
   return <div className="min-h-screen flex flex-col">
       <Header />
+      
       <main className="flex-1 pt-20">
         <div className="container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold mb-8">Корзина</h1>
 
-          {items.length === 0 ? <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
+          {items.length === 0 ? <motion.div initial={{
+          opacity: 0
+        }} animate={{
+          opacity: 1
+        }} className="text-center py-16">
               <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
               <h2 className="text-xl font-semibold mb-2">Корзина пуста</h2>
-              <p className="text-muted-foreground mb-6">Добавьте товары из каталога</p>
-              <Link to="/catalog"><Button>Перейти в каталог</Button></Link>
+              <p className="text-muted-foreground mb-6">
+                Добавьте товары из каталога
+              </p>
+              <Link to="/catalog">
+                <Button>Перейти в каталог</Button>
+              </Link>
             </motion.div> : <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Cart Items */}
               <div className="lg:col-span-2 space-y-4">
                 <AnimatePresence>
                   {items.map((item, index) => <CartItemRow key={item.product.id} item={item} index={index} updateQuantity={updateQuantity} removeItem={removeItem} />)}
                 </AnimatePresence>
               </div>
 
+              {/* Order Summary */}
               <div>
                 <div className="sticky top-24 p-6 rounded-xl border bg-card">
                   <h2 className="font-semibold text-lg mb-4">Итого</h2>
@@ -234,19 +300,16 @@ const CartPage = () => {
                     {promoDiscount > 0 && <>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Сумма</span>
-                          <span className="line-through text-muted-foreground">{formatUsd(total)} $</span>
+                          <span className="line-through text-muted-foreground">{total.toLocaleString('ru-RU')} ₽</span>
                         </div>
                         <div className="flex justify-between text-sm text-green-500">
                           <span>Скидка ({promoDiscount}%)</span>
-                          <span>-{formatUsd(total - discountedTotal)} $</span>
+                          <span>-{(total - discountedTotal).toLocaleString('ru-RU')} ₽</span>
                         </div>
                       </>}
                     <div className="flex justify-between text-lg font-bold pt-3 border-t">
                       <span>К оплате</span>
-                      <div className="text-right">
-                        <span>{formatUsd(discountedTotal)} $</span>
-                        <span className="text-xs text-muted-foreground font-normal ml-2">{usdToRub(discountedTotal, rate).toLocaleString('ru-RU')} ₽</span>
-                      </div>
+                      <span>{discountedTotal.toLocaleString('ru-RU')} ₽</span>
                     </div>
                   </div>
 
@@ -260,16 +323,16 @@ const CartPage = () => {
                             Списать с баланса
                           </label>
                         </div>
-                        <span className="text-sm font-medium">{formatUsd(userBalance)} $ <span className="text-xs text-muted-foreground">{usdToRub(userBalance, rate).toLocaleString('ru-RU')} ₽</span></span>
+                        <span className="text-sm font-medium">{userBalance.toLocaleString('ru-RU')} ₽</span>
                       </div>
                       {useBalance && <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                           <div className="flex justify-between">
                             <span>Списание с баланса</span>
-                            <span>−{formatUsd(balanceToUse)} $</span>
+                            <span>−{balanceToUse.toLocaleString('ru-RU')} ₽</span>
                           </div>
                           {cryptoAmount > 0 && <div className="flex justify-between font-medium text-foreground">
                               <span>Доплата через CryptoBot</span>
-                              <span>{formatUsd(cryptoAmount)} $</span>
+                              <span>{cryptoAmount.toLocaleString('ru-RU')} ₽</span>
                             </div>}
                         </div>}
                     </div>}
@@ -278,7 +341,12 @@ const CartPage = () => {
                   <div className="mb-4">
                     <div className="flex gap-2">
                       <Input placeholder="Промокод" value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} disabled={promoDiscount > 0} className="font-mono" />
-                      <Button variant="outline" size="sm" onClick={promoDiscount > 0 ? () => { setPromoDiscount(0); setPromoId(null); setPromoCode(''); setPromoError(''); } : handleApplyPromo} disabled={promoLoading || !promoCode.trim() && promoDiscount === 0}>
+                      <Button variant="outline" size="sm" onClick={promoDiscount > 0 ? () => {
+                    setPromoDiscount(0);
+                    setPromoId(null);
+                    setPromoCode('');
+                    setPromoError('');
+                  } : handleApplyPromo} disabled={promoLoading || !promoCode.trim() && promoDiscount === 0}>
                         {promoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : promoDiscount > 0 ? '✕' : <Ticket className="h-4 w-4" />}
                       </Button>
                     </div>
@@ -286,7 +354,7 @@ const CartPage = () => {
                     {promoDiscount > 0 && <p className="text-xs text-green-500 mt-1">Промокод применён: -{promoDiscount}%</p>}
                   </div>
 
-                  {/* Terms */}
+                  {/* Terms Agreement */}
                   <div className="flex items-start gap-3 mb-6">
                     <Checkbox id="terms" checked={agreedToTerms} onCheckedChange={checked => setAgreedToTerms(checked as boolean)} />
                     <label htmlFor="terms" className="text-xs text-muted-foreground cursor-pointer">
@@ -298,22 +366,25 @@ const CartPage = () => {
                   {useBalance && canPayWithBalance && <Button size="lg" className="w-full gap-3 mb-3" disabled={!agreedToTerms || isProcessing} onClick={handlePayWithBalance}>
                       {isProcessing ? 'Обработка...' : <>
                           <Wallet className="h-5 w-5" />
-                          Оплатить с баланса ({formatUsd(discountedTotal)} $)
+                          Оплатить с баланса ({discountedTotal.toLocaleString('ru-RU')} ₽)
                         </>}
                     </Button>}
 
-                  {/* CryptoBot Payment */}
+                  {/* CryptoBot Payment (full or with balance deduction) */}
                   {!(useBalance && canPayWithBalance) && <Button size="lg" className="w-full gap-3" disabled={!agreedToTerms || isProcessing} onClick={handlePayWithCrypto}>
                       {isProcessing ? 'Создание счёта...' : <>
                           <img src={cryptoBotLogo} alt="CryptoBot" className="w-5 h-5 rounded-full" />
-                          {useBalance && balanceToUse > 0 ? `Доплатить ${formatUsd(cryptoAmount)} $ через CryptoBot` : `Оплатить ${formatUsd(discountedTotal)} $ через CryptoBot`}
+                          {useBalance && balanceToUse > 0 ? `Доплатить ${cryptoAmount.toLocaleString('ru-RU')} ₽ через CryptoBot` : `Оплатить ${discountedTotal.toLocaleString('ru-RU')} ₽ через CryptoBot`}
                         </>}
                     </Button>}
+
+                  
                 </div>
               </div>
             </div>}
         </div>
       </main>
+
       <Footer />
     </div>;
 };

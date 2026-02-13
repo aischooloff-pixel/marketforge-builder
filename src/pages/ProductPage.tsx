@@ -18,7 +18,6 @@ import { motion } from 'framer-motion';
 import { ShoppingCart, ArrowLeft, Shield, AlertTriangle, PackageX, Loader2, Clock, Globe, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { PriceDisplay } from '@/components/PriceDisplay';
 const ProductPage = () => {
   const {
     id
@@ -87,26 +86,26 @@ const ProductPage = () => {
 
   const periodOptionsMap: Record<number, { value: string; label: string; price: number }[]> = {
     4: [ // IPv4
-      { value: '7', label: 'Неделя', price: 0.54 },
-      { value: '14', label: '2 недели', price: 0.88 },
-      { value: '30', label: 'Месяц', price: 1.54 },
-      { value: '60', label: '2 месяца', price: 3.10 },
-      { value: '90', label: '3 месяца', price: 4.32 },
+      { value: '7', label: 'Неделя', price: 49 },
+      { value: '14', label: '2 недели', price: 79 },
+      { value: '30', label: 'Месяц', price: 139 },
+      { value: '60', label: '2 месяца', price: 279 },
+      { value: '90', label: '3 месяца', price: 389 },
     ],
     6: [ // IPv6
-      { value: '3', label: '3 дня', price: 0.10 },
-      { value: '7', label: 'Неделя', price: 0.13 },
-      { value: '14', label: '2 недели', price: 0.21 },
-      { value: '30', label: 'Месяц', price: 0.32 },
-      { value: '60', label: '2 месяца', price: 0.54 },
-      { value: '90', label: '3 месяца', price: 0.77 },
+      { value: '3', label: '3 дня', price: 9 },
+      { value: '7', label: 'Неделя', price: 12 },
+      { value: '14', label: '2 недели', price: 19 },
+      { value: '30', label: 'Месяц', price: 29 },
+      { value: '60', label: '2 месяца', price: 49 },
+      { value: '90', label: '3 месяца', price: 69 },
     ],
     3: [ // IPv4 Shared
-      { value: '7', label: 'Неделя', price: 0.17 },
-      { value: '14', label: '2 недели', price: 0.28 },
-      { value: '30', label: 'Месяц', price: 0.43 },
-      { value: '60', label: '2 месяца', price: 0.77 },
-      { value: '90', label: '3 месяца', price: 1.10 },
+      { value: '7', label: 'Неделя', price: 15 },
+      { value: '14', label: '2 недели', price: 25 },
+      { value: '30', label: 'Месяц', price: 39 },
+      { value: '60', label: '2 месяца', price: 69 },
+      { value: '90', label: '3 месяца', price: 99 },
     ],
   };
 
@@ -306,7 +305,7 @@ const ProductPage = () => {
                           <SelectContent>
                             {periodOptions.map(opt => (
                               <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label} — {opt.price} $
+                                {opt.label} — {opt.price} ₽
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -336,7 +335,13 @@ const ProductPage = () => {
 
                     {/* Price */}
                     <div className="mb-4 md:mb-6">
-                      <PriceDisplay priceUsd={currentPeriodPrice} size="xl" suffix={product.type === 'subscription' ? '/мес' : undefined} />
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl md:text-4xl font-bold">
+                          {currentPeriodPrice.toLocaleString('ru-RU')}
+                        </span>
+                        <span className="text-lg md:text-xl text-muted-foreground">₽</span>
+                        {product.type === 'subscription' && <span className="text-muted-foreground text-sm">/мес</span>}
+                      </div>
                     </div>
 
                     {/* Add to Cart */}
