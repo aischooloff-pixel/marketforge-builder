@@ -40,6 +40,7 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
   const [selectedPackage, setSelectedPackage] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
   const [useSelf, setUseSelf] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
 
   const starCount = selectedPackage || (parseInt(customAmount) || 0);
   const totalPrice = Math.ceil(starCount * STAR_RATE);
@@ -59,7 +60,15 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
         toast.error(res.data.error);
         setResolvedUser(null);
       } else if (res.data) {
+        // Only allow private users, not channels/groups/bots
+        const userType = res.data.type;
+        if (userType === 'channel' || userType === 'group' || userType === 'supergroup') {
+          toast.error('Можно отправить звёзды только пользователю, не каналу или группе');
+          setResolvedUser(null);
+          return;
+        }
         setResolvedUser(res.data);
+        setAddedToCart(false);
         setStep('quantity');
       }
     } catch {
@@ -91,7 +100,7 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
     if (!resolvedUser || starCount < 1) return;
 
     addItem({
-      id: productId,
+      id: `stars-${resolvedUser.username}-${starCount}-${Date.now()}`,
       name: 'Telegram Stars',
       shortDesc: `${starCount} ⭐ → @${resolvedUser.username}`,
       longDesc: '',
@@ -102,10 +111,11 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
       legalNote: '',
       popular: false,
     }, {
-      country: resolvedUser.username, // store target username in country field
-      services: [`${starCount}`], // store star count in services field
+      country: resolvedUser.username,
+      services: [`${starCount}`],
     });
 
+    setAddedToCart(true);
     toast.success(`${starCount} ⭐ для @${resolvedUser.username} добавлено в корзину`);
   };
 
@@ -116,7 +126,7 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
         <img src={telegramStarsIcon} alt="Telegram Stars" className="w-8 h-8" />
         <div>
           <p className="text-sm font-medium">Telegram Stars</p>
-          <p className="text-xs text-muted-foreground">Курс: {STAR_RATE} ₽ за ⭐</p>
+          <p className="text-xs text-muted-foreground">Курс: {STAR_RATE} ₽ за звезду</p>
         </div>
       </div>
 
@@ -171,7 +181,7 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Поддерживается: @username, t.me/username, https://t.me/username
+              Только пользователи. Каналы и группы не поддерживаются.
             </p>
           </motion.div>
         ) : (
@@ -238,7 +248,10 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
                       : 'bg-card hover:bg-secondary border-border'
                   }`}
                 >
-                  <p className="text-lg font-bold">{pkg}</p>
+              <div className="flex items-center justify-center gap-1">
+                    <p className="text-lg font-bold">{pkg}</p>
+                    <img src={telegramStarsIcon} alt="" className="w-4 h-4 rounded-full" />
+                  </div>
                   <p className={`text-xs ${
                     selectedPackage === pkg ? 'text-primary-foreground/70' : 'text-muted-foreground'
                   }`}>
@@ -311,7 +324,7 @@ export const StarsBuyer = ({ productId }: StarsBuyerProps) => {
               onClick={handleAddToCart}
             >
               <ShoppingCart className="h-5 w-5" />
-              Добавить в корзину
+              {addedToCart ? 'Добавить ещё' : 'Добавить в корзину'}
             </Button>
           </motion.div>
         )}
