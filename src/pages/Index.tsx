@@ -32,43 +32,7 @@ const Index = () => {
     count
   } = useAverageRating(reviews);
 
-  useEffect(() => {
-    if (productsLoading || popularProducts.length === 0) return;
-    const el = scrollRef.current;
-    if (!el) return;
-
-    let animId: number;
-    let paused = false;
-    const speed = 0.5; // px per frame (~30px/s at 60fps)
-
-    const step = () => {
-      if (!paused && el) {
-        const maxScroll = el.scrollWidth - el.clientWidth;
-        if (el.scrollLeft >= maxScroll - 1) {
-          el.scrollLeft = 0;
-        } else {
-          el.scrollLeft += speed;
-        }
-      }
-      animId = requestAnimationFrame(step);
-    };
-    animId = requestAnimationFrame(step);
-
-    const pause = () => { paused = true; };
-    const resume = () => { paused = false; };
-    el.addEventListener('pointerdown', pause);
-    el.addEventListener('pointerup', resume);
-    el.addEventListener('touchstart', pause, { passive: true });
-    el.addEventListener('touchend', resume);
-
-    return () => {
-      cancelAnimationFrame(animId);
-      el.removeEventListener('pointerdown', pause);
-      el.removeEventListener('pointerup', resume);
-      el.removeEventListener('touchstart', pause);
-      el.removeEventListener('touchend', resume);
-    };
-  }, [productsLoading, popularProducts.length]);
+  // Auto-scroll removed — static horizontal scroll on mobile
   return <div className="min-h-screen flex flex-col">
       <Header />
       
