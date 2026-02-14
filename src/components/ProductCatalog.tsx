@@ -31,7 +31,7 @@ export const ProductCatalog = () => {
 
   // Client-side filtering for search and price (for instant feedback)
   const filteredProducts = useMemo(() => {
-    return allProducts.filter(product => {
+    let result = allProducts.filter(product => {
       const matchesSearch = search === '' || 
         product.name.toLowerCase().includes(search.toLowerCase()) || 
         product.short_desc?.toLowerCase().includes(search.toLowerCase()) || 
@@ -41,7 +41,14 @@ export const ProductCatalog = () => {
       
       return matchesSearch && matchesPrice;
     });
-  }, [allProducts, search, priceRange]);
+
+    // Shuffle when showing all categories (no specific category selected)
+    if (selectedCategory === 'all') {
+      result = [...result].sort(() => Math.random() - 0.5);
+    }
+
+    return result;
+  }, [allProducts, search, priceRange, selectedCategory]);
 
   const maxPrice = useMemo(() => {
     if (allProducts.length === 0) return 50000;
@@ -72,7 +79,7 @@ export const ProductCatalog = () => {
   };
 
   return (
-    <div className="min-h-screen pt-16 md:pt-20">
+    <div className="min-h-screen pt-16 md:pt-20 pb-20 md:pb-0">
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
         {/* Header */}
         <div className="mb-4 md:mb-8">
