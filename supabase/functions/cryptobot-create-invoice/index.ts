@@ -115,6 +115,30 @@ serve(async (req) => {
     const userId = profile.id;
     const webhookUrl = `${supabaseUrl}/functions/v1/cryptobot-webhook`;
 
+    // Get current exchange rate from CryptoBot
+    const ratesResponse = await fetch(`${CRYPTOBOT_API_URL}/getExchangeRates`, {
+      headers: { "Crypto-Pay-API-Token": cryptoBotToken },
+    });
+    const ratesData = await ratesResponse.json();
+    
+    let usdtAmount: string;
+    if (ratesData.ok) {
+      // Find USDT -> RUB rate
+      const usdtRub = ratesData.result?.find(
+        (r: { source: string; target: string }) => r.source === "USDT" && r.target === "RUB"
+      );
+      if (usdtRub) {
+        usdtAmount = (amount / parseFloat(usdtRub.rate)).toFixed(2);
+      } else {
+        // Fallback if rate not found
+        usdtAmount = (amount / 90).toFixed(2);
+      }
+    } else {
+      usdtAmount = (amount / 90).toFixed(2);
+    }
+
+    console.log(`Converting ${amount} RUB to ${usdtAmount} USDT`);
+
     // Create invoice via CryptoBot API
     const invoiceResponse = await fetch(`${CRYPTOBOT_API_URL}/createInvoice`, {
       method: "POST",
@@ -124,11 +148,11 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         asset: "USDT",
-        amount: (amount / 90).toFixed(2),
+        amount: usdtAmount,
         description: description || `Пополнение баланса TEMKA.STORE`,
         hidden_message: `Спасибо за пополнение! Баланс обновлён.`,
         paid_btn_name: "callback",
-        paid_btn_url: webhookUrl,
+        paid_btn_url: `${supabaseUrl}/functions/v1/cryptobot-webhook`,
         payload: JSON.stringify({ userId, orderId, amountRub: amount, balanceToUse: balanceToUse || 0 }),
         allow_comments: false,
         allow_anonymous: false,
