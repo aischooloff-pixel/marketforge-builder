@@ -2,3 +2,6 @@ project_id = "dhazezwjaqlqmnacgnim"
 
 [functions.profi-like]
 verify_jwt = false
+
+[functions.cryptobot-webhook]
+verify_jwt = false
