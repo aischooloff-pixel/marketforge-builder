@@ -70,7 +70,8 @@ serve(async (req) => {
     });
 
   try {
-    const { initData, path } = await req.json();
+    const body = await req.json();
+    const { initData, path } = body;
 
     if (!initData || !path) {
       return new Response(
