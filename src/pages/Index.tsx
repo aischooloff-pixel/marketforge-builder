@@ -338,7 +338,7 @@ const Index = () => {
         </section>
 
         {/* Disclaimer Banner */}
-        <section className="py-8 md:py-12 border-t bg-secondary/30">
+        <section className="py-8 md:py-12 pb-24 md:pb-12 border-t bg-secondary/30">
           <div className="container mx-auto px-4">
             <motion.div
               initial={{ opacity: 0 }}
