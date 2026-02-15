@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { ArrowRight, Zap, Users, Star, Quote, Info, Send, Award, Shield } from 'lucide-react';
+import { ArrowRight, Zap, Users, Star, Quote, Info, Send, Award, Shield, ShieldAlert } from 'lucide-react';
 import { useRef, useEffect } from 'react';
 const Index = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -334,6 +334,35 @@ const Index = () => {
             <div className="mt-6 mb-20 max-w-md mx-auto">
               <ReviewForm />
             </div>
+          </div>
+        </section>
+
+        {/* Disclaimer Banner */}
+        <section className="py-8 md:py-12 border-t bg-secondary/30">
+          <div className="container mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="flex flex-col md:flex-row items-start md:items-center gap-4 max-w-3xl mx-auto"
+            >
+              <div className="p-2.5 rounded-lg bg-destructive/10 shrink-0">
+                <ShieldAlert className="h-5 w-5 text-destructive" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-sm mb-1">Отказ от ответственности</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Все товары предназначены для законных целей. Покупатель несёт полную ответственность 
+                  за использование приобретённых товаров и услуг.
+                </p>
+              </div>
+              <Link to="/disclaimer">
+                <Button variant="outline" size="sm" className="text-xs gap-1.5 shrink-0">
+                  Подробнее
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
+              </Link>
+            </motion.div>
           </div>
         </section>
         

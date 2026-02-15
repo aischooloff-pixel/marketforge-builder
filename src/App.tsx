@@ -16,6 +16,7 @@ import CartPage from "./pages/CartPage";
 import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import InfoPage from "./pages/InfoPage";
+import DisclaimerPage from "./pages/DisclaimerPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const AppContent = () => {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/info" element={<InfoPage />} />
+              <Route path="/disclaimer" element={<DisclaimerPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
