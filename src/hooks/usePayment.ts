@@ -95,6 +95,68 @@ export const usePayment = () => {
     }
   };
 
+  // Pay with xRocket (optionally using partial balance)
+  const payWithXRocket = async (
+    items: CartItem[],
+    total: number,
+    balanceToUse: number = 0
+  ): Promise<PaymentResult> => {
+    if (!user) {
+      return { success: false, error: 'Пользователь не авторизован' };
+    }
+
+    const initData = getInitData();
+    if (!initData) {
+      return { success: false, error: 'Требуется авторизация через Telegram' };
+    }
+
+    if (balanceToUse > user.balance) {
+      return { success: false, error: 'Недостаточно средств на балансе' };
+    }
+
+    const xrocketAmount = total - balanceToUse;
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke(
+        'xrocket-create-invoice',
+        {
+          body: {
+            initData,
+            amount: xrocketAmount,
+            balanceToUse,
+            description: `Заказ${balanceToUse > 0 ? ` (баланс: ${balanceToUse}₽)` : ''}`,
+            items: items.map(item => ({
+              productId: item.productId,
+              productName: item.productName,
+              price: item.price,
+              quantity: item.quantity,
+              options: item.options || {},
+            })),
+          },
+        }
+      );
+
+      if (invoiceError || !invoiceData?.success) {
+        throw new Error(invoiceData?.error || 'Ошибка создания счёта');
+      }
+
+      return {
+        success: true,
+        orderId: invoiceData.orderId,
+        invoiceUrl: invoiceData.payUrl,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Ошибка оплаты';
+      setError(message);
+      return { success: false, error: message };
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Pay with balance — all mutations happen server-side via edge function
   const payWithBalance = async (
     items: CartItem[],
@@ -161,6 +223,7 @@ export const usePayment = () => {
 
   return {
     payWithCryptoBot,
+    payWithXRocket,
     payWithBalance,
     isProcessing,
     error,

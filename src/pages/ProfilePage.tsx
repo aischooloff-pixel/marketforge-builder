@@ -17,6 +17,7 @@ import SupportDialog from '@/components/SupportDialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
+import xrocketLogo from '@/assets/xrocket-logo.jpg';
 
 const ProfilePage = () => {
   const { user, isAuthenticated, isLoading: authLoading, webApp } = useTelegram();
@@ -34,6 +35,7 @@ const ProfilePage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
   const [visibleContent, setVisibleContent] = useState<Record<string, boolean>>({});
+  const [topUpMethod, setTopUpMethod] = useState<'cryptobot' | 'xrocket'>('cryptobot');
 
   const handleTopUp = async () => {
     const amount = parseInt(topUpAmount);
@@ -42,7 +44,9 @@ const ProfilePage = () => {
     setIsProcessing(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('cryptobot-create-invoice', {
+      const functionName = topUpMethod === 'xrocket' ? 'xrocket-create-invoice' : 'cryptobot-create-invoice';
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: {
           initData: webApp?.initData,
           amount,
@@ -54,14 +58,16 @@ const ProfilePage = () => {
         throw new Error(data?.error || 'Ошибка создания счёта');
       }
 
-      // Open CryptoBot payment
-      if (webApp && data.miniAppUrl) {
-        webApp.openTelegramLink(data.miniAppUrl);
-      } else if (data.payUrl) {
-        window.open(data.payUrl, '_blank');
+      // Open payment link
+      const payLink = data.miniAppUrl || data.payUrl || data.payUrl;
+      if (webApp && payLink && payLink.includes('t.me')) {
+        webApp.openTelegramLink(payLink);
+      } else if (payLink) {
+        window.open(payLink, '_blank');
       }
 
-      toast.success('Счёт создан! Оплатите в CryptoBot.');
+      const methodName = topUpMethod === 'xrocket' ? 'xRocket' : 'CryptoBot';
+      toast.success(`Счёт создан! Оплатите в ${methodName}.`);
       setIsTopUpOpen(false);
       setTopUpAmount('');
     } catch (err) {
@@ -221,16 +227,40 @@ const ProfilePage = () => {
                       </div>
                     </div>
 
-                    {/* CryptoBot Payment */}
-                    <div className="p-3 rounded-lg border border-foreground bg-secondary flex items-center gap-3">
-                      <img 
-                        src={cryptoBotLogo} 
-                        alt="CryptoBot" 
-                        className="w-8 h-8 rounded-full"
-                      />
-                      <div className="text-left">
-                        <p className="font-medium text-sm">CryptoBot</p>
-                        <p className="text-xs text-muted-foreground">USDT, TON, BTC, ETH</p>
+                    {/* Payment Method Selection */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Способ оплаты</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setTopUpMethod('cryptobot')}
+                          className={`p-3 rounded-lg border flex items-center gap-2 transition-colors ${
+                            topUpMethod === 'cryptobot' 
+                              ? 'border-primary bg-primary/10' 
+                              : 'border-border bg-secondary hover:border-muted-foreground'
+                          }`}
+                        >
+                          <img src={cryptoBotLogo} alt="CryptoBot" className="w-8 h-8 rounded-full" />
+                          <div className="text-left">
+                            <p className="font-medium text-xs">CryptoBot</p>
+                            <p className="text-[10px] text-muted-foreground">USDT, TON, BTC</p>
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTopUpMethod('xrocket')}
+                          className={`p-3 rounded-lg border flex items-center gap-2 transition-colors ${
+                            topUpMethod === 'xrocket' 
+                              ? 'border-primary bg-primary/10' 
+                              : 'border-border bg-secondary hover:border-muted-foreground'
+                          }`}
+                        >
+                          <img src={xrocketLogo} alt="xRocket" className="w-8 h-8 rounded-full" />
+                          <div className="text-left">
+                            <p className="font-medium text-xs">xRocket</p>
+                            <p className="text-[10px] text-muted-foreground">USDT</p>
+                          </div>
+                        </button>
                       </div>
                     </div>
 
@@ -248,7 +278,7 @@ const ProfilePage = () => {
                       ) : (
                         <>
                           <img 
-                            src={cryptoBotLogo} 
+                            src={topUpMethod === 'xrocket' ? xrocketLogo : cryptoBotLogo} 
                             alt="" 
                             className="w-4 h-4 rounded-full"
                           />
