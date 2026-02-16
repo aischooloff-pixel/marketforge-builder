@@ -67,9 +67,10 @@ serve(async (req) => {
     const update = JSON.parse(bodyText);
     console.log("xRocket webhook received (verified):", JSON.stringify(update));
 
-    // xRocket sends status "paid" on the invoice object
-    const invoice = update;
+    // xRocket sends { type: "invoicePay", data: { status: "paid", payload, ... } }
+    const invoice = update.data || update;
     if (invoice.status !== "paid") {
+      console.log("Invoice status is not paid:", invoice.status);
       return new Response("OK", { status: 200 });
     }
 
