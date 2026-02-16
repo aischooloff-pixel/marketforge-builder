@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import cryptoBotLogo from '@/assets/cryptobot-logo.jpg';
+import xrocketLogo from '@/assets/xrocket-logo.jpg';
 
 // Cart item row with stock-aware quantity limits
 const CartItemRow = ({
@@ -127,9 +128,11 @@ const CartPage = () => {
   } = useTelegram();
   const {
     payWithCryptoBot,
+    payWithXRocket,
     payWithBalance,
     isProcessing
   } = usePayment();
+  const [paymentMethod, setPaymentMethod] = useState<'cryptobot' | 'xrocket'>('cryptobot');
   const {
     validatePromo
   } = useAdmin();
@@ -179,15 +182,19 @@ const CartPage = () => {
         protocol: item.selectedProtocol,
       }
     }));
-    const result = await payWithCryptoBot(cartItems, discountedTotal, balanceToUse);
+    
+    const payFn = paymentMethod === 'xrocket' ? payWithXRocket : payWithCryptoBot;
+    const result = await payFn(cartItems, discountedTotal, balanceToUse);
+    
     if (result.success && result.invoiceUrl) {
       hapticFeedback('success');
-      if (webApp) {
+      if (webApp && result.invoiceUrl.includes('t.me')) {
         webApp.openTelegramLink(result.invoiceUrl);
-      } else {
+      } else if (result.invoiceUrl) {
         window.open(result.invoiceUrl, '_blank');
       }
-      toast.success('Счёт создан! Оплатите в CryptoBot.');
+      const methodName = paymentMethod === 'xrocket' ? 'xRocket' : 'CryptoBot';
+      toast.success(`Счёт создан! Оплатите в ${methodName}.`);
     } else {
       hapticFeedback('error');
       toast.error(result.error || 'Ошибка создания счёта');
@@ -331,7 +338,7 @@ const CartPage = () => {
                             <span>−{balanceToUse.toLocaleString('ru-RU')} ₽</span>
                           </div>
                           {cryptoAmount > 0 && <div className="flex justify-between font-medium text-foreground">
-                              <span>Доплата через CryptoBot</span>
+                              <span>Доплата через крипто</span>
                               <span>{cryptoAmount.toLocaleString('ru-RU')} ₽</span>
                             </div>}
                         </div>}
@@ -370,11 +377,49 @@ const CartPage = () => {
                         </>}
                     </Button>}
 
-                  {/* CryptoBot Payment (full or with balance deduction) */}
+                  {/* Payment Method Selection */}
+                  {!(useBalance && canPayWithBalance) && <div className="mb-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('cryptobot')}
+                        className={`p-2.5 rounded-lg border flex items-center gap-2 transition-colors ${
+                          paymentMethod === 'cryptobot' 
+                            ? 'border-primary bg-primary/10' 
+                            : 'border-border bg-secondary hover:border-muted-foreground'
+                        }`}
+                      >
+                        <img src={cryptoBotLogo} alt="CryptoBot" className="w-7 h-7 rounded-full" />
+                        <div className="text-left">
+                          <p className="font-medium text-xs">CryptoBot</p>
+                          <p className="text-[10px] text-muted-foreground">USDT, TON, BTC</p>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('xrocket')}
+                        className={`p-2.5 rounded-lg border flex items-center gap-2 transition-colors ${
+                          paymentMethod === 'xrocket' 
+                            ? 'border-primary bg-primary/10' 
+                            : 'border-border bg-secondary hover:border-muted-foreground'
+                        }`}
+                      >
+                        <img src={xrocketLogo} alt="xRocket" className="w-7 h-7 rounded-full" />
+                        <div className="text-left">
+                          <p className="font-medium text-xs">xRocket</p>
+                          <p className="text-[10px] text-muted-foreground">USDT</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>}
+
+                  {/* Crypto Payment Button */}
                   {!(useBalance && canPayWithBalance) && <Button size="lg" className="w-full gap-3" disabled={!agreedToTerms || isProcessing} onClick={handlePayWithCrypto}>
                       {isProcessing ? 'Создание счёта...' : <>
-                          <img src={cryptoBotLogo} alt="CryptoBot" className="w-5 h-5 rounded-full" />
-                          {useBalance && balanceToUse > 0 ? `Доплатить ${cryptoAmount.toLocaleString('ru-RU')} ₽ через CryptoBot` : `Оплатить ${discountedTotal.toLocaleString('ru-RU')} ₽ через CryptoBot`}
+                          <img src={paymentMethod === 'xrocket' ? xrocketLogo : cryptoBotLogo} alt="" className="w-5 h-5 rounded-full" />
+                          {useBalance && balanceToUse > 0 
+                            ? `Доплатить ${cryptoAmount.toLocaleString('ru-RU')} ₽` 
+                            : `Оплатить ${discountedTotal.toLocaleString('ru-RU')} ₽`}
                         </>}
                     </Button>}
 
