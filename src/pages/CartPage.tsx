@@ -430,6 +430,8 @@ const CartPage = () => {
         </div>
       </main>
 
+      {/* Spacer for mobile bottom nav */}
+      <div className="h-20 md:hidden" />
       <Footer />
     </div>;
 };
