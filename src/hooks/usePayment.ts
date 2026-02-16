@@ -66,6 +66,13 @@ export const usePayment = () => {
             amount: cryptoAmount,
             balanceToUse,
             description: `Заказ${balanceToUse > 0 ? ` (баланс: ${balanceToUse}₽)` : ''}`,
+            items: items.map(item => ({
+              productId: item.productId,
+              productName: item.productName,
+              price: item.price,
+              quantity: item.quantity,
+              options: item.options || {},
+            })),
           },
         }
       );
