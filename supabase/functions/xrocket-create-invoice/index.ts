@@ -183,15 +183,20 @@ serve(async (req) => {
 
     // Create order_items
     if (finalOrderId && items && Array.isArray(items) && items.length > 0) {
+      // Validate product_id as UUID — non-UUID IDs (e.g. Stars temp IDs) become null
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const orderItems = items.map((item: any) => ({
         order_id: finalOrderId,
-        product_id: item.productId || null,
+        product_id: item.productId && uuidRegex.test(item.productId) ? item.productId : null,
         product_name: item.productName,
         price: item.price,
         quantity: item.quantity || 1,
         options: item.options || {},
       }));
-      await supabase.from("order_items").insert(orderItems);
+      const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+      if (itemsError) {
+        console.error("Failed to insert order_items:", itemsError);
+      }
     }
 
     console.log(`xRocket invoice created: ${invoice.id} for user ${userId}`);
