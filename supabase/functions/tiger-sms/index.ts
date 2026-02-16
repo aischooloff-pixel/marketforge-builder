@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 const TIGER_API = "https://api.tiger-sms.com/stubs/handler_api.php";
+const PRICE_MARKUP = 1.3; // +30% наценка
 
 async function tigerRequest(params: Record<string, string>): Promise<string> {
   const apiKey = Deno.env.get("TIGER_SMS_API_KEY");
@@ -61,6 +62,17 @@ serve(async (req) => {
       const result = await tigerRequest(params);
       try {
         const data = JSON.parse(result);
+        // Apply markup to all prices
+        for (const countryId of Object.keys(data)) {
+          for (const serviceId of Object.keys(data[countryId])) {
+            const entry = data[countryId][serviceId];
+            if (entry && typeof entry.cost === "number") {
+              entry.cost = Math.ceil(entry.cost * PRICE_MARKUP * 100) / 100;
+            } else if (entry && typeof entry.cost === "string") {
+              entry.cost = (Math.ceil(parseFloat(entry.cost) * PRICE_MARKUP * 100) / 100).toString();
+            }
+          }
+        }
         return json({ prices: data });
       } catch {
         return json({ error: result }, 400);
