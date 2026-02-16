@@ -44,7 +44,7 @@ const ProfilePage = () => {
     try {
       const { data, error } = await supabase.functions.invoke('cryptobot-create-invoice', {
         body: {
-          userId: user.id,
+          initData: webApp?.initData,
           amount,
           description: `Пополнение баланса на ${amount} ₽`,
         },

@@ -74,7 +74,7 @@ serve(async (req) => {
 
     const invoice = update.payload;
     const payloadData = JSON.parse(invoice.payload || "{}");
-    const { userId, orderId, amountRub, balanceToUse } = payloadData;
+    const { userId, orderId, amountRub, balanceToUse, items } = payloadData;
 
     if (!userId || !amountRub) {
       console.error("Missing payload data");
