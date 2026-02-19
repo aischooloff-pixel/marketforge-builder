@@ -229,7 +229,11 @@ serve(async (req) => {
       }
     }
 
-    if (!isAuthed) {
+    // Allow public endpoints without admin auth
+    const publicPaths = ["/promos/validate"];
+    const isPublicPath = publicPaths.some(p => path === p);
+
+    if (!isAuthed && !isPublicPath) {
       console.log("Admin API: Authentication failed - no valid method");
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
