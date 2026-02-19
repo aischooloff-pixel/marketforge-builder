@@ -43,7 +43,9 @@ export const TigerNumberBuyer = () => {
     if (!selectedService || !pricesData) return [];
 
     const entries = Object.entries(pricesData)
-      .filter(([, serviceMap]) => {
+      .filter(([code, serviceMap]) => {
+        // Hide Russia (code "0")
+        if (code === '0') return false;
         const serviceData = serviceMap[selectedService];
         return serviceData && serviceData.count > 0;
       })
