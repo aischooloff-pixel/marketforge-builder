@@ -1195,15 +1195,30 @@ serve(async (req) => {
           });
         }
 
-        // Get all user telegram_ids
-        const { data: allProfiles, error: profilesErr } = await supabase
-          .from("profiles")
-          .select("telegram_id")
-          .eq("is_banned", false);
+        // Get ALL user telegram_ids with pagination (bypass 1000 row limit)
+        let allTelegramIds: number[] = [];
+        let rangeFrom = 0;
+        const PAGE_SIZE = 1000;
+        while (true) {
+          const { data: pageProfiles, error: profilesErr } = await supabase
+            .from("profiles")
+            .select("telegram_id")
+            .eq("is_banned", false)
+            .range(rangeFrom, rangeFrom + PAGE_SIZE - 1);
 
-        if (profilesErr) throw profilesErr;
+          if (profilesErr) throw profilesErr;
+          if (!pageProfiles || pageProfiles.length === 0) break;
 
-        const telegramIds = allProfiles?.map(p => p.telegram_id).filter(Boolean) || [];
+          allTelegramIds = allTelegramIds.concat(
+            pageProfiles.map((p: { telegram_id: number }) => p.telegram_id).filter(Boolean)
+          );
+
+          if (pageProfiles.length < PAGE_SIZE) break;
+          rangeFrom += PAGE_SIZE;
+        }
+
+        const telegramIds = allTelegramIds;
+        console.log(`[Broadcast] Total users to send: ${telegramIds.length}`);
 
         // Build inline keyboard if buttons provided
         let reply_markup: Record<string, unknown> | undefined;
@@ -1215,62 +1230,88 @@ serve(async (req) => {
           };
         }
 
+        // Helper: build payload for a given chatId
+        function buildPayload(chatId: number, useParseMode: boolean): { apiMethod: string; payload: Record<string, unknown> } {
+          let apiMethod = "sendMessage";
+          const payload: Record<string, unknown> = { chat_id: chatId };
+
+          if (useParseMode && parse_mode) {
+            payload.parse_mode = parse_mode;
+          }
+
+          if (reply_markup) payload.reply_markup = reply_markup;
+
+          if (media_url) {
+            if (media_type === "video") {
+              apiMethod = "sendVideo";
+              payload.video = media_url;
+              if (broadcastText) payload.caption = broadcastText;
+            } else if (media_type === "animation" || media_type === "gif") {
+              apiMethod = "sendAnimation";
+              payload.animation = media_url;
+              if (broadcastText) payload.caption = broadcastText;
+            } else {
+              apiMethod = "sendPhoto";
+              payload.photo = media_url;
+              if (broadcastText) payload.caption = broadcastText;
+            }
+          } else {
+            payload.text = broadcastText;
+          }
+
+          return { apiMethod, payload };
+        }
+
+        // Helper: send one message, retry without parse_mode on HTML parse error
+        async function sendOne(chatId: number): Promise<boolean> {
+          const { apiMethod, payload } = buildPayload(chatId, true);
+
+          const res = await fetch(`https://api.telegram.org/bot${botToken}/${apiMethod}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (res.ok) {
+            await res.text();
+            return true;
+          }
+
+          const errText = await res.text();
+
+          // If HTML parse error — retry without parse_mode (plain text fallback)
+          if (errText.includes("can't parse entities")) {
+            const { apiMethod: m2, payload: p2 } = buildPayload(chatId, false);
+            const res2 = await fetch(`https://api.telegram.org/bot${botToken}/${m2}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(p2),
+            });
+            if (res2.ok) {
+              await res2.text();
+              return true;
+            }
+            await res2.text();
+          }
+
+          console.error(`Broadcast failed for ${chatId}:`, errText);
+          return false;
+        }
+
         let sent = 0;
         let failed = 0;
 
-        for (const chatId of telegramIds) {
-          try {
-            let apiMethod = "sendMessage";
-            const payload: Record<string, unknown> = {
-              chat_id: chatId,
-              parse_mode: parse_mode || "HTML",
-            };
-
-            if (reply_markup) {
-              payload.reply_markup = reply_markup;
-            }
-
-            if (media_url) {
-              // Determine method based on media type
-              if (media_type === "video") {
-                apiMethod = "sendVideo";
-                payload.video = media_url;
-                if (broadcastText) payload.caption = broadcastText;
-              } else if (media_type === "animation" || media_type === "gif") {
-                apiMethod = "sendAnimation";
-                payload.animation = media_url;
-                if (broadcastText) payload.caption = broadcastText;
-              } else {
-                // Default to photo
-                apiMethod = "sendPhoto";
-                payload.photo = media_url;
-                if (broadcastText) payload.caption = broadcastText;
-              }
-            } else {
-              payload.text = broadcastText;
-            }
-
-            const res = await fetch(`https://api.telegram.org/bot${botToken}/${apiMethod}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            });
-
-            if (res.ok) {
-              sent++;
-            } else {
-              failed++;
-              const errBody = await res.text();
-              console.error(`Broadcast failed for ${chatId}:`, errBody);
-            }
-
-            // Rate limiting: 30 messages per second max for Telegram
-            if (sent % 25 === 0) {
-              await new Promise(r => setTimeout(r, 1000));
-            }
-          } catch (e) {
-            failed++;
-            console.error(`Broadcast error for ${chatId}:`, e);
+        // Send in batches of 25 in parallel, then wait 1s to respect Telegram rate limits (~30 msg/s)
+        const BATCH_SIZE = 25;
+        for (let i = 0; i < telegramIds.length; i += BATCH_SIZE) {
+          const batch = telegramIds.slice(i, i + BATCH_SIZE);
+          const results = await Promise.all(batch.map(sendOne));
+          for (const ok of results) {
+            if (ok) sent++; else failed++;
+          }
+          // Wait between batches to avoid rate limiting
+          if (i + BATCH_SIZE < telegramIds.length) {
+            await new Promise(r => setTimeout(r, 1000));
           }
         }
 
