@@ -12,7 +12,8 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { ArrowRight, Zap, Users, Star, Quote, Info, Send, Award, Shield, ShieldAlert } from 'lucide-react';
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
+import LightRays from '@/components/LightRays';
 const Index = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const {
@@ -38,8 +39,25 @@ const Index = () => {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="pt-24 pb-12 md:pt-40 md:pb-32">
-          <div className="container mx-auto px-4">
+        <section className="pt-24 pb-12 md:pt-40 md:pb-32 relative overflow-hidden">
+          {/* WebGL Light Rays Background */}
+          <div className="absolute inset-0 w-full h-full">
+            <LightRays
+              raysOrigin="top-center"
+              raysColor="#ffffff"
+              raysSpeed={0.6}
+              lightSpread={0.8}
+              rayLength={1.5}
+              fadeDistance={0.9}
+              saturation={0.5}
+              followMouse={true}
+              mouseInfluence={0.12}
+              noiseAmount={0.05}
+              distortion={0.05}
+            />
+          </div>
+
+          <div className="container mx-auto px-4 relative z-10">
             <motion.div initial={{
             opacity: 0,
             y: 30
