@@ -1195,6 +1195,50 @@ serve(async (req) => {
           });
         }
 
+        // Auto-fix HTML: close any unclosed Telegram-supported tags
+        function fixHtml(text: string): string {
+          if (!text) return text;
+          const allowedTags = ['b', 'i', 'u', 's', 'code', 'pre', 'a', 'em', 'strong', 'del', 'ins', 'tg-spoiler'];
+          const stack: string[] = [];
+          let result = '';
+          let i = 0;
+
+          while (i < text.length) {
+            if (text[i] !== '<') { result += text[i++]; continue; }
+            const closeIdx = text.indexOf('>', i);
+            if (closeIdx === -1) { result += '&lt;'; i++; continue; }
+            const tagContent = text.substring(i + 1, closeIdx).trim();
+            const isClosing = tagContent.startsWith('/');
+            const rawName = isClosing ? tagContent.substring(1) : tagContent;
+            const tagName = rawName.toLowerCase().split(/[\s\/]/)[0];
+
+            if (allowedTags.includes(tagName)) {
+              if (isClosing) {
+                const idx = [...stack].reverse().findIndex(t => t === tagName);
+                if (idx !== -1) {
+                  const realIdx = stack.length - 1 - idx;
+                  while (stack.length > realIdx + 1) result += `</${stack.pop()}>`;
+                  stack.pop();
+                  result += `</${tagName}>`;
+                }
+              } else {
+                stack.push(tagName);
+                result += text.substring(i, closeIdx + 1);
+              }
+            } else {
+              result += text.substring(i, closeIdx + 1);
+            }
+            i = closeIdx + 1;
+          }
+
+          while (stack.length > 0) result += `</${stack.pop()}>`;
+          return result;
+        }
+
+        // Sanitize text if HTML mode
+        const isHtmlMode = !parse_mode || parse_mode === "HTML";
+        const safeText = isHtmlMode ? fixHtml(broadcastText || '') : (broadcastText || '');
+
         // Get ALL user telegram_ids with pagination (bypass 1000 row limit)
         let allTelegramIds: number[] = [];
         let rangeFrom = 0;
@@ -1231,69 +1275,43 @@ serve(async (req) => {
         }
 
         // Helper: build payload for a given chatId
-        function buildPayload(chatId: number, useParseMode: boolean): { apiMethod: string; payload: Record<string, unknown> } {
+        function buildPayload(chatId: number): { apiMethod: string; payload: Record<string, unknown> } {
           let apiMethod = "sendMessage";
-          const payload: Record<string, unknown> = { chat_id: chatId };
-
-          if (useParseMode && parse_mode) {
-            payload.parse_mode = parse_mode;
-          }
+          const payload: Record<string, unknown> = {
+            chat_id: chatId,
+            parse_mode: parse_mode || "HTML",
+          };
 
           if (reply_markup) payload.reply_markup = reply_markup;
 
           if (media_url) {
             if (media_type === "video") {
-              apiMethod = "sendVideo";
-              payload.video = media_url;
-              if (broadcastText) payload.caption = broadcastText;
+              apiMethod = "sendVideo"; payload.video = media_url;
+              if (safeText) payload.caption = safeText;
             } else if (media_type === "animation" || media_type === "gif") {
-              apiMethod = "sendAnimation";
-              payload.animation = media_url;
-              if (broadcastText) payload.caption = broadcastText;
+              apiMethod = "sendAnimation"; payload.animation = media_url;
+              if (safeText) payload.caption = safeText;
             } else {
-              apiMethod = "sendPhoto";
-              payload.photo = media_url;
-              if (broadcastText) payload.caption = broadcastText;
+              apiMethod = "sendPhoto"; payload.photo = media_url;
+              if (safeText) payload.caption = safeText;
             }
           } else {
-            payload.text = broadcastText;
+            payload.text = safeText;
           }
 
           return { apiMethod, payload };
         }
 
-        // Helper: send one message, retry without parse_mode on HTML parse error
+        // Helper: send one message
         async function sendOne(chatId: number): Promise<boolean> {
-          const { apiMethod, payload } = buildPayload(chatId, true);
-
+          const { apiMethod, payload } = buildPayload(chatId);
           const res = await fetch(`https://api.telegram.org/bot${botToken}/${apiMethod}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
-
-          if (res.ok) {
-            await res.text();
-            return true;
-          }
-
+          if (res.ok) { await res.text(); return true; }
           const errText = await res.text();
-
-          // If HTML parse error — retry without parse_mode (plain text fallback)
-          if (errText.includes("can't parse entities")) {
-            const { apiMethod: m2, payload: p2 } = buildPayload(chatId, false);
-            const res2 = await fetch(`https://api.telegram.org/bot${botToken}/${m2}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(p2),
-            });
-            if (res2.ok) {
-              await res2.text();
-              return true;
-            }
-            await res2.text();
-          }
-
           console.error(`Broadcast failed for ${chatId}:`, errText);
           return false;
         }
@@ -1301,15 +1319,12 @@ serve(async (req) => {
         let sent = 0;
         let failed = 0;
 
-        // Send in batches of 25 in parallel, then wait 1s to respect Telegram rate limits (~30 msg/s)
+        // Send in batches of 25 in parallel, ~30 msg/s Telegram limit
         const BATCH_SIZE = 25;
         for (let i = 0; i < telegramIds.length; i += BATCH_SIZE) {
           const batch = telegramIds.slice(i, i + BATCH_SIZE);
           const results = await Promise.all(batch.map(sendOne));
-          for (const ok of results) {
-            if (ok) sent++; else failed++;
-          }
-          // Wait between batches to avoid rate limiting
+          for (const ok of results) { if (ok) sent++; else failed++; }
           if (i + BATCH_SIZE < telegramIds.length) {
             await new Promise(r => setTimeout(r, 1000));
           }
