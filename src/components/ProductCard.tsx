@@ -57,9 +57,9 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
       className="group h-full"
     >
       <Link to={`/product/${product.id}`} className="block h-full">
-        <div className={`h-full p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm hover:bg-white/8 hover:border-white/20 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col ${isOutOfStock ? 'opacity-50' : ''}`}>
+        <div className={`h-full p-3 md:p-4 rounded-xl md:rounded-2xl border bg-card shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col ${isOutOfStock ? 'opacity-60' : ''}`}>
           {/* Product Image/Icon Area */}
-          <div className="relative aspect-square md:aspect-[4/3] rounded-lg md:rounded-xl bg-white/5 border border-white/8 flex items-center justify-center mb-2 md:mb-4 overflow-hidden">
+          <div className="relative aspect-square md:aspect-[4/3] rounded-lg md:rounded-xl bg-secondary/80 flex items-center justify-center mb-2 md:mb-4 overflow-hidden">
             {product.media_urls && product.media_urls.length > 0 ? (
               /\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ? (
                 <video src={product.media_urls[0]} className="w-full h-full object-cover" muted />
@@ -131,12 +131,12 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 
             {/* Stock indicator */}
             {!isOutOfStock && stockCount > 0 && stockCount <= 5 && (
-              <p className="text-xs text-warning mb-1">
+              <p className="text-xs text-orange-500 mb-1">
                 Осталось: {stockCount} шт
               </p>
             )}
             {stockCount === -1 && (
-              <p className="text-xs text-success mb-1">
+              <p className="text-xs text-green-500 mb-1">
                 ∞ В наличии
               </p>
             )}

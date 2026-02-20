@@ -8,7 +8,7 @@ import { Footer } from '@/components/Footer';
 import { ProductCard } from '@/components/ProductCard';
 import { ReviewForm } from '@/components/ReviewForm';
 import { Button } from '@/components/ui/button';
-
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { ArrowRight, Zap, Users, Star, Quote, Info, Send, Award, Shield, ShieldAlert } from 'lucide-react';
@@ -33,13 +33,7 @@ const Index = () => {
   } = useAverageRating(reviews);
 
   // Auto-scroll removed — static horizontal scroll on mobile
-  return <div className="min-h-screen flex flex-col bg-background">
-      {/* Ambient background glows */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full" style={{ background: 'radial-gradient(closest-side, rgba(255,255,255,0.06), transparent)' }} />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full" style={{ background: 'radial-gradient(closest-side, rgba(255,255,255,0.03), transparent)' }} />
-      </div>
-
+  return <div className="min-h-screen flex flex-col">
       <Header />
       
       <main className="flex-1">
@@ -98,33 +92,32 @@ const Index = () => {
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center px-4">
                 <Link to="/catalog">
-                  <Button size="lg" className="w-full sm:w-auto gap-2 text-sm md:text-base px-6 md:px-8 h-11 md:h-12 bg-white text-black hover:bg-white/90 border-0">
+                  <Button size="lg" className="w-full sm:w-auto gap-2 text-sm md:text-base px-6 md:px-8 h-11 md:h-12">
                     Смотреть каталог
                     <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
                   </Button>
                 </Link>
                 <div className="flex flex-row gap-2 justify-center">
                   <Link to="/info">
-                    <Button size="sm" variant="outline" className="gap-1.5 text-xs px-4 h-9 border-white/10 bg-white/5 hover:bg-white/10 text-foreground/80">
+                    <Button size="sm" variant="outline" className="gap-1.5 text-xs px-4 h-9">
                       <Info className="h-3.5 w-3.5" />
                       Информация
                     </Button>
                   </Link>
                   <a href="https://t.me/TemkaStoreNews" target="_blank" rel="noopener noreferrer">
-                    <Button size="sm" variant="outline" className="gap-1.5 text-xs px-4 h-9 border-white/10 bg-white/5 hover:bg-white/10 text-foreground/80">
+                    <Button size="sm" variant="outline" className="gap-1.5 text-xs px-4 h-9">
                       <Send className="h-3.5 w-3.5" />
                       Телеграм канал
                     </Button>
                   </a>
                 </div>
-
               </div>
             </motion.div>
           </div>
         </section>
 
         {/* Features */}
-        <section className="py-8 md:py-16 border-y border-white/8">
+        <section className="py-8 md:py-16 border-y bg-secondary/30">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
               {[{
@@ -149,9 +142,9 @@ const Index = () => {
               delay: index * 0.1
             }} viewport={{
               once: true
-            }} className="flex items-start gap-3 md:gap-4 p-4 md:p-6 rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm">
-                  <div className="p-2 md:p-3 rounded-xl bg-white/10 border border-white/10">
-                    <feature.icon className="h-5 w-5 md:h-6 md:w-6 text-foreground" />
+            }} className="flex items-start gap-3 md:gap-4 p-4 md:p-6">
+                  <div className="p-2 md:p-3 rounded-lg md:rounded-xl bg-foreground text-background">
+                    <feature.icon className="h-5 w-5 md:h-6 md:w-6" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-base md:text-lg mb-0.5 md:mb-1">{feature.title}</h3>
@@ -161,7 +154,6 @@ const Index = () => {
             </div>
           </div>
         </section>
-
 
         {/* Popular Products */}
         <section className="py-10 md:py-20">
@@ -224,7 +216,7 @@ const Index = () => {
         </section>
 
         {/* Categories */}
-        <section className="py-10 md:py-20 border-y border-white/8">
+        <section className="py-10 md:py-20 bg-secondary/30">
           <div className="container mx-auto px-4">
             <motion.div initial={{
             opacity: 0
@@ -238,7 +230,7 @@ const Index = () => {
             </motion.div>
 
             {categoriesLoading ? <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
-                {[...Array(8)].map((_, i) => <div key={i} className="p-4 md:p-6 rounded-2xl border border-white/10 bg-white/5">
+                {[...Array(8)].map((_, i) => <div key={i} className="p-4 md:p-6 rounded-lg md:rounded-xl border bg-card">
                     <Skeleton className="h-10 w-10 mx-auto mb-2 rounded" />
                     <Skeleton className="h-4 w-3/4 mx-auto mb-1" />
                     <Skeleton className="h-3 w-1/2 mx-auto hidden md:block" />
@@ -256,9 +248,9 @@ const Index = () => {
               once: true
             }}>
                     <Link to={`/catalog?category=${category.slug}`}>
-                      <div className="p-4 md:p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm hover:bg-white/8 hover:border-white/20 hover:-translate-y-1 transition-all text-center group">
+                      <div className="p-4 md:p-6 rounded-lg md:rounded-xl border bg-card hover:shadow-lg hover:-translate-y-1 transition-all text-center group">
                         <div className="text-3xl md:text-4xl mb-2 md:mb-3">{category.icon}</div>
-                        <h3 className="font-semibold text-sm md:text-base mb-0.5 md:mb-1 text-foreground/80 group-hover:text-foreground transition-colors">
+                        <h3 className="font-semibold text-sm md:text-base mb-0.5 md:mb-1 group-hover:text-foreground transition-colors">
                           {category.name}
                         </h3>
                         <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 hidden md:block">
@@ -272,7 +264,6 @@ const Index = () => {
               </div>}
           </div>
         </section>
-
 
         {/* Reviews */}
         <section className="py-10 md:py-20">
@@ -299,7 +290,7 @@ const Index = () => {
 
             {reviewsLoading ? <div className="flex gap-4 overflow-hidden pb-4">
                 {[...Array(3)].map((_, i) => <div key={i} className="w-[280px] md:w-[320px] flex-shrink-0">
-                    <div className="p-4 rounded-2xl border border-white/10 bg-white/5">
+                    <div className="p-4 rounded-xl border bg-card">
                       <Skeleton className="h-4 w-20 mb-3" />
                       <Skeleton className="h-16 w-full mb-3" />
                       <Skeleton className="h-4 w-24" />
@@ -320,24 +311,23 @@ const Index = () => {
               }} viewport={{
                 once: true
               }} className="w-[280px] md:w-[320px] flex-shrink-0">
-                      <div className="p-4 md:p-5 h-full rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
+                      <Card className="p-4 md:p-5 h-full">
                         <div className="flex items-center gap-1 mb-3">
                           {Array.from({
                       length: review.rating
-                    }).map((_, i) => <Star key={i} className="h-4 w-4 fill-foreground text-foreground" />)}
+                    }).map((_, i) => <Star key={i} className="h-4 w-4 fill-primary text-primary" />)}
                         </div>
                         <Quote className="h-5 w-5 text-muted-foreground/30 mb-2" />
                         <p className="text-sm md:text-base text-foreground mb-4">{review.text}</p>
                         <div className="mt-auto">
-                          <p className="font-medium text-sm text-foreground/70">{review.author_name || 'Пользователь'}</p>
+                          <p className="font-medium text-sm">{review.author_name || 'Пользователь'}</p>
                         </div>
-                      </div>
+                      </Card>
                     </motion.div>)}
                 </div>
               </div> : <div className="text-center py-8 text-muted-foreground">
                 <p>Отзывов пока нет. Будьте первым!</p>
               </div>}
-
             {reviews.length > 0 && <p className="text-center text-xs text-muted-foreground mt-2">← Листайте →</p>}
 
             {/* Review Form */}
@@ -348,15 +338,15 @@ const Index = () => {
         </section>
 
         {/* Disclaimer Banner */}
-        <section className="py-8 md:py-12 pb-24 md:pb-12 border-t border-white/8">
+        <section className="py-8 md:py-12 pb-24 md:pb-12 border-t bg-secondary/30">
           <div className="container mx-auto px-4">
             <motion.div
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              className="flex flex-col md:flex-row items-start md:items-center gap-4 max-w-3xl mx-auto p-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm"
+              className="flex flex-col md:flex-row items-start md:items-center gap-4 max-w-3xl mx-auto"
             >
-              <div className="p-2.5 rounded-xl bg-destructive/15 border border-destructive/20 shrink-0">
+              <div className="p-2.5 rounded-lg bg-destructive/10 shrink-0">
                 <ShieldAlert className="h-5 w-5 text-destructive" />
               </div>
               <div className="flex-1">
@@ -367,7 +357,7 @@ const Index = () => {
                 </p>
               </div>
               <Link to="/disclaimer">
-                <Button variant="outline" size="sm" className="text-xs gap-1.5 shrink-0 border-white/10 bg-white/5 hover:bg-white/10">
+                <Button variant="outline" size="sm" className="text-xs gap-1.5 shrink-0">
                   Подробнее
                   <ArrowRight className="h-3 w-3" />
                 </Button>
@@ -375,7 +365,6 @@ const Index = () => {
             </motion.div>
           </div>
         </section>
-
         
       </main>
 
