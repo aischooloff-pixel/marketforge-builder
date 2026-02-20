@@ -1,21 +1,20 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { storeData } from '@/data/products';
 import { usePopularProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useApprovedReviews, useAverageRating } from '@/hooks/useReviews';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { ProductCard } from '@/components/ProductCard';
 import { ReviewForm } from '@/components/ReviewForm';
-import CircularGallery from '@/components/CircularGallery';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { ArrowRight, Zap, Users, Star, Quote, Info, Send, Award, Shield, ShieldAlert } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useRef, useEffect } from 'react';
 const Index = () => {
-  const navigate = useNavigate();
-  const { theme } = useTheme();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const {
     data: popularProducts = [],
     isLoading: productsLoading
@@ -159,8 +158,13 @@ const Index = () => {
         {/* Popular Products */}
         <section className="py-10 md:py-20">
           <div className="container mx-auto px-4">
-            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-              className="flex justify-between items-center gap-4 mb-6 md:mb-10">
+            <motion.div initial={{
+            opacity: 0
+          }} whileInView={{
+            opacity: 1
+          }} viewport={{
+            once: true
+          }} className="flex justify-between items-center gap-4 mb-6 md:mb-10">
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold mb-1">Популярное</h2>
                 <p className="text-sm md:text-base text-muted-foreground">Самые востребованные товары</p>
@@ -172,45 +176,44 @@ const Index = () => {
                 </Button>
               </Link>
             </motion.div>
-          </div>
 
-          {/* CircularGallery — full width, outside container */}
-          {productsLoading ? (
-            <div className="flex gap-4 px-4 overflow-hidden">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex-shrink-0 w-[260px] rounded-2xl border bg-card">
-                  <Skeleton className="aspect-[4/3] rounded-2xl" />
+            {/* Loading state */}
+            {productsLoading ? <>
+                <div className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
+                  <div className="flex gap-3">
+                    {[...Array(3)].map((_, i) => <div key={i} className="w-[85vw] flex-shrink-0">
+                        <div className="p-3 rounded-xl border bg-card">
+                          <Skeleton className="aspect-square rounded-lg mb-2" />
+                          <Skeleton className="h-5 w-3/4 mb-2" />
+                          <Skeleton className="h-4 w-1/2" />
+                        </div>
+                      </div>)}
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : popularProducts.length > 0 ? (
-            <div className="w-full" style={{ height: '420px' }}>
-              <CircularGallery
-                items={popularProducts.map(p => ({
-                  image: p.media_urls?.[0] || `https://placehold.co/700x500/1a1a1a/ffffff?text=${encodeURIComponent(p.name)}`,
-                  text: p.name,
-                  href: `/product/${p.id}`
-                }))}
-                bend={3}
-                textColor={theme === 'dark' ? '#ffffff' : '#111111'}
-                borderRadius={0.07}
-                font="bold 28px Inter"
-                scrollSpeed={2}
-                scrollEase={0.05}
-                onItemClick={(index) => {
-                  if (popularProducts[index]) {
-                    navigate(`/product/${popularProducts[index].id}`);
-                  }
-                }}
-              />
-            </div>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>Популярные товары скоро появятся</p>
-            </div>
-          )}
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, i) => <div key={i} className="p-4 rounded-2xl border bg-card">
+                      <Skeleton className="aspect-[4/3] rounded-xl mb-4" />
+                      <Skeleton className="h-6 w-3/4 mb-2" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>)}
+                </div>
+              </> : popularProducts.length > 0 ? <>
+                {/* Horizontal scroll on Mobile, Grid on Desktop */}
+                <div ref={scrollRef} className="md:hidden overflow-x-auto -mx-4 px-4 pb-4 scrollbar-hide">
+                  <div className="flex gap-3">
+                    {popularProducts.map((product, index) => <div key={product.id} className="w-[85vw] flex-shrink-0">
+                        <ProductCard product={product} index={index} />
+                      </div>)}
+                  </div>
+                </div>
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {popularProducts.map((product, index) => <ProductCard key={product.id} product={product} index={index} />)}
+                </div>
+              </> : <div className="text-center py-12 text-muted-foreground">
+                <p>Популярные товары скоро появятся</p>
+              </div>}
+          </div>
         </section>
-
 
         {/* Categories */}
         <section className="py-10 md:py-20 bg-secondary/30">
