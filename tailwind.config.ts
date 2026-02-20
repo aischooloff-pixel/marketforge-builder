@@ -14,9 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"MS Sans Serif"', '"VT323"', '"Courier New"', 'monospace'],
-        mono: ['"VT323"', '"Courier New"', 'monospace'],
-        pixel: ['"VT323"', 'monospace'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -60,25 +58,11 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
-        /* Win95 specific */
-        win95: {
-          grey: "#C0C0C0",
-          light: "#FFFFFF",
-          dark: "#808080",
-          darker: "#000000",
-          navy: "#000080",
-          highlight: "#0000FF",
-        },
       },
       borderRadius: {
-        lg: "0px",
-        md: "0px",
-        sm: "0px",
-      },
-      boxShadow: {
-        "win95-raised": "inset -1px -1px 0px #000000, inset 1px 1px 0px #FFFFFF, inset -2px -2px 0px #808080, inset 2px 2px 0px #DFDFDF",
-        "win95-sunken": "inset 1px 1px 0px #000000, inset -1px -1px 0px #FFFFFF, inset 2px 2px 0px #808080, inset -2px -2px 0px #DFDFDF",
-        "win95-flat": "1px 1px 0px #000000",
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
         "accordion-down": {
@@ -105,9 +89,9 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.2s steps(4)",
-        "slide-up": "slide-up 0.2s steps(4)",
-        "scale-in": "scale-in 0.1s steps(2)",
+        "fade-in": "fade-in 0.3s ease-out",
+        "slide-up": "slide-up 0.4s ease-out",
+        "scale-in": "scale-in 0.2s ease-out",
       },
     },
   },
