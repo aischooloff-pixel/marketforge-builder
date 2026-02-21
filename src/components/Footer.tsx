@@ -44,10 +44,19 @@ export const Footer = () => {
                 PGP: 4A8B 2C1F 9D3E ...
               </div>
             </div>
-            <span className="text-[10px] text-muted-foreground/50 mt-1">
-              © TEMKA.STORE · Все права защищены  
-            </span>
           </div>
+        </div>
+
+        {/* Legal disclaimer */}
+        <div className="mt-4 pt-3 border-t border-border">
+          <p className="text-[10px] text-muted-foreground/60 text-center leading-relaxed max-w-2xl mx-auto font-mono">
+            ⚠ Визуальное оформление сайта является художественной стилизацией и не является пропагандой незаконной деятельности, 
+            наркотических средств или насилия. Все элементы дизайна носят исключительно декоративный характер. 
+            Магазин осуществляет продажу только легальных цифровых товаров и услуг в соответствии с законодательством РФ.
+          </p>
+          <p className="text-[10px] text-muted-foreground/50 text-center mt-2">
+            © TEMKA.STORE · Все права защищены
+          </p>
         </div>
       </div>
     </footer>
