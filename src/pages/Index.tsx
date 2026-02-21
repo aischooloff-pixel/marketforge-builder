@@ -154,7 +154,7 @@ const Index = () => {
               </div> : categories.length > 0 ? <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4">
                 {categories.map((category, index) => <motion.div key={category.id} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.05 }} viewport={{ once: true }}>
                     <Link to={`/catalog?category=${category.slug}`}>
-                      <div className="p-4 md:p-6 win95-window hover-lift text-center group">
+                      <div className="p-4 md:p-6 win95-window hover-lift text-center group h-full flex flex-col items-center justify-center">
                         <div className="text-3xl md:text-4xl mb-2 md:mb-3">{category.icon}</div>
                         <h3 className="font-semibold text-sm md:text-base mb-0.5 md:mb-1 group-hover:text-foreground transition-colors">{category.name}</h3>
                         <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 hidden md:block">{category.description}</p>
