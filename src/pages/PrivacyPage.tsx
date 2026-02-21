@@ -16,13 +16,13 @@ const Section = ({
   items: string[];
 }) => (
   <div className="mb-8">
-    <div className="flex items-center gap-2 mb-3">
-      <Icon className="h-5 w-5 text-muted-foreground" />
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <div className="flex items-start gap-2 mb-3">
+      <Icon className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+      <h2 className="text-base md:text-lg font-semibold">{title}</h2>
     </div>
     <ul className="space-y-2">
       {items.map((item, i) => (
-        <li key={i} className="text-sm text-muted-foreground leading-relaxed pl-4 border-l-2 border-border">
+        <li key={i} className="text-sm text-muted-foreground leading-relaxed pl-4 border-l-2 border-border break-words">
           {item}
         </li>
       ))}
@@ -32,10 +32,10 @@ const Section = ({
 
 const PrivacyPage = () => {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-x-hidden">
       <Header />
       <main className="flex-1 pt-20 pb-24">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="container mx-auto px-4 max-w-3xl overflow-hidden break-words">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <Link to="/">
               <Button variant="ghost" size="sm" className="mb-6 gap-2">
