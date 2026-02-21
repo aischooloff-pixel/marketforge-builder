@@ -389,7 +389,7 @@ const ProfilePage = () => {
                               {formatDate(order.created_at)}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right whitespace-nowrap">
                             <p className="font-pixel text-sm text-primary">
                               {parseFloat(String(order.total)).toLocaleString('ru-RU')} ₽
                             </p>
