@@ -560,11 +560,58 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
+        // System promo code WELCOME10 — hardcoded, no DB required
+        const SYSTEM_PROMOS: Record<string, { discount_percent: number; first_order_only: boolean }> = {
+          "WELCOME10": { discount_percent: 10, first_order_only: true },
+        };
 
+        const upperCode = promoCode.toUpperCase();
+        const systemPromo = SYSTEM_PROMOS[upperCode];
+
+        if (systemPromo) {
+          // Check first-order restriction
+          if (systemPromo.first_order_only && promoUserId) {
+            // Check if user already used this system promo
+            const { data: existingUse } = await supabase
+              .from("promo_uses")
+              .select("id")
+              .eq("user_id", promoUserId)
+              .filter("promo_id", "eq", `system:${upperCode}`)
+              .maybeSingle();
+
+            if (existingUse) {
+              return new Response(JSON.stringify({ valid: false, error: "Вы уже использовали этот промокод" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+
+            const { count } = await supabase
+              .from("orders")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", promoUserId)
+              .in("status", ["paid", "completed"]);
+
+            if (count && count > 0) {
+              return new Response(JSON.stringify({ valid: false, error: "Промокод только для первого заказа" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+          }
+
+          return new Response(JSON.stringify({
+            valid: true,
+            discount_percent: systemPromo.discount_percent,
+            promo_id: `system:${upperCode}`,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Regular DB-based promo codes
         const { data: promo, error: promoErr } = await supabase
           .from("promo_codes")
           .select("*")
-          .eq("code", promoCode.toUpperCase())
+          .eq("code", upperCode)
           .eq("is_active", true)
           .single();
 
@@ -599,21 +646,6 @@ serve(async (req) => {
             return new Response(JSON.stringify({ valid: false, error: "Вы уже использовали этот промокод" }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
-          }
-
-          // WELCOME10 — only for first order
-          if (promoCode.toUpperCase() === "WELCOME10") {
-            const { count } = await supabase
-              .from("orders")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", promoUserId)
-              .in("status", ["paid", "completed"]);
-
-            if (count && count > 0) {
-              return new Response(JSON.stringify({ valid: false, error: "Промокод только для первого заказа" }), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              });
-            }
           }
         }
 
