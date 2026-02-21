@@ -341,14 +341,26 @@ serve(async (req) => {
 
       // ============ ORDERS ============
       case path === "/orders" && method === "GET": {
-        const { data, error } = await supabase
+        // Fetch orders with items
+        const { data: ordersData, error: ordersErr } = await supabase
           .from("orders")
           .select("*, profiles(username, first_name, telegram_id), order_items(*)")
           .order("created_at", { ascending: false })
           .limit(100);
 
-        if (error) throw error;
-        return new Response(JSON.stringify(data), {
+        if (ordersErr) throw ordersErr;
+
+        // Fetch deposit transactions
+        const { data: depositsData, error: depositsErr } = await supabase
+          .from("transactions")
+          .select("*, profiles:user_id(username, first_name, telegram_id)")
+          .eq("type", "deposit")
+          .order("created_at", { ascending: false })
+          .limit(100);
+
+        if (depositsErr) throw depositsErr;
+
+        return new Response(JSON.stringify({ orders: ordersData, deposits: depositsData }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
