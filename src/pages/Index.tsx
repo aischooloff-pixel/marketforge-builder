@@ -109,7 +109,7 @@ const Index = () => {
                 },
                 {
                   icon: PxUsers,
-                  title: "Только для своих",
+                  title: "Для профи",
                   desc: "Для профессионалов своих дел",
                 },
               ].map((feature, index) => {
