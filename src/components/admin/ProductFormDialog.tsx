@@ -42,6 +42,7 @@ const productSchema = z.object({
   is_popular: z.boolean().default(false),
   tags: z.string().optional(),
   max_per_user: z.coerce.number().min(0).default(0),
+  icon_url: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -65,6 +66,7 @@ interface Product {
   tags?: string[];
   media_urls?: string[];
   max_per_user?: number;
+  icon_url?: string;
 }
 
 interface ProductFormDialogProps {
@@ -86,8 +88,11 @@ export const ProductFormDialog = ({
 }: ProductFormDialogProps) => {
   const isEditing = !!product;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [iconUrl, setIconUrl] = useState<string>('');
   const [uploading, setUploading] = useState(false);
+  const [uploadingIcon, setUploadingIcon] = useState(false);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -125,8 +130,10 @@ export const ProductFormDialog = ({
         is_popular: product.is_popular,
         tags: userTags.join(', '),
         max_per_user: product.max_per_user ?? 0,
+        icon_url: product.icon_url || '',
       });
       setMediaUrls(product.media_urls || []);
+      setIconUrl(product.icon_url || '');
     } else {
       setProtectedTags([]);
       form.reset({
@@ -140,19 +147,41 @@ export const ProductFormDialog = ({
         is_popular: false,
         tags: '',
         max_per_user: 0,
+        icon_url: '',
       });
       setMediaUrls([]);
+      setIconUrl('');
     }
   }, [product, open, form]);
+
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Только изображения'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Макс. 5 МБ'); return; }
+    setUploadingIcon(true);
+    const ext = file.name.split('.').pop();
+    const path = `icons/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from('product-media').upload(path, file);
+    if (error) { toast.error('Ошибка загрузки иконки'); setUploadingIcon(false); return; }
+    const { data: urlData } = supabase.storage.from('product-media').getPublicUrl(path);
+    setIconUrl(urlData.publicUrl);
+    form.setValue('icon_url', urlData.publicUrl);
+    setUploadingIcon(false);
+    if (iconInputRef.current) iconInputRef.current.value = '';
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const remaining = 5 - mediaUrls.length;
+    if (remaining <= 0) { toast.error('Максимум 5 медиа'); return; }
+
     setUploading(true);
     const newUrls: string[] = [];
 
-    for (const file of Array.from(files)) {
+    for (const file of Array.from(files).slice(0, remaining)) {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) {
@@ -184,7 +213,7 @@ export const ProductFormDialog = ({
       newUrls.push(urlData.publicUrl);
     }
 
-    setMediaUrls(prev => [...prev, ...newUrls]);
+    setMediaUrls(prev => [...prev, ...newUrls].slice(0, 5));
     if (newUrls.length > 0) toast.success(`Загружено: ${newUrls.length} файл(ов)`);
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -214,6 +243,7 @@ export const ProductFormDialog = ({
       tags: mergedTags,
       media_urls: mediaUrls,
       max_per_user: data.max_per_user,
+      icon_url: iconUrl || undefined,
     };
 
     await onSubmit(productData);
@@ -277,9 +307,37 @@ export const ProductFormDialog = ({
               )}
             />
 
+            {/* Icon Upload */}
+            <div>
+              <FormLabel>Иконка товара (1:1)</FormLabel>
+              <div className="mt-2 flex items-center gap-3">
+                {iconUrl ? (
+                  <div className="relative group w-14 h-14 rounded-lg overflow-hidden border bg-muted">
+                    <img src={iconUrl} alt="icon" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => { setIconUrl(''); form.setValue('icon_url', ''); }}
+                      className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-14 h-14 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-muted-foreground text-xs">
+                    1:1
+                  </div>
+                )}
+                <input ref={iconInputRef} type="file" accept="image/*" onChange={handleIconUpload} className="hidden" />
+                <Button type="button" variant="outline" size="sm" onClick={() => iconInputRef.current?.click()} disabled={uploadingIcon}>
+                  {uploadingIcon ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ImagePlus className="h-4 w-4 mr-2" />}
+                  {uploadingIcon ? 'Загрузка...' : iconUrl ? 'Заменить' : 'Загрузить'}
+                </Button>
+              </div>
+            </div>
+
             {/* Media Upload */}
             <div>
-              <FormLabel>Медиа (фото / видео)</FormLabel>
+              <FormLabel>Медиа (фото / видео) — {mediaUrls.length}/5</FormLabel>
               <div className="mt-2 space-y-2">
                 {mediaUrls.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
@@ -317,14 +375,14 @@ export const ProductFormDialog = ({
                   size="sm"
                   className="w-full"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
+                  disabled={uploading || mediaUrls.length >= 5}
                 >
                   {uploading ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
                     <ImagePlus className="h-4 w-4 mr-2" />
                   )}
-                  {uploading ? 'Загрузка...' : 'Добавить медиа'}
+                  {uploading ? 'Загрузка...' : mediaUrls.length >= 5 ? 'Максимум 5' : 'Добавить медиа'}
                 </Button>
               </div>
             </div>

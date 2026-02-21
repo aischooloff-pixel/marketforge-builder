@@ -275,6 +275,7 @@ export type Database = {
           category_id: string | null
           countries: string[] | null
           created_at: string | null
+          icon_url: string | null
           id: string
           is_active: boolean | null
           is_popular: boolean | null
@@ -296,6 +297,7 @@ export type Database = {
           category_id?: string | null
           countries?: string[] | null
           created_at?: string | null
+          icon_url?: string | null
           id?: string
           is_active?: boolean | null
           is_popular?: boolean | null
@@ -317,6 +319,7 @@ export type Database = {
           category_id?: string | null
           countries?: string[] | null
           created_at?: string | null
+          icon_url?: string | null
           id?: string
           is_active?: boolean | null
           is_popular?: boolean | null

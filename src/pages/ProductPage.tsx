@@ -9,6 +9,7 @@ import { CountrySelector, ServiceSelector } from '@/components/CountrySelector';
 import { ProxyCountrySelector } from '@/components/ProxyCountrySelector';
 import { TigerNumberBuyer } from '@/components/TigerNumberBuyer';
 import { SocialBoostBuyer } from '@/components/SocialBoostBuyer';
+import { MediaGallery } from '@/components/MediaGallery';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -216,45 +217,22 @@ const ProductPage = () => {
 
                   {/* Left: Product Info */}
                   <div className="space-y-3">
-                    {/* Image Panel */}
-                    <div className="bevel-sunken bg-background p-1">
-                      <div className="relative aspect-[2/1] md:aspect-[16/9] overflow-hidden">
-                        {product.media_urls && product.media_urls.length > 0 ? (
-                          /\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ? (
-                            <video src={product.media_urls[0]} className="w-full h-full object-cover" controls muted />
-                          ) : (
-                            <img src={product.media_urls[0]} alt={product.name} className="w-full h-full object-cover" />
-                          )
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-secondary/50">
-                            <div className="text-5xl md:text-6xl">{categoryIcon}</div>
-                          </div>
-                        )}
-                        {isOutOfStock && (
-                          <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                            <Badge variant="destructive" className="text-sm md:text-lg py-1.5 px-3 gap-1.5">
-                              <PackageX className="h-4 w-4 md:h-5 md:w-5" />
-                              Нет в наличии
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
+                    {/* Media Gallery */}
+                    <div className="relative">
+                      <MediaGallery
+                        urls={product.media_urls || []}
+                        alt={product.name}
+                        fallbackIcon={categoryIcon}
+                      />
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 bg-background/60 flex items-center justify-center pointer-events-none">
+                          <Badge variant="destructive" className="text-sm md:text-lg py-1.5 px-3 gap-1.5">
+                            <PackageX className="h-4 w-4 md:h-5 md:w-5" />
+                            Нет в наличии
+                          </Badge>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Thumbnails */}
-                    {product.media_urls && product.media_urls.length > 1 && (
-                      <div className="flex gap-1 overflow-x-auto">
-                        {product.media_urls.map((url, i) => (
-                          <div key={i} className="w-12 h-12 bevel-sunken bg-background p-0.5 flex-shrink-0">
-                            {/\.(mp4|webm|mov)$/i.test(url) ? (
-                              <video src={url} className="w-full h-full object-cover" muted />
-                            ) : (
-                              <img src={url} alt="" className="w-full h-full object-cover" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
 
                     {/* Description Panel */}
                     <div className="bevel-sunken bg-background p-2 md:p-3">

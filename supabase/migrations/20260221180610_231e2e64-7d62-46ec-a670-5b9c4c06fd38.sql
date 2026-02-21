@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN icon_url text DEFAULT NULL;
