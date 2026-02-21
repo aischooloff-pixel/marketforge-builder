@@ -8,6 +8,10 @@ import { CartProvider } from "@/contexts/CartContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { TelegramProvider, useTelegram } from "@/contexts/TelegramContext";
 import { BannedScreen } from "@/components/BannedScreen";
+import { FloatingZiplock } from "@/components/FloatingZiplock";
+import { PoliceRaidGlitch } from "@/components/PoliceRaidGlitch";
+import { CrtBootScreen } from "@/components/CrtBootScreen";
+import { AgeGate } from "@/components/AgeGate";
 import { useEffect } from "react";
 import Index from "./pages/Index";
 import CatalogPage from "./pages/CatalogPage";
@@ -17,6 +21,8 @@ import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import InfoPage from "./pages/InfoPage";
 import DisclaimerPage from "./pages/DisclaimerPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import TermsPage from "./pages/TermsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +52,11 @@ const AppContent = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <CrtBootScreen />
+          <AgeGate />
+          <FloatingZiplock />
+          <PoliceRaidGlitch />
+          <div className="crt-overlay" />
           <BrowserRouter>
             <StartAppRedirect />
             <Routes>
@@ -57,6 +68,8 @@ const AppContent = () => {
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/info" element={<InfoPage />} />
               <Route path="/disclaimer" element={<DisclaimerPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
