@@ -147,7 +147,20 @@ serve(async (req) => {
     }
 
     if (orderId) {
-      await supabase.from("orders").update({ status: "paid" }).eq("id", orderId);
+      // SECURITY: Only mark order as paid if its payment_id matches this invoice
+      const { data: matchedOrder } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("id", orderId)
+        .eq("payment_id", invoice.invoice_id.toString())
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (matchedOrder) {
+        await supabase.from("orders").update({ status: "paid" }).eq("id", matchedOrder.id);
+      } else {
+        console.warn(`[CryptoBot] Order ${orderId} not matched or already processed (invoice ${invoice.invoice_id})`);
+      }
     } else {
       await supabase
         .from("orders")
@@ -168,9 +181,16 @@ serve(async (req) => {
 
     // Trigger auto-delivery for the order
     if (orderId) {
-      await supabase.functions.invoke("process-order", {
-        body: { orderId },
-      });
+      try {
+        const { error: processError } = await supabase.functions.invoke("process-order", {
+          body: { orderId },
+        });
+        if (processError) {
+          console.error(`[CryptoBot] process-order failed for ${orderId}:`, processError);
+        }
+      } catch (e) {
+        console.error(`[CryptoBot] process-order exception for ${orderId}:`, e);
+      }
     }
 
     console.log(`Payment processed: ${amountRub} RUB for user ${userId}`);
