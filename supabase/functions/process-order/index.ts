@@ -66,12 +66,8 @@ serve(async (req) => {
     // Process each order item
     const deliveredItems: string[] = [];
     const fileUrls: string[] = [];
-    let hasStarsItems = false;
     for (const item of order.order_items) {
       const quantity = item.quantity || 1;
-
-      // Detect Stars items by product_name (product_id is null for Stars)
-      const isStarsByName = item.product_name === "Telegram Stars";
 
       // Check if this is an API-based product (e.g., px6 proxy)
       let tags: string[] = [];
@@ -85,19 +81,6 @@ serve(async (req) => {
       }
 
       const isApiPx6 = tags.includes("api:px6");
-      const isApiStars = tags.includes("api:stars") || isStarsByName;
-
-      // Telegram Stars: manual fulfillment — add to delivered items but don't auto-complete
-      if (isApiStars) {
-        const options = item.options as { country?: string; services?: string[] } | null;
-        const targetUsername = options?.country || "unknown";
-        const starCount = options?.services?.[0] || "0";
-
-        console.log(`[ProcessOrder] Stars order: ${starCount} stars for @${targetUsername}`);
-        deliveredItems.push(`⭐ ${item.product_name}:\nЗаказ на ${starCount} звёзд для @${targetUsername} взят в обработку. Ожидайте пополнения.`);
-        hasStarsItems = true;
-        continue;
-      }
 
       if (isApiPx6) {
         // Always buy via px6 API — even if product_items exist, API products are fulfilled via API
@@ -172,16 +155,13 @@ serve(async (req) => {
     }
 
     // Update order status
-    // If order has Stars items, keep as "paid" (admin completes Stars manually)
-    // If order has ONLY regular items (no Stars), mark as "completed"
     const deliveredContent = deliveredItems.join("\n\n---\n\n");
-    const finalStatus = hasStarsItems ? "paid" : "completed";
     
     const { error: updateOrderError } = await supabase
       .from("orders")
       .update({
-        status: finalStatus,
-        ...(finalStatus === "completed" ? { completed_at: new Date().toISOString() } : {}),
+        status: "completed",
+        completed_at: new Date().toISOString(),
         delivered_content: deliveredContent,
       })
       .eq("id", orderId);
@@ -195,15 +175,9 @@ serve(async (req) => {
       try {
         // Send text content
         if (deliveredContent) {
-          const statusEmoji = hasStarsItems ? '⏳' : '✅';
-          const statusText = hasStarsItems
-            ? `${statusEmoji} Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}`
-            : `${statusEmoji} Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}\n\n🙏 Спасибо за покупку! Будем рады видеть вас снова.\n⭐ Оставьте, пожалуйста, отзыв — нам важно ваше мнение!`;
-          const textMessage = statusText;
+          const textMessage = `✅ Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}\n\n🙏 Спасибо за покупку! Будем рады видеть вас снова.\n⭐ Оставьте, пожалуйста, отзыв — нам важно ваше мнение!`;
 
-          const buttons = hasStarsItems
-            ? [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }]]
-            : [
+          const buttons = [
                 [{ text: "⭐ Оставить отзыв", callback_data: `review_start:${orderId.substring(0, 8)}` }],
                 [{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }],
               ];

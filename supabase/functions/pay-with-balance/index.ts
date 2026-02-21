@@ -130,9 +130,6 @@ serve(async (req) => {
 
     // Check stock availability and max_per_user limits
     for (const item of items as CartItem[]) {
-      // Stars items have non-UUID IDs like "stars-username-500-timestamp" — skip DB checks
-      const isStarsItem = item.productId.startsWith("stars-");
-      if (isStarsItem) continue;
 
       // Check if this is an API-based product (e.g., px6 proxy) — skip product_items stock check
       const { data: productInfo } = await supabase
@@ -208,10 +205,9 @@ serve(async (req) => {
 
     // Create order items
     const orderItems = (items as CartItem[]).map((item) => {
-      const isStarsItem = item.productId.startsWith("stars-");
       return {
         order_id: order.id,
-        product_id: isStarsItem ? null : item.productId,
+        product_id: item.productId,
         product_name: item.productName,
         price: item.price * item.quantity,
         quantity: item.quantity,

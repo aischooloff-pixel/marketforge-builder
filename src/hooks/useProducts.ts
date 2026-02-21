@@ -153,7 +153,6 @@ export const useProduct = (id: string | undefined) => {
 };
 
 export const useProductStock = (productId: string | undefined) => {
-  // Skip query for non-UUID IDs (e.g. Stars items like "stars-username-500-timestamp")
   const isValidUuid = !!productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
   return useQuery({
     queryKey: ['product-stock', productId],

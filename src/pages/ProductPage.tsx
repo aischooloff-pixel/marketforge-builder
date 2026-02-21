@@ -9,7 +9,7 @@ import { CountrySelector, ServiceSelector } from '@/components/CountrySelector';
 import { ProxyCountrySelector } from '@/components/ProxyCountrySelector';
 import { TigerNumberBuyer } from '@/components/TigerNumberBuyer';
 import { SocialBoostBuyer } from '@/components/SocialBoostBuyer';
-import { StarsBuyer } from '@/components/StarsBuyer';
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,7 +42,7 @@ const ProductPage = () => {
   const isApiProduct = product?.tags?.some(t => t.startsWith('api:px6')) ?? false;
   const isTigerProduct = product?.tags?.includes('api:tiger') ?? false;
   const isProfiLikeProduct = product?.tags?.includes('api:profilike') ?? false;
-  const isStarsProduct = product?.tags?.includes('api:stars') ?? false;
+  
   const proxyVersion = product?.tags?.includes('api:px6:v3') ? 3 : product?.tags?.includes('api:px6:v4') ? 4 : 6;
 
   const { data: proxyData, isLoading: proxyLoading } = useProxyAvailability(proxyVersion, isApiProduct);
@@ -322,11 +322,8 @@ const ProductPage = () => {
                         {/* Profi-Like */}
                         {isProfiLikeProduct && !isOutOfStock && <SocialBoostBuyer />}
 
-                        {/* Stars */}
-                        {isStarsProduct && !isOutOfStock && <StarsBuyer productId={product.id} />}
-
                         {/* Standard flow */}
-                        {!isTigerProduct && !isProfiLikeProduct && !isStarsProduct && (
+                        {!isTigerProduct && !isProfiLikeProduct && (
                           <>
                             {/* Badges */}
                             <div className="flex flex-wrap gap-1">
