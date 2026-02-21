@@ -183,18 +183,9 @@ export const TelegramProvider = ({ children }: { children: ReactNode }) => {
       // Authenticate user
       authenticateUser();
     } else {
-      // Development mode - simulate regular user (NO admin rights for security)
-      console.log('[TelegramAuth] Development mode: simulating Telegram user (no admin access)');
-      setUser({
-        id: '00000000-0000-0000-0000-000000000000',
-        telegram_id: 123456789,
-        username: 'dev_user',
-        first_name: 'Developer',
-        balance: 5000,
-        is_banned: false,
-        roles: ['user'], // Regular user - admin requires real DB role
-        created_at: new Date().toISOString(),
-      });
+      // Not in Telegram — no user session
+      console.log('[TelegramAuth] Not running inside Telegram, no user session');
+      setUser(null);
       setIsLoading(false);
     }
   }, []);

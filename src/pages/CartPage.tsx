@@ -255,6 +255,29 @@ const CartPage = () => {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 pt-20 flex items-center justify-center">
+          <div className="win95-window max-w-sm w-full mx-4">
+            <div className="win95-titlebar px-2 py-1">
+              <span className="font-pixel text-[10px]">⚠ авторизация</span>
+            </div>
+            <div className="p-6 text-center">
+              <PxCart size={48} className="mx-auto mb-4 text-muted-foreground" />
+              <h1 className="text-xl font-pixel mb-2">Войдите в аккаунт</h1>
+              <p className="text-sm text-muted-foreground font-mono">
+                Откройте приложение через Telegram для авторизации
+              </p>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
