@@ -111,38 +111,30 @@ serve(async (req) => {
     const currentBalance = parseFloat(profile.balance) || 0;
     const balanceDeduction = parseFloat(balanceToUse) || 0;
 
-    const afterDeposit = currentBalance + amountRub;
-    const finalBalance = afterDeposit - balanceDeduction;
+    // Crypto payment is external — do NOT add it to balance.
+    // Only deduct the balance portion the user chose to use.
+    const finalBalance = currentBalance - balanceDeduction;
 
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ balance: finalBalance })
-      .eq("id", userId);
-
-    if (updateError) {
-      console.error("Balance update error:", updateError);
-      return new Response("Balance update failed", { status: 500 });
-    }
-
-    // Transaction for the CryptoBot deposit
-    await supabase.from("transactions").insert({
-      user_id: userId,
-      type: "deposit",
-      amount: amountRub,
-      balance_after: afterDeposit,
-      description: `Пополнение через CryptoBot`,
-      payment_id: invoice.invoice_id.toString(),
-    });
-
-    // Transaction for the balance deduction (partial payment)
     if (balanceDeduction > 0) {
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ balance: finalBalance })
+        .eq("id", userId);
+
+      if (updateError) {
+        console.error("Balance update error:", updateError);
+        return new Response("Balance update failed", { status: 500 });
+      }
+
+      // Transaction for balance portion of the payment
       await supabase.from("transactions").insert({
         user_id: userId,
         type: "purchase",
         amount: -balanceDeduction,
         balance_after: finalBalance,
         order_id: orderId || null,
-        description: `Частичная оплата заказа (баланс)`,
+        description: `Оплата заказа (баланс): ${balanceDeduction}₽`,
+        payment_id: invoice.invoice_id.toString(),
       });
     }
 

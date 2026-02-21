@@ -117,34 +117,25 @@ serve(async (req) => {
     const currentBalance = parseFloat(profileData.balance) || 0;
     const balanceDeduction = parseFloat(balanceToUse) || 0;
 
-    const afterDeposit = currentBalance + amountRub;
-    const finalBalance = afterDeposit - balanceDeduction;
+    // Crypto payment is external — do NOT add it to balance.
+    // Only deduct the balance portion the user chose to use.
+    const finalBalance = currentBalance - balanceDeduction;
 
-    // Update balance
-    await supabase
-      .from("profiles")
-      .update({ balance: finalBalance })
-      .eq("id", userId);
-
-    // Transaction for deposit
-    await supabase.from("transactions").insert({
-      user_id: userId,
-      type: "deposit",
-      amount: amountRub,
-      balance_after: afterDeposit,
-      description: "Пополнение через xRocket",
-      payment_id: invoiceId,
-    });
-
-    // Transaction for balance deduction (partial payment)
     if (balanceDeduction > 0) {
+      await supabase
+        .from("profiles")
+        .update({ balance: finalBalance })
+        .eq("id", userId);
+
+      // Transaction for balance portion of the payment
       await supabase.from("transactions").insert({
         user_id: userId,
         type: "purchase",
         amount: -balanceDeduction,
         balance_after: finalBalance,
         order_id: orderId || null,
-        description: "Частичная оплата заказа (баланс)",
+        description: `Оплата заказа (баланс): ${balanceDeduction}₽`,
+        payment_id: invoiceId,
       });
     }
 
