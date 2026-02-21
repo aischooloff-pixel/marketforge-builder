@@ -192,7 +192,7 @@ export const ProductCatalog = () => {
       </div>
 
       {/* Disclaimer */}
-      <div className="mt-8 win95-window">
+      <div className="mt-8 mb-24 md:mb-8 win95-window">
         <button
           onClick={() => setDisclaimerOpen(!disclaimerOpen)}
           className="win95-titlebar px-2 py-1 w-full text-left flex items-center justify-between cursor-pointer"
