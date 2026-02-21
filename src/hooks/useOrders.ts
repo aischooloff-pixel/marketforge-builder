@@ -22,47 +22,7 @@ export interface Order {
   order_items: OrderItem[];
 }
 
-const mockOrders: Order[] = [
-  {
-    id: 'test-order-001',
-    status: 'completed',
-    total: 1990,
-    payment_method: 'cryptobot',
-    payment_id: 'cb_test_123',
-    delivered_content: 'login:test_user\npassword:qwerty123',
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-    completed_at: new Date(Date.now() - 86400000 * 2 + 60000).toISOString(),
-    order_items: [
-      { id: 'item-1', product_name: 'VK API Toolkit', price: 1990, quantity: 1, options: null },
-    ],
-  },
-  {
-    id: 'test-order-002',
-    status: 'completed',
-    total: 1490,
-    payment_method: 'balance',
-    payment_id: null,
-    delivered_content: 'proxy://ru-proxy-01.temka.store:8080',
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-    completed_at: new Date(Date.now() - 86400000 * 5 + 30000).toISOString(),
-    order_items: [
-      { id: 'item-2', product_name: 'Country Proxy Pack 🇷🇺', price: 1490, quantity: 1, options: null },
-    ],
-  },
-  {
-    id: 'test-order-003',
-    status: 'pending',
-    total: 2990,
-    payment_method: null,
-    payment_id: null,
-    delivered_content: null,
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    completed_at: null,
-    order_items: [
-      { id: 'item-3', product_name: 'Premium Proxy Bundle', price: 2990, quantity: 1, options: null },
-    ],
-  },
-];
+
 
 export const useOrders = () => {
   const { user, isAuthenticated, isTelegramWebApp, webApp } = useTelegram();
@@ -70,8 +30,8 @@ export const useOrders = () => {
   return useQuery({
     queryKey: ['orders', user?.id],
     queryFn: async (): Promise<Order[]> => {
-      // Dev mode — return mock data
-      if (!isTelegramWebApp) return mockOrders;
+      // Not in Telegram — no data
+      if (!isTelegramWebApp) return [];
 
       if (!user?.id || !webApp?.initData) return [];
 

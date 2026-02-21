@@ -13,48 +13,7 @@ export interface Transaction {
   created_at: string;
 }
 
-const mockTransactions: Transaction[] = [
-  {
-    id: 'tx-001',
-    type: 'deposit',
-    amount: 5000,
-    balance_after: 5000,
-    description: 'Пополнение через CryptoBot',
-    payment_id: 'cb_test_100',
-    order_id: null,
-    created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
-  },
-  {
-    id: 'tx-002',
-    type: 'purchase',
-    amount: -1990,
-    balance_after: 3010,
-    description: 'Покупка: VK API Toolkit',
-    payment_id: null,
-    order_id: 'test-order-001',
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: 'tx-003',
-    type: 'purchase',
-    amount: -1490,
-    balance_after: 1520,
-    description: 'Покупка: Country Proxy Pack',
-    payment_id: null,
-    order_id: 'test-order-002',
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-  {
-    id: 'tx-004',
-    type: 'bonus',
-    amount: 500,
-    balance_after: 2020,
-    description: 'Бонус за отзыв',
-    payment_id: null,
-    order_id: null,
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
+
 
 export const useTransactions = () => {
   const { user, isAuthenticated, isTelegramWebApp, webApp } = useTelegram();
@@ -62,8 +21,8 @@ export const useTransactions = () => {
   return useQuery({
     queryKey: ['transactions', user?.id],
     queryFn: async (): Promise<Transaction[]> => {
-      // Dev mode — return mock data
-      if (!isTelegramWebApp) return mockTransactions;
+      // Not in Telegram — no data
+      if (!isTelegramWebApp) return [];
 
       if (!user?.id || !webApp?.initData) return [];
 

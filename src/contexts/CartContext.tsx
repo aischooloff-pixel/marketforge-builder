@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product } from '@/data/products';
+import { Product } from '@/hooks/useProducts';
 import { useTelegram } from '@/contexts/TelegramContext';
 
 interface CartItem {
@@ -9,6 +9,7 @@ interface CartItem {
   selectedServices?: string[];
   selectedPeriod?: number;
   selectedProtocol?: string;
+  overridePrice?: number;
 }
 
 interface CartContextType {
@@ -106,7 +107,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems([]);
   };
 
-  const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const total = items.reduce((sum, item) => sum + (item.overridePrice || item.product.price) * item.quantity, 0);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (

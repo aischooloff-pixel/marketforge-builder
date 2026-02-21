@@ -39,9 +39,7 @@ export const ProductCatalog = () => {
       const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
       return matchesSearch && matchesPrice;
     });
-    if (selectedCategory === 'all') {
-      result = [...result].sort(() => Math.random() - 0.5);
-    }
+    // No random shuffle — keep server sort order
     return result;
   }, [allProducts, search, priceRange, selectedCategory]);
 

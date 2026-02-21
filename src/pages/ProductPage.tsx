@@ -132,20 +132,7 @@ const ProductPage = () => {
   const handleAddToCart = () => {
     if (isOutOfStock) return;
     if (needsCountrySelector && !selectedCountry) return;
-    addItem({
-      id: product.id,
-      name: product.name,
-      shortDesc: product.short_desc || '',
-      longDesc: product.long_desc || '',
-      price: currentPeriodPrice,
-      type: product.type || 'one-time',
-      category: product.categories?.slug || '',
-      tags: product.tags || [],
-      legalNote: product.legal_note || '',
-      popular: product.is_popular || false,
-      countries: product.countries || undefined,
-      services: product.services || undefined
-    }, {
+    addItem(product, {
       country: selectedCountry || undefined,
       services: selectedServices.length > 0 ? selectedServices : undefined,
       period: needsPeriodSelector ? parseInt(activePeriod) : undefined,
