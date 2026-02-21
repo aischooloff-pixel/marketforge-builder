@@ -55,12 +55,14 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
           <div className="p-2 md:p-3 flex flex-col flex-1 bg-card">
             {/* Icon + name row */}
             <div className="flex items-start gap-2 mb-1.5">
-              <div className="w-8 h-8 md:w-10 md:h-10 bevel-sunken bg-background flex items-center justify-center flex-shrink-0">
-                {product.media_urls && product.media_urls.length > 0 && !/\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ?
-                <img src={product.media_urls[0]} alt={product.name} className="w-full h-full object-cover" /> :
-
-                <span className="text-base md:text-lg">{categoryIcon}</span>
-                }
+              <div className="w-8 h-8 md:w-10 md:h-10 bevel-sunken bg-background flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {product.icon_url ? (
+                  <img src={product.icon_url} alt={product.name} className="w-full h-full object-cover" />
+                ) : product.media_urls && product.media_urls.length > 0 && !/\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ? (
+                  <img src={product.media_urls[0]} alt={product.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-base md:text-lg">{categoryIcon}</span>
+                )}
               </div>
               <h3 className="text-xs md:text-sm font-bold leading-tight line-clamp-2 flex-1 min-w-0">
                 {product.name}
