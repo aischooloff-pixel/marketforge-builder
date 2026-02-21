@@ -186,7 +186,7 @@ export const TelegramProvider = ({ children }: { children: ReactNode }) => {
       // Development mode - simulate regular user (NO admin rights for security)
       console.log('[TelegramAuth] Development mode: simulating Telegram user (no admin access)');
       setUser({
-        id: 'dev-user-id',
+        id: '00000000-0000-0000-0000-000000000000',
         telegram_id: 123456789,
         username: 'dev_user',
         first_name: 'Developer',
