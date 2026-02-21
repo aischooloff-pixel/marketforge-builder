@@ -1,16 +1,42 @@
-import { useRef, useState } from 'react';
-import { motion, useInView, AnimatePresence } from 'framer-motion';
-import { PxQuestion, PxFolder, PxFolderOpen, PxArrowDown } from '@/components/PixelIcons';
+import { useRef, useState } from "react";
+import { motion, useInView, AnimatePresence } from "framer-motion";
+import { PxQuestion, PxFolder, PxFolderOpen, PxArrowDown } from "@/components/PixelIcons";
 
 const faqData = [
-  { question: 'Как работает отстук?', answer: 'После оплаты товар выдаётся автоматически — моментально получаешь данные в личный кабинет или в Telegram. Без ожидания, без посредников.' },
-  { question: 'Какие способы оплаты?', answer: 'Крипта через CryptoBot и xRocket. Также можно оплатить с баланса — пополняется в профиле.' },
-  { question: 'Что делать при проблеме с товаром?', answer: 'Открывай диспут через саппорт в приложении или пиши в Telegram. Разберёмся быстро.' },
-  { question: 'Есть ли возврат?', answer: 'Да, через гарант-сервис. Если товар нерабочий или не соответствует — средства вернутся на баланс. Без кидалова.' },
-  { question: 'Как работает мини-апп?', answer: 'Прямо внутри Telegram — каталог, оплата, баланс, история. Никуда не переходишь, всё в одном месте.' }
+  {
+    question: "Как работает автовыдача?",
+    answer:
+      "После оплаты товар выдаётся автоматически — моментально получаешь данные товаров. Без ожидания, без посредников.",
+  },
+  {
+    question: "Какие способы оплаты?",
+    answer: "Крипта через CryptoBot и xRocket. Также можно оплатить с баланса — пополняется в профиле.",
+  },
+  {
+    question: "Что делать при проблеме с товаром?",
+    answer: "Открывай диспут через саппорт в приложении или пиши админу в Telegram. Разберёмся быстро.",
+  },
+  {
+    question: "Есть ли возврат?",
+    answer: "Да, через админа. Если товар нерабочий или не соответствует — средства вернутся на баланс. Без кидалова.",
+  },
+  {
+    question: "Как работает мини-апп?",
+    answer: "Прямо внутри Telegram — каталог, оплата, баланс, история. Никуда не переходишь, всё в одном месте.",
+  },
 ];
 
-const FaqItem = ({ item, index, isOpen, onToggle }: { item: typeof faqData[0]; index: number; isOpen: boolean; onToggle: () => void }) => {
+const FaqItem = ({
+  item,
+  index,
+  isOpen,
+  onToggle,
+}: {
+  item: (typeof faqData)[0];
+  index: number;
+  isOpen: boolean;
+  onToggle: () => void;
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.5, once: false });
 
@@ -23,7 +49,7 @@ const FaqItem = ({ item, index, isOpen, onToggle }: { item: typeof faqData[0]; i
       className="mb-4 cursor-pointer"
       onClick={onToggle}
     >
-      <div className={`win95-window transition-colors ${isOpen ? 'bg-secondary' : ''}`}>
+      <div className={`win95-window transition-colors ${isOpen ? "bg-secondary" : ""}`}>
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-2 pr-4">
             {isOpen ? <PxFolderOpen size={16} /> : <PxFolder size={16} />}
@@ -35,7 +61,13 @@ const FaqItem = ({ item, index, isOpen, onToggle }: { item: typeof faqData[0]; i
         </div>
         <AnimatePresence>
           {isOpen && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
               <p className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">{item.answer}</p>
             </motion.div>
           )}
@@ -51,7 +83,12 @@ const FaqSection = () => {
   return (
     <section className="py-10 md:py-20 bg-secondary/30 criminal-pattern">
       <div className="container mx-auto px-4">
-        <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center mb-6 md:mb-10">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="text-center mb-6 md:mb-10"
+        >
           <div className="inline-flex items-center gap-2 mb-3">
             <PxQuestion size={20} />
             <span className="text-sm text-muted-foreground font-medium">FAQ</span>
@@ -62,7 +99,13 @@ const FaqSection = () => {
 
         <div className="max-w-2xl mx-auto">
           {faqData.map((item, index) => (
-            <FaqItem key={index} item={item} index={index} isOpen={openIndex === index} onToggle={() => setOpenIndex(prev => prev === index ? -1 : index)} />
+            <FaqItem
+              key={index}
+              item={item}
+              index={index}
+              isOpen={openIndex === index}
+              onToggle={() => setOpenIndex((prev) => (prev === index ? -1 : index))}
+            />
           ))}
         </div>
       </div>
