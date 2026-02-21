@@ -25,11 +25,11 @@ const DisclaimerPage = () => {
               </Button>
             </Link>
 
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 rounded-xl bg-destructive/10">
+            <div className="flex items-start gap-3 mb-6">
+              <div className="p-3 rounded-xl bg-destructive/10 shrink-0">
                 <ShieldAlert className="h-6 w-6 text-destructive" />
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold min-w-0 break-words">
                 Отказ от ответственности
               </h1>
             </div>

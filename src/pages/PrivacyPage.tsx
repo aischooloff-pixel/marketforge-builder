@@ -44,11 +44,11 @@ const PrivacyPage = () => {
               </Button>
             </Link>
 
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bevel-raised bg-card">
+            <div className="flex items-start gap-3 mb-6">
+              <div className="p-3 bevel-raised bg-card shrink-0">
                 <Shield className="h-6 w-6 text-primary" />
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold">Политика конфиденциальности</h1>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold min-w-0 break-words">Политика конфиденциальности</h1>
             </div>
 
             <p className="text-muted-foreground mb-8 text-sm md:text-base leading-relaxed">
