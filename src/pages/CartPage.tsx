@@ -9,7 +9,8 @@ import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, ShoppingBag, AlertTriangle, Check, Ticket, Loader2, Wallet, Plus, Minus } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { PxCart, PxCheck, PxPlus, PxFolder } from '@/components/PixelIcons';
 import { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -35,107 +36,99 @@ const CartItemRow = ({
   updateQuantity: (id: string, qty: number) => void;
   removeItem: (id: string) => void;
 }) => {
-  const {
-    data: stockCount = 0
-  } = useProductStock(item.product.id);
+  const { data: stockCount = 0 } = useProductStock(item.product.id);
   const isStarsItem = item.product.tags?.includes('api:stars');
   const maxQty = isStarsItem ? 99 : (stockCount === -1 ? 99 : stockCount);
-  return <motion.div key={item.product.id} initial={{
-    opacity: 0,
-    y: 20
-  }} animate={{
-    opacity: 1,
-    y: 0
-  }} exit={{
-    opacity: 0,
-    x: -100
-  }} transition={{
-    delay: index * 0.1
-  }} className="p-6 rounded-xl border bg-card flex flex-col sm:flex-row gap-4">
+
+  return (
+    <motion.div
+      key={item.product.id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -50 }}
+      transition={{ delay: index * 0.05 }}
+      className="bevel-sunken p-3 flex flex-col sm:flex-row gap-3"
+    >
       <div className="flex-1">
         <Link to={`/product/${item.product.id}`}>
-          <h3 className="font-semibold hover:underline">
+          <h3 className="font-pixel text-[11px] text-primary hover:underline">
             {item.product.name}
           </h3>
         </Link>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
           {item.product.shortDesc}
         </p>
-        {item.selectedCountry && !item.product.tags?.includes('api:stars') && <p className="text-sm mt-2">
-            Страна: {item.selectedCountry.toUpperCase()}
-          </p>}
+        {item.selectedCountry && !isStarsItem && (
+          <p className="text-[10px] font-mono mt-1">Страна: {item.selectedCountry.toUpperCase()}</p>
+        )}
         {isStarsItem && item.selectedCountry && (
-          <p className="text-sm mt-2">
+          <p className="text-[10px] font-mono mt-1">
             Получатель: @{item.selectedCountry} · {item.selectedServices?.[0]} ⭐
           </p>
         )}
-        {item.selectedPeriod && <p className="text-sm mt-1">
-            Период: {`${item.selectedPeriod} дн.`}
-          </p>}
-        {item.selectedProtocol && <p className="text-sm mt-1">
-            Протокол: {item.selectedProtocol === 'socks' ? 'SOCKS5' : 'HTTP/HTTPS'}
-          </p>}
-        {item.selectedServices && item.selectedServices.length > 0 && !item.product.tags?.includes('api:stars') && <p className="text-sm mt-1">
-            Сервисы: {item.selectedServices.join(', ')}
-          </p>}
-        {maxQty > 0 && maxQty < 99 && item.quantity > maxQty && <p className="text-xs text-destructive mt-1">
-            В наличии только {maxQty} шт
-          </p>}
+        {item.selectedPeriod && (
+          <p className="text-[10px] font-mono mt-0.5">Период: {item.selectedPeriod} дн.</p>
+        )}
+        {item.selectedProtocol && (
+          <p className="text-[10px] font-mono mt-0.5">Протокол: {item.selectedProtocol === 'socks' ? 'SOCKS5' : 'HTTP/HTTPS'}</p>
+        )}
+        {item.selectedServices && item.selectedServices.length > 0 && !isStarsItem && (
+          <p className="text-[10px] font-mono mt-0.5">Сервисы: {item.selectedServices.join(', ')}</p>
+        )}
+        {maxQty > 0 && maxQty < 99 && item.quantity > maxQty && (
+          <p className="text-[9px] text-destructive font-pixel mt-1">В НАЛИЧИИ: {maxQty} ШТ</p>
+        )}
       </div>
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1 border rounded-lg">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center bevel-sunken bg-card">
           {isStarsItem ? (
-            <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+            <span className="w-8 text-center text-[11px] font-pixel">{item.quantity}</span>
           ) : (
             <>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.product.id, item.quantity - 1)}>
-                <Minus className="h-3 w-3" />
-              </Button>
-              <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={item.quantity >= maxQty} onClick={() => updateQuantity(item.product.id, Math.min(item.quantity + 1, maxQty))}>
-                <Plus className="h-3 w-3" />
-              </Button>
+              <button
+                className="bevel-raised h-6 w-6 flex items-center justify-center text-[10px] active:bevel-sunken"
+                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+              >
+                −
+              </button>
+              <span className="w-8 text-center text-[11px] font-pixel">{item.quantity}</span>
+              <button
+                className="bevel-raised h-6 w-6 flex items-center justify-center text-[10px] active:bevel-sunken disabled:opacity-50"
+                disabled={item.quantity >= maxQty}
+                onClick={() => updateQuantity(item.product.id, Math.min(item.quantity + 1, maxQty))}
+              >
+                +
+              </button>
             </>
           )}
         </div>
         <div className="text-right">
-          <p className="font-bold">
+          <p className="font-pixel text-[11px] text-primary">
             {(item.product.price * item.quantity).toLocaleString('ru-RU')} ₽
           </p>
-          {item.quantity > 1 && <p className="text-xs text-muted-foreground">
+          {item.quantity > 1 && (
+            <p className="text-[9px] text-muted-foreground font-mono">
               {item.product.price.toLocaleString('ru-RU')} ₽ × {item.quantity}
-            </p>}
+            </p>
+          )}
         </div>
-        <Button variant="ghost" size="icon" onClick={() => removeItem(item.product.id)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <button
+          className="bevel-raised bg-card h-6 w-6 flex items-center justify-center text-[10px] text-destructive active:bevel-sunken"
+          onClick={() => removeItem(item.product.id)}
+        >
+          ✕
+        </button>
       </div>
-    </motion.div>;
+    </motion.div>
+  );
 };
+
 const CartPage = () => {
-  const {
-    items,
-    removeItem,
-    updateQuantity,
-    clearCart,
-    total,
-    itemCount
-  } = useCart();
-  const {
-    user,
-    webApp,
-    hapticFeedback
-  } = useTelegram();
-  const {
-    payWithCryptoBot,
-    payWithXRocket,
-    payWithBalance,
-    isProcessing
-  } = usePayment();
+  const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
+  const { user, webApp, hapticFeedback } = useTelegram();
+  const { payWithCryptoBot, payWithXRocket, payWithBalance, isProcessing } = usePayment();
   const [paymentMethod, setPaymentMethod] = useState<'cryptobot' | 'xrocket'>('cryptobot');
-  const {
-    validatePromo
-  } = useAdmin();
+  const { validatePromo } = useAdmin();
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [useBalance, setUseBalance] = useState(false);
@@ -149,6 +142,7 @@ const CartPage = () => {
   const canPayWithBalance = userBalance >= discountedTotal && discountedTotal > 0;
   const balanceToUse = useBalance ? Math.min(userBalance, discountedTotal) : 0;
   const cryptoAmount = discountedTotal - balanceToUse;
+
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) return;
     setPromoLoading(true);
@@ -167,6 +161,7 @@ const CartPage = () => {
     }
     setPromoLoading(false);
   };
+
   const handlePayWithCrypto = async () => {
     if (!agreedToTerms || !user) return;
     hapticFeedback('medium');
@@ -200,6 +195,7 @@ const CartPage = () => {
       toast.error(result.error || 'Ошибка создания счёта');
     }
   };
+
   const handlePayWithBalance = async () => {
     if (!agreedToTerms || !user) return;
     hapticFeedback('medium');
@@ -226,213 +222,276 @@ const CartPage = () => {
       toast.error(result.error || 'Ошибка оплаты');
     }
   };
+
   if (orderComplete) {
-    return <div className="min-h-screen flex flex-col">
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
         <Header />
         <main className="flex-1 pt-20">
           <div className="container mx-auto px-4 py-16">
-            <motion.div initial={{
-            opacity: 0,
-            scale: 0.9
-          }} animate={{
-            opacity: 1,
-            scale: 1
-          }} className="max-w-md mx-auto text-center">
-              <motion.div initial={{
-              scale: 0
-            }} animate={{
-              scale: 1
-            }} transition={{
-              delay: 0.2,
-              type: 'spring'
-            }} className="w-20 h-20 mx-auto mb-6 rounded-full bg-foreground text-background flex items-center justify-center">
-                <Check className="h-10 w-10" />
-              </motion.div>
-              <h1 className="text-2xl font-bold mb-4">Заказ оплачен!</h1>
-              <p className="text-muted-foreground mb-8">
-                Товары выданы автоматически. Посмотреть их можно в профиле.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/profile">
-                  <Button>Перейти в профиль</Button>
-                </Link>
-                <Link to="/catalog">
-                  <Button variant="outline">Продолжить покупки</Button>
-                </Link>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="win95-window max-w-sm mx-auto"
+            >
+              <div className="win95-titlebar px-2 py-1">
+                <span className="font-pixel text-[10px]">✓ заказ оплачен</span>
+              </div>
+              <div className="p-6 text-center">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: 'spring' }}
+                  className="w-16 h-16 mx-auto mb-4 bevel-sunken bg-primary/20 flex items-center justify-center"
+                >
+                  <PxCheck size={32} className="text-primary" />
+                </motion.div>
+                <h1 className="font-pixel text-sm mb-3">ЗАКАЗ ОПЛАЧЕН!</h1>
+                <p className="text-[10px] text-muted-foreground font-mono mb-6">
+                  Товары выданы автоматически. Посмотреть можно в профиле.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Link to="/profile">
+                    <Button className="w-full bevel-raised font-pixel text-[10px]">ПРОФИЛЬ</Button>
+                  </Link>
+                  <Link to="/catalog">
+                    <Button variant="outline" className="w-full bevel-raised font-pixel text-[10px]">КАТАЛОГ</Button>
+                  </Link>
+                </div>
               </div>
             </motion.div>
           </div>
         </main>
         <Footer />
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen flex flex-col">
+
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
       
-      <main className="flex-1 pt-20">
-        <div className="container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold mb-8">Корзина</h1>
-
-          {items.length === 0 ? <motion.div initial={{
-          opacity: 0
-        }} animate={{
-          opacity: 1
-        }} className="text-center py-16">
-              <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h2 className="text-xl font-semibold mb-2">Корзина пуста</h2>
-              <p className="text-muted-foreground mb-6">
-                Добавьте товары из каталога
-              </p>
-              <Link to="/catalog">
-                <Button>Перейти в каталог</Button>
-              </Link>
-            </motion.div> : <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <main className="flex-1 pt-16 md:pt-20">
+        <div className="container mx-auto px-3 py-4 md:px-4 md:py-8 max-w-5xl">
+          
+          {items.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="win95-window max-w-sm mx-auto"
+            >
+              <div className="win95-titlebar px-2 py-1">
+                <span className="font-pixel text-[10px]">🛒 корзина</span>
+              </div>
+              <div className="p-8 text-center">
+                <PxCart size={40} className="mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h2 className="font-pixel text-[11px] mb-2">КОРЗИНА ПУСТА</h2>
+                <p className="text-[10px] text-muted-foreground font-mono mb-4">
+                  Добавьте товары из каталога
+                </p>
+                <Link to="/catalog">
+                  <Button className="bevel-raised font-pixel text-[10px]">КАТАЛОГ</Button>
+                </Link>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Cart Items */}
-              <div className="lg:col-span-2 space-y-4">
-                <AnimatePresence>
-                  {items.map((item, index) => <CartItemRow key={item.product.id} item={item} index={index} updateQuantity={updateQuantity} removeItem={removeItem} />)}
-                </AnimatePresence>
+              <div className="lg:col-span-2">
+                <div className="win95-window">
+                  <div className="win95-titlebar px-2 py-1">
+                    <span className="flex items-center gap-1">
+                      <PxCart size={12} />
+                      <span className="font-pixel text-[10px]">корзина ({itemCount})</span>
+                    </span>
+                  </div>
+                  <div className="p-2 space-y-2">
+                    <AnimatePresence>
+                      {items.map((item, index) => (
+                        <CartItemRow
+                          key={item.product.id}
+                          item={item}
+                          index={index}
+                          updateQuantity={updateQuantity}
+                          removeItem={removeItem}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </div>
               </div>
 
               {/* Order Summary */}
               <div>
-                <div className="sticky top-24 p-6 rounded-xl border bg-card">
-                  <h2 className="font-semibold text-lg mb-4">Итого</h2>
-                  
-                  <div className="space-y-3 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Товаров</span>
-                      <span>{itemCount}</span>
-                    </div>
-                    {promoDiscount > 0 && <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Сумма</span>
-                          <span className="line-through text-muted-foreground">{total.toLocaleString('ru-RU')} ₽</span>
-                        </div>
-                        <div className="flex justify-between text-sm text-green-500">
-                          <span>Скидка ({promoDiscount}%)</span>
-                          <span>-{(total - discountedTotal).toLocaleString('ru-RU')} ₽</span>
-                        </div>
-                      </>}
-                    <div className="flex justify-between text-lg font-bold pt-3 border-t">
-                      <span>К оплате</span>
-                      <span>{discountedTotal.toLocaleString('ru-RU')} ₽</span>
-                    </div>
+                <div className="win95-window sticky top-24">
+                  <div className="win95-titlebar px-2 py-1">
+                    <span className="flex items-center gap-1">
+                      <PxFolder size={12} />
+                      <span className="font-pixel text-[10px]">итого</span>
+                    </span>
                   </div>
-
-                  {/* Use Balance Toggle */}
-                  {userBalance > 0 && discountedTotal > 0 && <div className="mb-4 p-3 rounded-lg border bg-muted/30">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Checkbox id="use-balance" checked={useBalance} onCheckedChange={checked => setUseBalance(checked as boolean)} />
-                          <label htmlFor="use-balance" className="text-sm cursor-pointer">
-                            <Wallet className="h-4 w-4 inline mr-1" />
-                            Списать с баланса
-                          </label>
-                        </div>
-                        <span className="text-sm font-medium">{userBalance.toLocaleString('ru-RU')} ₽</span>
+                  <div className="p-3 space-y-3">
+                    {/* Summary */}
+                    <div className="bevel-sunken p-2 space-y-1">
+                      <div className="flex justify-between text-[10px] font-mono">
+                        <span className="text-muted-foreground">Товаров:</span>
+                        <span>{itemCount}</span>
                       </div>
-                      {useBalance && <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                          <div className="flex justify-between">
-                            <span>Списание с баланса</span>
-                            <span>−{balanceToUse.toLocaleString('ru-RU')} ₽</span>
+                      {promoDiscount > 0 && (
+                        <>
+                          <div className="flex justify-between text-[10px] font-mono">
+                            <span className="text-muted-foreground">Сумма:</span>
+                            <span className="line-through text-muted-foreground">{total.toLocaleString('ru-RU')} ₽</span>
                           </div>
-                          {cryptoAmount > 0 && <div className="flex justify-between font-medium text-foreground">
-                              <span>Доплата через крипто</span>
-                              <span>{cryptoAmount.toLocaleString('ru-RU')} ₽</span>
-                            </div>}
-                        </div>}
-                    </div>}
+                          <div className="flex justify-between text-[10px] font-mono text-primary">
+                            <span>Скидка ({promoDiscount}%):</span>
+                            <span>-{(total - discountedTotal).toLocaleString('ru-RU')} ₽</span>
+                          </div>
+                        </>
+                      )}
+                      <div className="flex justify-between font-pixel text-[11px] pt-1 border-t border-border">
+                        <span>К ОПЛАТЕ:</span>
+                        <span className="text-primary">{discountedTotal.toLocaleString('ru-RU')} ₽</span>
+                      </div>
+                    </div>
 
-                  {/* Promo Code */}
-                  <div className="mb-4">
-                    <div className="flex gap-2">
-                      <Input placeholder="Промокод" value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} disabled={promoDiscount > 0} className="font-mono" />
-                      <Button variant="outline" size="sm" onClick={promoDiscount > 0 ? () => {
-                    setPromoDiscount(0);
-                    setPromoId(null);
-                    setPromoCode('');
-                    setPromoError('');
-                  } : handleApplyPromo} disabled={promoLoading || !promoCode.trim() && promoDiscount === 0}>
-                        {promoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : promoDiscount > 0 ? '✕' : <Ticket className="h-4 w-4" />}
+                    {/* Use Balance Toggle */}
+                    {userBalance > 0 && discountedTotal > 0 && (
+                      <div className="bevel-sunken p-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Checkbox id="use-balance" checked={useBalance} onCheckedChange={checked => setUseBalance(checked as boolean)} />
+                            <label htmlFor="use-balance" className="text-[10px] font-pixel cursor-pointer">
+                              💰 С БАЛАНСА
+                            </label>
+                          </div>
+                          <span className="text-[10px] font-pixel text-primary">{userBalance.toLocaleString('ru-RU')} ₽</span>
+                        </div>
+                        {useBalance && (
+                          <div className="mt-1 space-y-0.5 text-[9px] font-mono text-muted-foreground">
+                            <div className="flex justify-between">
+                              <span>Списание:</span>
+                              <span>−{balanceToUse.toLocaleString('ru-RU')} ₽</span>
+                            </div>
+                            {cryptoAmount > 0 && (
+                              <div className="flex justify-between text-foreground">
+                                <span>Доплата крипто:</span>
+                                <span>{cryptoAmount.toLocaleString('ru-RU')} ₽</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Promo Code */}
+                    <div className="flex gap-1">
+                      <Input
+                        placeholder="ПРОМОКОД"
+                        value={promoCode}
+                        onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                        disabled={promoDiscount > 0}
+                        className="bevel-sunken border-0 font-mono text-[10px] h-7 rounded-none"
+                      />
+                      <button
+                        className="bevel-raised bg-card h-7 w-8 flex items-center justify-center text-[10px] active:bevel-sunken disabled:opacity-50"
+                        onClick={promoDiscount > 0 ? () => {
+                          setPromoDiscount(0);
+                          setPromoId(null);
+                          setPromoCode('');
+                          setPromoError('');
+                        } : handleApplyPromo}
+                        disabled={promoLoading || (!promoCode.trim() && promoDiscount === 0)}
+                      >
+                        {promoLoading ? '⏳' : promoDiscount > 0 ? '✕' : '🎫'}
+                      </button>
+                    </div>
+                    {promoError && <p className="text-[9px] text-destructive font-pixel">{promoError}</p>}
+                    {promoDiscount > 0 && <p className="text-[9px] text-primary font-pixel">✓ СКИДКА: -{promoDiscount}%</p>}
+
+                    {/* Terms Agreement */}
+                    <div className="flex items-start gap-2">
+                      <Checkbox id="terms" checked={agreedToTerms} onCheckedChange={checked => setAgreedToTerms(checked as boolean)} />
+                      <label htmlFor="terms" className="text-[9px] text-muted-foreground font-mono cursor-pointer leading-tight">
+                        Подтверждаю честное и законное использование продукта
+                      </label>
+                    </div>
+
+                    {/* Full Balance Payment */}
+                    {useBalance && canPayWithBalance && (
+                      <Button
+                        className="w-full bevel-raised font-pixel text-[10px] gap-1"
+                        disabled={!agreedToTerms || isProcessing}
+                        onClick={handlePayWithBalance}
+                      >
+                        {isProcessing ? 'ОБРАБОТКА...' : (
+                          <>💰 ОПЛАТИТЬ С БАЛАНСА ({discountedTotal.toLocaleString('ru-RU')} ₽)</>
+                        )}
                       </Button>
-                    </div>
-                    {promoError && <p className="text-xs text-destructive mt-1">{promoError}</p>}
-                    {promoDiscount > 0 && <p className="text-xs text-green-500 mt-1">Промокод применён: -{promoDiscount}%</p>}
-                  </div>
+                    )}
 
-                  {/* Terms Agreement */}
-                  <div className="flex items-start gap-3 mb-6">
-                    <Checkbox id="terms" checked={agreedToTerms} onCheckedChange={checked => setAgreedToTerms(checked as boolean)} />
-                    <label htmlFor="terms" className="text-xs text-muted-foreground cursor-pointer">
-                      Подтверждаю честное и законное использование продукта
-                    </label>
-                  </div>
-
-                  {/* Full Balance Payment */}
-                  {useBalance && canPayWithBalance && <Button size="lg" className="w-full gap-3 mb-3" disabled={!agreedToTerms || isProcessing} onClick={handlePayWithBalance}>
-                      {isProcessing ? 'Обработка...' : <>
-                          <Wallet className="h-5 w-5" />
-                          Оплатить с баланса ({discountedTotal.toLocaleString('ru-RU')} ₽)
-                        </>}
-                    </Button>}
-
-                  {/* Payment Method Selection */}
-                  {!(useBalance && canPayWithBalance) && <div className="mb-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('cryptobot')}
-                        className={`p-2.5 rounded-lg border flex items-center gap-2 transition-colors ${
-                          paymentMethod === 'cryptobot' 
-                            ? 'border-primary bg-primary/10' 
-                            : 'border-border bg-secondary hover:border-muted-foreground'
-                        }`}
-                      >
-                        <img src={cryptoBotLogo} alt="CryptoBot" className="w-7 h-7 rounded-full" />
-                        <div className="text-left">
-                          <p className="font-medium text-xs">CryptoBot</p>
-                          <p className="text-[10px] text-muted-foreground">USDT, TON, BTC</p>
+                    {/* Payment Method Selection */}
+                    {!(useBalance && canPayWithBalance) && (
+                      <>
+                        <div className="grid grid-cols-2 gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('cryptobot')}
+                            className={`bevel-raised p-2 flex items-center gap-1.5 ${
+                              paymentMethod === 'cryptobot' ? 'bevel-sunken bg-primary/10' : 'bg-card hover:bg-muted'
+                            }`}
+                          >
+                            <img src={cryptoBotLogo} alt="CryptoBot" className="w-6 h-6 rounded-sm" />
+                            <div className="text-left">
+                              <p className="font-pixel text-[8px]">CryptoBot</p>
+                              <p className="text-[7px] text-muted-foreground font-mono">USDT, TON</p>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPaymentMethod('xrocket')}
+                            className={`bevel-raised p-2 flex items-center gap-1.5 ${
+                              paymentMethod === 'xrocket' ? 'bevel-sunken bg-primary/10' : 'bg-card hover:bg-muted'
+                            }`}
+                          >
+                            <img src={xrocketLogo} alt="xRocket" className="w-6 h-6 rounded-sm" />
+                            <div className="text-left">
+                              <p className="font-pixel text-[8px]">xRocket</p>
+                              <p className="text-[7px] text-muted-foreground font-mono">USDT</p>
+                            </div>
+                          </button>
                         </div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMethod('xrocket')}
-                        className={`p-2.5 rounded-lg border flex items-center gap-2 transition-colors ${
-                          paymentMethod === 'xrocket' 
-                            ? 'border-primary bg-primary/10' 
-                            : 'border-border bg-secondary hover:border-muted-foreground'
-                        }`}
-                      >
-                        <img src={xrocketLogo} alt="xRocket" className="w-7 h-7 rounded-full" />
-                        <div className="text-left">
-                          <p className="font-medium text-xs">xRocket</p>
-                          <p className="text-[10px] text-muted-foreground">USDT</p>
-                        </div>
-                      </button>
-                    </div>
-                  </div>}
 
-                  {/* Crypto Payment Button */}
-                  {!(useBalance && canPayWithBalance) && <Button size="lg" className="w-full gap-3" disabled={!agreedToTerms || isProcessing} onClick={handlePayWithCrypto}>
-                      {isProcessing ? 'Создание счёта...' : <>
-                          <img src={paymentMethod === 'xrocket' ? xrocketLogo : cryptoBotLogo} alt="" className="w-5 h-5 rounded-full" />
-                          {useBalance && balanceToUse > 0 
-                            ? `Доплатить ${cryptoAmount.toLocaleString('ru-RU')} ₽` 
-                            : `Оплатить ${discountedTotal.toLocaleString('ru-RU')} ₽`}
-                        </>}
-                    </Button>}
-
-                  
+                        {/* Crypto Payment Button */}
+                        <Button
+                          className="w-full bevel-raised font-pixel text-[10px] gap-1"
+                          disabled={!agreedToTerms || isProcessing}
+                          onClick={handlePayWithCrypto}
+                        >
+                          {isProcessing ? 'СОЗДАНИЕ СЧЁТА...' : (
+                            <>
+                              <img src={paymentMethod === 'xrocket' ? xrocketLogo : cryptoBotLogo} alt="" className="w-4 h-4 rounded-sm" />
+                              {useBalance && balanceToUse > 0 
+                                ? `ДОПЛАТИТЬ ${cryptoAmount.toLocaleString('ru-RU')} ₽` 
+                                : `ОПЛАТИТЬ ${discountedTotal.toLocaleString('ru-RU')} ₽`}
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>}
+            </div>
+          )}
         </div>
       </main>
 
       {/* Spacer for mobile bottom nav */}
       <div className="h-20 md:hidden" />
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default CartPage;
