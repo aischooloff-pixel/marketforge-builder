@@ -167,8 +167,12 @@ export const TelegramProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     console.log('[TelegramAuth] Initializing...');
     
-    if (window.Telegram?.WebApp) {
-      const tgWebApp = window.Telegram.WebApp;
+    const hasTelegramWithData = window.Telegram?.WebApp && 
+      window.Telegram.WebApp.initData && 
+      window.Telegram.WebApp.initData.length > 0;
+
+    if (hasTelegramWithData) {
+      const tgWebApp = window.Telegram!.WebApp;
       console.log('[TelegramAuth] Telegram WebApp found, initData:', tgWebApp.initData?.substring(0, 50) + '...');
       setWebApp(tgWebApp);
       
