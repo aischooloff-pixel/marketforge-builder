@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useProducts, Product } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { ProductCard } from '@/components/ProductCard';
@@ -19,6 +20,7 @@ export const ProductCatalog = () => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
   const [showFilters, setShowFilters] = useState(false);
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
 
   const { data: categories = [], isLoading: categoriesLoading } = useCategories();
   const { data: allProducts = [], isLoading: productsLoading } = useProducts({
@@ -185,6 +187,27 @@ export const ProductCatalog = () => {
               </motion.div>
             )}
           </div>
+        </div>
+
+        {/* Disclaimer */}
+        <div className="mt-6 win95-window">
+          <button
+            onClick={() => setDisclaimerOpen(!disclaimerOpen)}
+            className="win95-titlebar px-2 py-1 w-full text-left flex items-center justify-between cursor-pointer"
+          >
+            <span className="font-pixel text-[10px]">⚠ Отказ от ответственности</span>
+            <span className="text-[10px]">{disclaimerOpen ? '▲' : '▼'}</span>
+          </button>
+          {disclaimerOpen && (
+            <div className="p-3 text-xs text-muted-foreground space-y-2 bevel-sunken m-1">
+              <p>
+                Все товары и услуги представлены исключительно в ознакомительных целях. Администрация не несёт ответственности за действия покупателей. Приобретая товар, вы подтверждаете, что ознакомились с условиями использования.
+              </p>
+              <Link to="/disclaimer" className="inline-block text-primary hover:underline font-pixel text-[10px]">
+                Подробнее →
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
