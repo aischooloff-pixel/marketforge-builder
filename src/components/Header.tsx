@@ -78,16 +78,18 @@ export const Header = () => {
           </div>
         </div>
 
-        {/* Marquee Ticker */}
-        <div className="bg-primary overflow-hidden py-1 border-b border-border">
-          <div className="marquee-track">
-            {[...Array(2)].map((_, i) => (
-              <span key={i} className="text-sm md:text-base text-primary-foreground whitespace-nowrap px-8 font-medium">
-                ⚠ ВХОД ТОЛЬКО ДЛЯ СВОИХ ⚠ КИДАЛ БАНИМ БЕЗ РАЗГОВОРОВ ⚠ ГАРАНТ ВСТРОЕН ⚠ ОТСТУК 24/7 ⚠ ДИСПУТ ЧЕРЕЗ САППОРТ ⚠ НЕ ПИШИТЕ ПЕРВЫМИ ⚠ ВХОД ТОЛЬКО ДЛЯ СВОИХ ⚠ КИДАЛ БАНИМ БЕЗ РАЗГОВОРОВ ⚠ ГАРАНТ ВСТРОЕН ⚠ ОТСТУК 24/7 ⚠ ДИСПУТ ЧЕРЕЗ САППОРТ ⚠ НЕ ПИШИТЕ ПЕРВЫМИ ⚠
-              </span>
-            ))}
+        {/* Marquee Ticker — only on home page */}
+        {location.pathname === '/' && (
+          <div className="bg-primary overflow-hidden py-1 border-b border-border">
+            <div className="marquee-track">
+              {[...Array(2)].map((_, i) => (
+                <span key={i} className="text-sm md:text-base text-primary-foreground whitespace-nowrap px-8 font-medium">
+                  ⚠ ВХОД ТОЛЬКО ДЛЯ СВОИХ ⚠ КИДАЛ БАНИМ БЕЗ РАЗГОВОРОВ ⚠ ГАРАНТ ВСТРОЕН ⚠ ОТСТУК 24/7 ⚠ ДИСПУТ ЧЕРЕЗ САППОРТ ⚠ НЕ ПИШИТЕ ПЕРВЫМИ ⚠ ВХОД ТОЛЬКО ДЛЯ СВОИХ ⚠ КИДАЛ БАНИМ БЕЗ РАЗГОВОРОВ ⚠ ГАРАНТ ВСТРОЕН ⚠ ОТСТУК 24/7 ⚠ ДИСПУТ ЧЕРЕЗ САППОРТ ⚠ НЕ ПИШИТЕ ПЕРВЫМИ ⚠
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 win95-window safe-area-bottom">
