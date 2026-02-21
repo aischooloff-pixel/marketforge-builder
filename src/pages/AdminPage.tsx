@@ -87,9 +87,23 @@ interface Order {
   status: string;
   total: number;
   created_at: string;
+  delivered_content?: string;
   profiles?: { username: string; first_name: string; telegram_id: number };
   order_items?: Array<{ product_name: string; price: number; quantity: number; options?: Record<string, unknown> }>;
 }
+
+interface Deposit {
+  id: string;
+  amount: number;
+  created_at: string;
+  description?: string;
+  payment_id?: string;
+  profiles?: { username: string; first_name: string; telegram_id: number };
+}
+
+type TimelineItem = 
+  | { type: 'order'; data: Order; created_at: string }
+  | { type: 'deposit'; data: Deposit; created_at: string };
 
 interface User {
   id: string;
@@ -117,9 +131,17 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex-1 min-w-0">
-            <p className="font-medium">#{order.id.slice(0, 8)}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                🛒 Заказ
+              </Badge>
+              <span className="text-xs text-muted-foreground">#{order.id.slice(0, 8)}</span>
+            </div>
             <p className="text-xs text-muted-foreground">
               {order.profiles?.username ? `@${order.profiles.username}` : order.profiles?.first_name}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {new Date(order.created_at).toLocaleString('ru-RU')}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -138,7 +160,7 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
                  order.status === 'pending' ? 'Не оплачен' : order.status}
               </Badge>
             </div>
-            {hasMultipleItems && (
+            {(order.order_items?.length || 0) > 0 && (
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -179,7 +201,12 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
               );
             })}
           </div>
-          
+          {order.delivered_content && (
+            <div className="mt-2 p-2 rounded-lg bg-muted/50 border border-border">
+              <p className="text-[10px] font-medium text-muted-foreground mb-1">Содержимое:</p>
+              <pre className="text-[10px] text-foreground whitespace-pre-wrap break-all font-mono">{order.delivered_content}</pre>
+            </div>
+          )}
         </CollapsibleContent>
 
         {/* Order complete */}
@@ -209,6 +236,7 @@ const AdminPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [promos, setPromos] = useState<PromoCode[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
@@ -258,7 +286,10 @@ const AdminPage = () => {
 
     if (statsData) setStats(statsData);
     if (productsData) setProducts(productsData);
-    if (ordersData) setOrders(ordersData);
+    if (ordersData) {
+      setOrders(ordersData.orders);
+      setDeposits(ordersData.deposits);
+    }
     if (usersData) setUsers(usersData);
     if (categoriesData) setCategories(categoriesData as Category[]);
     if (promosData) setPromos(promosData as PromoCode[]);
@@ -276,7 +307,10 @@ const AdminPage = () => {
   const handleUpdateOrderStatus = async (orderId: string, status: 'pending' | 'paid' | 'completed' | 'cancelled' | 'refunded') => {
     await admin.updateOrderStatus(orderId, status);
     const updated = await admin.fetchOrders();
-    if (updated) setOrders(updated);
+    if (updated) {
+      setOrders(updated.orders);
+      setDeposits(updated.deposits);
+    }
   };
 
 
@@ -715,25 +749,70 @@ const AdminPage = () => {
                 </div>
               </TabsContent>
 
-              {/* Orders */}
+              {/* Orders & Deposits */}
               <TabsContent value="orders">
                 <div className="space-y-2">
-                  {orders.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Заказов пока нет</p>
-                    </div>
-                  ) : (
-                    orders.map((order) => (
-                      <OrderCard
-                        key={order.id}
-                        order={order}
-                        onComplete={() => handleUpdateOrderStatus(order.id, 'completed')}
-                        onUpdateStatus={(status) => handleUpdateOrderStatus(order.id, status)}
-                        isLoading={admin.isLoading}
-                      />
-                    ))
-                  )}
+                  {(() => {
+                    // Build unified timeline
+                    const timeline: TimelineItem[] = [
+                      ...orders.map(o => ({ type: 'order' as const, data: o, created_at: o.created_at })),
+                      ...deposits.map(d => ({ type: 'deposit' as const, data: d, created_at: d.created_at })),
+                    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+                    if (timeline.length === 0) {
+                      return (
+                        <div className="text-center py-12 text-muted-foreground">
+                          <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p>Заказов и пополнений пока нет</p>
+                        </div>
+                      );
+                    }
+
+                    return timeline.map((item) => {
+                      if (item.type === 'deposit') {
+                        const d = item.data;
+                        return (
+                          <Card key={`dep-${d.id}`} className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
+                                    💰 Пополнение
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {d.profiles?.username ? `@${d.profiles.username}` : d.profiles?.first_name || '—'}
+                                </p>
+                                {d.description && (
+                                  <p className="text-xs text-muted-foreground mt-1">{d.description}</p>
+                                )}
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                  {new Date(d.created_at).toLocaleString('ru-RU')}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-green-600">+{parseFloat(String(d.amount)).toLocaleString('ru-RU')} ₽</p>
+                                {d.payment_id && (
+                                  <p className="text-[10px] text-muted-foreground">{d.payment_id.slice(0, 12)}…</p>
+                                )}
+                              </div>
+                            </div>
+                          </Card>
+                        );
+                      }
+
+                      const order = item.data;
+                      return (
+                        <OrderCard
+                          key={order.id}
+                          order={order}
+                          onComplete={() => handleUpdateOrderStatus(order.id, 'completed')}
+                          onUpdateStatus={(status) => handleUpdateOrderStatus(order.id, status)}
+                          isLoading={admin.isLoading}
+                        />
+                      );
+                    });
+                  })()}
                 </div>
               </TabsContent>
 

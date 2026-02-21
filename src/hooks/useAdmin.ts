@@ -174,8 +174,8 @@ export const useAdmin = () => {
   }, [invokeAdminApi]);
 
   // Orders
-  const fetchOrders = useCallback(async (): Promise<Order[] | null> => {
-    return invokeAdminApi<Order[]>('/orders', 'GET');
+  const fetchOrders = useCallback(async (): Promise<{ orders: Order[]; deposits: any[] } | null> => {
+    return invokeAdminApi<{ orders: Order[]; deposits: any[] }>('/orders', 'GET');
   }, [invokeAdminApi]);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: OrderStatus): Promise<Order | null> => {
