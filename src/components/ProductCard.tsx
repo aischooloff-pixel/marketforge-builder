@@ -89,7 +89,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             <div className="flex items-center justify-between pt-1.5 border-t border-border/50 mt-auto">
               <div>
                 <span className="md:text-base font-bold text-primary text-lg">{product.price.toLocaleString('ru-RU')}</span>
-                <span className="text-[10px] md:text-xs text-muted-foreground ml-0.5">₽</span>
+                <span className="md:text-xs text-muted-foreground ml-0.5 text-sm">₽</span>
                 {product.type === 'subscription' && <span className="text-[9px] text-muted-foreground">/мес</span>}
               </div>
               {!isOutOfStock &&
