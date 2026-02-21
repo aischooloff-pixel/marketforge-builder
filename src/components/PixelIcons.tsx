@@ -154,3 +154,52 @@ export const PxArrowDown: React.FC<PixelIconProps> = ({ size = 12, className = '
     <path d="M4 9L8 14L12 9" fill="currentColor" />
   </svg>
 );
+
+export const PxComputer: React.FC<PixelIconProps> = ({ size = 20, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" className={className} style={{ imageRendering: 'pixelated' }}>
+    <rect x="1" y="1" width="14" height="10" fill="#C0C0C0" stroke="#000" strokeWidth="0.5" />
+    <rect x="2" y="2" width="12" height="7" fill="#000080" />
+    <rect x="5" y="11" width="6" height="2" fill="#C0C0C0" stroke="#000" strokeWidth="0.5" />
+    <rect x="3" y="13" width="10" height="2" fill="#C0C0C0" stroke="#000" strokeWidth="0.5" />
+    <rect x="2" y="2" width="12" height="1" fill="#0000FF" />
+  </svg>
+);
+
+export const PxChat: React.FC<PixelIconProps> = ({ size = 20, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" className={className} style={{ imageRendering: 'pixelated' }}>
+    <rect x="1" y="2" width="14" height="9" rx="0" fill="#FFFF80" stroke="#000" strokeWidth="0.5" />
+    <path d="M4 11L4 14L7 11" fill="#FFFF80" stroke="#000" strokeWidth="0.5" />
+    <rect x="3" y="5" width="6" height="1" fill="#000" />
+    <rect x="3" y="7" width="8" height="1" fill="#000" />
+  </svg>
+);
+
+export const PxTrophy: React.FC<PixelIconProps> = ({ size = 20, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" className={className} style={{ imageRendering: 'pixelated' }}>
+    <path d="M4 2H12V7C12 10 10 12 8 12C6 12 4 10 4 7V2Z" fill="#FFFF00" stroke="#000" strokeWidth="0.5" />
+    <rect x="7" y="12" width="2" height="2" fill="#C0C0C0" stroke="#000" strokeWidth="0.5" />
+    <rect x="5" y="14" width="6" height="1" fill="#C0C0C0" stroke="#000" strokeWidth="0.5" />
+    <path d="M4 4H2V6C2 7 3 8 4 8" fill="#FFFF00" stroke="#000" strokeWidth="0.5" />
+    <path d="M12 4H14V6C14 7 13 8 12 8" fill="#FFFF00" stroke="#000" strokeWidth="0.5" />
+  </svg>
+);
+
+export const PxPlus: React.FC<PixelIconProps> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" className={className} style={{ imageRendering: 'pixelated' }}>
+    <rect x="7" y="2" width="2" height="12" fill="currentColor" />
+    <rect x="2" y="7" width="12" height="2" fill="currentColor" />
+  </svg>
+);
+
+export const PxCheck: React.FC<PixelIconProps> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" className={className} style={{ imageRendering: 'pixelated' }}>
+    <path d="M3 8L6 11L13 4" fill="none" stroke="currentColor" strokeWidth="2" />
+  </svg>
+);
+
+export const PxEmpty: React.FC<PixelIconProps> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" className={className} style={{ imageRendering: 'pixelated' }}>
+    <rect x="2" y="2" width="12" height="12" fill="#C0C0C0" stroke="#000" strokeWidth="0.5" />
+    <path d="M4 4L12 12M12 4L4 12" stroke="#800000" strokeWidth="1" />
+  </svg>
+);
