@@ -2,9 +2,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useCart } from '@/contexts/CartContext';
 import { useTelegram } from '@/contexts/TelegramContext';
-import { Sun, Moon, ShoppingCart, Home, Grid3X3, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
+import { PxHome, PxGrid, PxUser, PxCart, PxFolder } from '@/components/PixelIcons';
 
 export const Header = () => {
   const { theme, toggleTheme } = useTheme();
@@ -13,89 +12,66 @@ export const Header = () => {
   const location = useLocation();
 
   const navLinks = [
-    { href: '/', label: 'Главная', icon: Home },
-    { href: '/catalog', label: 'Каталог', icon: Grid3X3 },
-    { href: '/profile', label: 'Профиль', icon: User },
+    { href: '/', label: 'Главная', icon: PxHome },
+    { href: '/catalog', label: 'Каталог', icon: PxGrid },
+    { href: '/profile', label: 'Профиль', icon: PxUser },
   ];
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
     <>
-      {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass border-b">
-        <div className="container mx-auto px-3 md:px-4 h-14 md:h-16 flex items-center justify-between">
-          {/* Logo */}
+      <header className="fixed top-0 left-0 right-0 z-50 win95-window">
+        <div className="win95-titlebar px-2 py-1">
+          <span className="flex-1 flex items-center gap-1">
+            <PxFolder size={14} />
+            TEMKA.STORE
+          </span>
+          <div className="flex gap-0.5">
+            <button onClick={toggleTheme} className="bevel-raised bg-card h-4 w-4 flex items-center justify-center text-foreground text-[8px] leading-none active:bevel-sunken">
+              {theme === 'light' ? '☽' : '☀'}
+            </button>
+          </div>
+        </div>
+        
+        <div className="px-2 py-1 flex items-center justify-between border-b border-border">
           <Link to="/" className="flex items-center gap-1">
-            <span className="text-lg md:text-xl font-bold tracking-tight">TEMKA</span>
-            <span className="text-lg md:text-xl font-light text-muted-foreground">.STORE</span>
+            <span className="font-bold tracking-tight font-pixel text-[10px]">TEMKA</span>
+            <span className="font-light text-muted-foreground font-pixel text-[10px]">.STORE</span>
           </Link>
 
-          {/* Navigation - Desktop only */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map(link => (
-              <Link 
-                key={link.href} 
-                to={link.href} 
-                className={`text-sm font-medium transition-colors hover:text-foreground ${
-                  isActive(link.href) 
-                    ? 'text-foreground' 
-                    : 'text-muted-foreground'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+          <nav className="hidden md:flex items-center gap-1">
+            {navLinks.map(link => {
+              const Icon = link.icon;
+              return (
+                <Link key={link.href} to={link.href}>
+                  <Button
+                    variant={isActive(link.href) ? 'default' : 'ghost'}
+                    size="sm"
+                    className="text-xs gap-1"
+                  >
+                    <Icon size={14} />
+                    {link.label}
+                  </Button>
+                </Link>
+              );
+            })}
           </nav>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1 md:gap-2">
-            {/* Theme Toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full h-8 w-8 md:h-10 md:w-10">
-              <AnimatePresence mode="wait">
-                {theme === 'light' ? (
-                  <motion.div 
-                    key="moon" 
-                    initial={{ rotate: -90, opacity: 0 }} 
-                    animate={{ rotate: 0, opacity: 1 }} 
-                    exit={{ rotate: 90, opacity: 0 }} 
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Moon className="h-4 w-4" />
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    key="sun" 
-                    initial={{ rotate: 90, opacity: 0 }} 
-                    animate={{ rotate: 0, opacity: 1 }} 
-                    exit={{ rotate: -90, opacity: 0 }} 
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Sun className="h-4 w-4" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </Button>
-
-            {/* Cart */}
+          <div className="flex items-center gap-1">
             <Link to="/cart">
-              <Button variant="ghost" size="icon" className="rounded-full relative h-8 w-8 md:h-10 md:w-10">
-                <ShoppingCart className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="relative h-8 w-8">
+                <PxCart size={18} />
                 {itemCount > 0 && (
-                  <motion.span 
-                    initial={{ scale: 0 }} 
-                    animate={{ scale: 1 }} 
-                    className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-foreground text-background text-[10px] flex items-center justify-center font-medium"
-                  >
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-medium">
                     {itemCount}
-                  </motion.span>
+                  </span>
                 )}
               </Button>
             </Link>
 
-            {/* Balance - visible on larger screens */}
             {user && (
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary text-sm font-medium">
+              <div className="hidden md:flex items-center gap-2 px-2 py-1 bevel-sunken bg-card text-sm">
                 <span>{user.balance.toLocaleString('ru-RU')} ₽</span>
               </div>
             )}
@@ -103,24 +79,21 @@ export const Header = () => {
         </div>
       </header>
 
-      {/* Bottom Navigation - Mobile only */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t safe-area-bottom">
-        <div className="flex items-center justify-around h-16 px-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 win95-window safe-area-bottom">
+        <div className="flex items-center justify-around h-14 px-1">
           {navLinks.map(link => {
             const Icon = link.icon;
             const active = isActive(link.href);
             return (
-              <Link 
-                key={link.href} 
-                to={link.href} 
-                className={`flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-xl transition-colors ${
-                  active 
-                    ? 'text-foreground' 
-                    : 'text-muted-foreground'
-                }`}
-              >
-                <Icon className={`h-5 w-5 ${active ? 'text-primary' : ''}`} />
-                <span className="text-[10px] font-medium">{link.label}</span>
+              <Link key={link.href} to={link.href} className="flex-1">
+                <Button
+                  variant={active ? 'default' : 'ghost'}
+                  size="sm"
+                  className="w-full flex flex-col items-center justify-center gap-0.5 h-12 text-[10px]"
+                >
+                  <Icon size={18} />
+                  <span>{link.label}</span>
+                </Button>
               </Link>
             );
           })}
