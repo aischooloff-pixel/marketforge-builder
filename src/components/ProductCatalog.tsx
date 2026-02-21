@@ -40,11 +40,7 @@ export const ProductCatalog = () => {
       return matchesSearch && matchesPrice;
     });
     if (selectedCategory === 'all') {
-      result = [...result].sort((a, b) => {
-        const hashA = a.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-        const hashB = b.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-        return hashA - hashB;
-      });
+      result = [...result].sort(() => Math.random() - 0.5);
     }
     return result;
   }, [allProducts, search, priceRange, selectedCategory]);
