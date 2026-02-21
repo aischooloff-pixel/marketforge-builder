@@ -22,12 +22,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
     e.preventDefault();
     e.stopPropagation();
     if (stockCount === 0) return;
-    addItem({
-      id: product.id, name: product.name, shortDesc: product.short_desc || '', longDesc: product.long_desc || '',
-      price: product.price, type: product.type || 'one-time', category: product.categories?.slug || '',
-      tags: product.tags || [], legalNote: product.legal_note || '', popular: product.is_popular || false,
-      countries: product.countries || undefined, services: product.services || undefined
-    });
+    addItem(product);
     toast.success(`${product.name} добавлен в корзину`);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 2000);
@@ -129,7 +124,7 @@ export const ProductCardCompact = ({ product }: ProductCardProps) => {
         {!isOutOfStock &&
         <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-xs" onClick={(e) => {
           e.preventDefault();
-          addItem({ id: product.id, name: product.name, shortDesc: product.short_desc || '', longDesc: product.long_desc || '', price: product.price, type: product.type || 'one-time', category: product.categories?.slug || '', tags: product.tags || [], legalNote: product.legal_note || '', popular: product.is_popular || false });
+          addItem(product);
         }}>
             +
           </Button>

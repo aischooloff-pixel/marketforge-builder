@@ -55,7 +55,7 @@ const CartItemRow = ({
           </h3>
         </Link>
         <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
-          {item.product.shortDesc}
+          {item.product.short_desc}
         </p>
         {item.selectedCountry && (
           <p className="text-[10px] font-mono mt-1">Страна: {item.selectedCountry.toUpperCase()}</p>

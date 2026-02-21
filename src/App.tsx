@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { CartProvider } from "@/contexts/CartContext";
-import { UserProvider } from "@/contexts/UserContext";
+
 import { TelegramProvider, useTelegram } from "@/contexts/TelegramContext";
 import { BannedScreen } from "@/components/BannedScreen";
 import { FloatingZiplock } from "@/components/FloatingZiplock";
@@ -47,7 +47,7 @@ const AppContent = () => {
   }
 
   return (
-    <UserProvider>
+    <CartProvider>
       <CartProvider>
         <TooltipProvider>
           <Toaster />
@@ -75,7 +75,7 @@ const AppContent = () => {
           </BrowserRouter>
         </TooltipProvider>
       </CartProvider>
-    </UserProvider>
+    </CartProvider>
   );
 };
 
