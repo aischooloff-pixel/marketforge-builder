@@ -39,7 +39,13 @@ export const ProductCatalog = () => {
       const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
       return matchesSearch && matchesPrice;
     });
-    // No random shuffle — keep server sort order
+    if (selectedCategory === 'all') {
+      result = [...result].sort((a, b) => {
+        const hashA = a.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const hashB = b.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        return hashA - hashB;
+      });
+    }
     return result;
   }, [allProducts, search, priceRange, selectedCategory]);
 
