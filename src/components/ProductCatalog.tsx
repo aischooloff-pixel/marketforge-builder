@@ -189,26 +189,27 @@ export const ProductCatalog = () => {
           </div>
         </div>
 
-        {/* Disclaimer */}
-        <div className="mt-6 win95-window">
-          <button
-            onClick={() => setDisclaimerOpen(!disclaimerOpen)}
-            className="win95-titlebar px-2 py-1 w-full text-left flex items-center justify-between cursor-pointer"
-          >
-            <span className="font-pixel text-[10px]">⚠ Отказ от ответственности</span>
-            <span className="text-[10px]">{disclaimerOpen ? '▲' : '▼'}</span>
-          </button>
-          {disclaimerOpen && (
-            <div className="p-3 text-xs text-muted-foreground space-y-2 bevel-sunken m-1">
-              <p>
-                Все товары и услуги представлены исключительно в ознакомительных целях. Администрация не несёт ответственности за действия покупателей. Приобретая товар, вы подтверждаете, что ознакомились с условиями использования.
-              </p>
-              <Link to="/disclaimer" className="inline-block text-primary hover:underline font-pixel text-[10px]">
-                Подробнее →
-              </Link>
-            </div>
-          )}
-        </div>
+      </div>
+
+      {/* Disclaimer */}
+      <div className="mt-8 win95-window">
+        <button
+          onClick={() => setDisclaimerOpen(!disclaimerOpen)}
+          className="win95-titlebar px-2 py-1 w-full text-left flex items-center justify-between cursor-pointer"
+        >
+          <span className="font-pixel text-[10px]">⚠ Отказ от ответственности</span>
+          <span className="text-[10px]">{disclaimerOpen ? '▲' : '▼'}</span>
+        </button>
+        {disclaimerOpen && (
+          <div className="p-3 text-xs text-muted-foreground space-y-2 bevel-sunken m-1">
+            <p>
+              Все товары и услуги представлены исключительно в ознакомительных целях. Администрация не несёт ответственности за действия покупателей. Приобретая товар, вы подтверждаете, что ознакомились с условиями использования.
+            </p>
+            <Link to="/disclaimer" className="inline-block text-primary hover:underline font-pixel text-[10px]">
+              Подробнее →
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
