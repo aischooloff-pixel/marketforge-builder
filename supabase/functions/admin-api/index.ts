@@ -639,7 +639,7 @@ serve(async (req) => {
           });
         }
 
-        // Check if user already used
+        // Check if user already used this promo
         if (promoUserId) {
           const { data: existing } = await supabase
             .from("promo_uses")
@@ -652,6 +652,21 @@ serve(async (req) => {
             return new Response(JSON.stringify({ valid: false, error: "Вы уже использовали этот промокод" }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
+          }
+
+          // WELCOME10 — only for first order
+          if (promoCode.toUpperCase() === "WELCOME10") {
+            const { count } = await supabase
+              .from("orders")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", promoUserId)
+              .in("status", ["paid", "completed"]);
+
+            if (count && count > 0) {
+              return new Response(JSON.stringify({ valid: false, error: "Промокод только для первого заказа" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
           }
         }
 

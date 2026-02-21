@@ -84,9 +84,12 @@ export const FloatingZiplock = () => {
     try {
       await navigator.clipboard.writeText(GIFT_CODE);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => {
+        handleClaim();
+      }, 800);
     } catch {
-      setCopied(false);
+      // Fallback: just claim
+      handleClaim();
     }
   };
 
@@ -154,12 +157,12 @@ export const FloatingZiplock = () => {
                   <h3 className="font-pixel text-[11px] sm:text-xs text-primary leading-relaxed">
                     ПОДАРОК ДЛЯ НОВИЧКА!
                   </h3>
-                  <p className="text-sm sm:text-base text-foreground">
-                    Скидка <span className="text-primary font-bold">10%</span> на любой заказ!
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Действует 24 часа с момента активации
-                  </p>
+                   <p className="text-sm sm:text-base text-foreground">
+                     Скидка <span className="text-primary font-bold">10%</span> на первый заказ!
+                   </p>
+                   <p className="text-xs text-muted-foreground">
+                     Только для первого заказа
+                   </p>
                 </div>
 
                 <div className="bevel-sunken bg-background px-4 py-2 w-full text-center">
