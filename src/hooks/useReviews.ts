@@ -21,7 +21,20 @@ export const useApprovedReviews = () => {
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as Review[];
+      
+      // Fetch usernames for reviews
+      const userIds = [...new Set((data || []).map(r => r.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username')
+        .in('id', userIds);
+      
+      const usernameMap = new Map((profiles || []).map(p => [p.id, p.username]));
+      
+      return (data || []).map(r => ({
+        ...r,
+        author_name: r.author_name || (usernameMap.get(r.user_id) ? `@${usernameMap.get(r.user_id)}` : null),
+      })) as Review[];
     },
   });
 };
