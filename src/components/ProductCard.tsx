@@ -68,7 +68,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             </div>
 
             {/* Description */}
-            <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-2 mb-2 flex-1">
+            <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 mb-2 flex-1">
               {product.short_desc || '—'}
             </p>
 
