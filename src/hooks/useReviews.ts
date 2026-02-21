@@ -26,15 +26,19 @@ export const useApprovedReviews = () => {
       const userIds = [...new Set((data || []).map(r => r.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, username')
+        .select('id, username, first_name')
         .in('id', userIds);
       
-      const usernameMap = new Map((profiles || []).map(p => [p.id, p.username]));
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
       
-      return (data || []).map(r => ({
-        ...r,
-        author_name: r.author_name || (usernameMap.get(r.user_id) ? `@${usernameMap.get(r.user_id)}` : null),
-      })) as Review[];
+      return (data || []).map(r => {
+        const profile = profileMap.get(r.user_id);
+        const displayName = r.author_name 
+          || (profile?.username ? `@${profile.username}` : null)
+          || profile?.first_name
+          || null;
+        return { ...r, author_name: displayName };
+      }) as Review[];
     },
   });
 };

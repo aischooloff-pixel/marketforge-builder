@@ -39,6 +39,7 @@ export const ReviewForm = () => {
           method: 'POST',
           text: text.trim().slice(0, 500),
           rating,
+          author_name: user.username ? `@${user.username}` : user.first_name || null,
         },
       });
       if (error || data?.error) throw new Error(data?.error || 'Failed');
