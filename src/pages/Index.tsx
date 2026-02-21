@@ -28,19 +28,8 @@ const Index = () => {
       <Header />
       
       <main className="flex-1">
-        {/* Marquee Ticker */}
-        <div className="fixed top-[72px] left-0 right-0 z-40 bg-primary overflow-hidden py-1.5 border-b border-border">
-          <div className="marquee-track">
-            {[...Array(2)].map((_, i) => (
-              <span key={i} className="text-sm md:text-base text-primary-foreground whitespace-nowrap px-8 font-medium">
-                ⚠ ВХОД ТОЛЬКО ДЛЯ СВОИХ ⚠ КИДАЛ БАНИМ БЕЗ РАЗГОВОРОВ ⚠ ГАРАНТ ВСТРОЕН ⚠ ОТСТУК 24/7 ⚠ ДИСПУТ ЧЕРЕЗ САППОРТ ⚠ НЕ ПИШИТЕ ПЕРВЫМИ ⚠ ВХОД ТОЛЬКО ДЛЯ СВОИХ ⚠ КИДАЛ БАНИМ БЕЗ РАЗГОВОРОВ ⚠ ГАРАНТ ВСТРОЕН ⚠ ОТСТУК 24/7 ⚠ ДИСПУТ ЧЕРЕЗ САППОРТ ⚠ НЕ ПИШИТЕ ПЕРВЫМИ ⚠
-              </span>
-            ))}
-          </div>
-        </div>
-
         {/* Hero Section */}
-        <section className="pt-36 pb-12 md:pt-52 md:pb-32 criminal-pattern">
+        <section className="pt-28 pb-12 md:pt-40 md:pb-32 criminal-pattern">
           <div className="container mx-auto px-4">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-4xl mx-auto text-center">
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bevel-raised bg-card text-foreground text-xs md:text-sm font-medium mb-4 md:mb-8">
