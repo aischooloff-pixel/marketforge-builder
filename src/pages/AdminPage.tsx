@@ -111,9 +111,6 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const hasMultipleItems = (order.order_items?.length || 0) > 1;
-  const hasStars = order.order_items?.some(i => i.product_name === 'Telegram Stars');
-  const hasNonStars = order.order_items?.some(i => i.product_name !== 'Telegram Stars');
-  const isMixed = hasStars && hasNonStars;
 
   return (
     <Card className="p-4">
@@ -141,7 +138,7 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
                  order.status === 'pending' ? 'Не оплачен' : order.status}
               </Badge>
             </div>
-            {(hasMultipleItems || hasStars) && (
+            {hasMultipleItems && (
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -164,29 +161,11 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
           <div className="mt-3 space-y-2 border-t pt-3">
             {order.order_items?.map((item, idx) => {
               const opts = item.options as { country?: string; services?: string[] } | null;
-              const isStars = item.product_name === 'Telegram Stars';
-              const starCount = isStars ? opts?.services?.[0] : null;
-              const targetUser = isStars ? opts?.country : null;
-
               return (
                 <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-secondary/30">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{item.product_name}</p>
-                    {isStars && starCount && targetUser && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-xs text-muted-foreground">{starCount} ⭐ →</span>
-                        <a
-                          href={`https://t.me/${targetUser}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline inline-flex items-center gap-0.5"
-                        >
-                          @{targetUser}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
-                    )}
-                    {!isStars && opts?.country && (
+                    {opts?.country && (
                       <p className="text-xs text-muted-foreground">Страна: {opts.country}</p>
                     )}
                   </div>
@@ -201,27 +180,10 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
             })}
           </div>
           
-          {/* Mixed order info */}
-          {isMixed && order.status === 'paid' && (
-            <p className="text-xs text-muted-foreground mt-2">
-              ℹ️ Обычные товары выданы автоматически. Нажмите «⭐ Stars выполнено» после отправки звёзд.
-            </p>
-          )}
         </CollapsibleContent>
 
-        {/* Stars order: dedicated complete button */}
-        {order.status === 'paid' && hasStars && (
-          <Button
-            size="sm"
-            className="w-full mt-2 gap-1"
-            onClick={onComplete}
-            disabled={isLoading}
-          >
-            ⭐ Stars выполнено
-          </Button>
-        )}
-        {/* Regular order complete */}
-        {order.status === 'paid' && !hasStars && (
+        {/* Order complete */}
+        {order.status === 'paid' && (
           <Button
             size="sm"
             className="w-full mt-2"
@@ -317,11 +279,6 @@ const AdminPage = () => {
     if (updated) setOrders(updated);
   };
 
-  const handleCompleteStarsOrder = async (orderId: string) => {
-    await admin.completeStarsOrder(orderId);
-    const updated = await admin.fetchOrders();
-    if (updated) setOrders(updated);
-  };
 
   const handleToggleUserBan = async (userId: string, isBanned: boolean) => {
     await admin.toggleUserBan(userId, isBanned);
@@ -771,7 +728,7 @@ const AdminPage = () => {
                       <OrderCard
                         key={order.id}
                         order={order}
-                        onComplete={() => handleCompleteStarsOrder(order.id)}
+                        onComplete={() => handleUpdateOrderStatus(order.id, 'completed')}
                         onUpdateStatus={(status) => handleUpdateOrderStatus(order.id, status)}
                         isLoading={admin.isLoading}
                       />

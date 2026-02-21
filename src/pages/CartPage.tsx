@@ -37,8 +37,7 @@ const CartItemRow = ({
   removeItem: (id: string) => void;
 }) => {
   const { data: stockCount = 0 } = useProductStock(item.product.id);
-  const isStarsItem = item.product.tags?.includes('api:stars');
-  const maxQty = isStarsItem ? 99 : (stockCount === -1 ? 99 : stockCount);
+  const maxQty = stockCount === -1 ? 99 : stockCount;
 
   return (
     <motion.div
@@ -58,13 +57,8 @@ const CartItemRow = ({
         <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
           {item.product.shortDesc}
         </p>
-        {item.selectedCountry && !isStarsItem && (
+        {item.selectedCountry && (
           <p className="text-[10px] font-mono mt-1">Страна: {item.selectedCountry.toUpperCase()}</p>
-        )}
-        {isStarsItem && item.selectedCountry && (
-          <p className="text-[10px] font-mono mt-1">
-            Получатель: @{item.selectedCountry} · {item.selectedServices?.[0]} ⭐
-          </p>
         )}
         {item.selectedPeriod && (
           <p className="text-[10px] font-mono mt-0.5">Период: {item.selectedPeriod} дн.</p>
@@ -72,7 +66,7 @@ const CartItemRow = ({
         {item.selectedProtocol && (
           <p className="text-[10px] font-mono mt-0.5">Протокол: {item.selectedProtocol === 'socks' ? 'SOCKS5' : 'HTTP/HTTPS'}</p>
         )}
-        {item.selectedServices && item.selectedServices.length > 0 && !isStarsItem && (
+        {item.selectedServices && item.selectedServices.length > 0 && (
           <p className="text-[10px] font-mono mt-0.5">Сервисы: {item.selectedServices.join(', ')}</p>
         )}
         {maxQty > 0 && maxQty < 99 && item.quantity > maxQty && (
@@ -81,10 +75,6 @@ const CartItemRow = ({
       </div>
       <div className="flex items-center gap-3">
         <div className="flex items-center bevel-sunken bg-card">
-          {isStarsItem ? (
-            <span className="w-8 text-center text-[11px] font-pixel">{item.quantity}</span>
-          ) : (
-            <>
               <button
                 className="bevel-raised h-6 w-6 flex items-center justify-center text-[10px] active:bevel-sunken"
                 onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
@@ -99,8 +89,6 @@ const CartItemRow = ({
               >
                 +
               </button>
-            </>
-          )}
         </div>
         <div className="text-right">
           <p className="font-pixel text-[11px] text-primary">
