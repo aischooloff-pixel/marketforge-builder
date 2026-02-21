@@ -148,9 +148,9 @@ serve(async (req) => {
       });
     }
 
-    // Update order status
+    // Update order status — only if still pending
     if (orderId) {
-      await supabase.from("orders").update({ status: "paid" }).eq("id", orderId);
+      await supabase.from("orders").update({ status: "paid" }).eq("id", orderId).eq("status", "pending");
     } else {
       await supabase
         .from("orders")
@@ -173,9 +173,16 @@ serve(async (req) => {
 
     // Trigger auto-delivery
     if (orderId) {
-      await supabase.functions.invoke("process-order", {
-        body: { orderId },
-      });
+      try {
+        const { error: processError } = await supabase.functions.invoke("process-order", {
+          body: { orderId },
+        });
+        if (processError) {
+          console.error(`[xRocket] process-order failed for ${orderId}:`, processError);
+        }
+      } catch (e) {
+        console.error(`[xRocket] process-order exception for ${orderId}:`, e);
+      }
     }
 
     console.log(`xRocket payment processed: ${amountRub} RUB for user ${userId}`);
