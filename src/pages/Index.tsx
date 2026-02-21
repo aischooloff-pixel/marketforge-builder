@@ -177,13 +177,13 @@ const Index = () => {
               </div> : reviews.length > 0 ? <div className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
                 <div className="flex gap-4" style={{ width: 'max-content' }}>
                   {reviews.map((review, index) => <motion.div key={review.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} viewport={{ once: true }} className="w-[280px] md:w-[320px] flex-shrink-0">
-                      <div className="p-3 md:p-4 h-full bevel-sunken bg-card font-mono text-sm">
+                      <div className="p-3 md:p-4 h-full max-h-[140px] overflow-hidden bevel-sunken bg-card font-mono text-sm">
                         <div className="flex items-center gap-1.5 mb-2 text-primary text-xs">
                           <span className="text-muted-foreground">[{new Date(review.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}]</span>
                           <span>&lt;{review.author_name || 'user'}&gt;</span>
                           <span className="ml-auto text-warning">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
                         </div>
-                        <p className="text-foreground/90 leading-relaxed">
+                        <p className="text-foreground/90 leading-relaxed line-clamp-3">
                           <span className="text-muted-foreground select-none">&gt; </span>{review.text}
                         </p>
                       </div>
