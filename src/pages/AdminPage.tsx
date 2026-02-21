@@ -274,26 +274,36 @@ const AdminPage = () => {
   const loadAllData = async () => {
     setDataLoading(true);
     
-    const [statsData, productsData, ordersData, usersData, categoriesData, promosData, ticketsData] = await Promise.all([
-      admin.fetchStats(),
-      admin.fetchProducts(),
-      admin.fetchOrders(),
-      admin.fetchUsers(),
-      admin.fetchCategories(),
-      admin.fetchPromos(),
-      admin.fetchTickets(),
-    ]);
+    try {
+      const [statsData, productsData, ordersData, usersData, categoriesData, promosData, ticketsData] = await Promise.all([
+        admin.fetchStats(),
+        admin.fetchProducts(),
+        admin.fetchOrders(),
+        admin.fetchUsers(),
+        admin.fetchCategories(),
+        admin.fetchPromos(),
+        admin.fetchTickets(),
+      ]);
 
-    if (statsData) setStats(statsData);
-    if (productsData) setProducts(productsData);
-    if (ordersData) {
-      setOrders(ordersData.orders);
-      setDeposits(ordersData.deposits);
+      if (statsData) setStats(statsData);
+      if (productsData) setProducts(productsData);
+      if (ordersData) {
+        // Handle both old (array) and new ({ orders, deposits }) response formats
+        if (Array.isArray(ordersData)) {
+          setOrders(ordersData);
+          setDeposits([]);
+        } else {
+          setOrders(ordersData.orders || []);
+          setDeposits(ordersData.deposits || []);
+        }
+      }
+      if (usersData) setUsers(usersData);
+      if (categoriesData) setCategories(categoriesData as Category[]);
+      if (promosData) setPromos(promosData as PromoCode[]);
+      if (ticketsData) setTickets(ticketsData as any[]);
+    } catch (err) {
+      console.error('Failed to load admin data:', err);
     }
-    if (usersData) setUsers(usersData);
-    if (categoriesData) setCategories(categoriesData as Category[]);
-    if (promosData) setPromos(promosData as PromoCode[]);
-    if (ticketsData) setTickets(ticketsData as any[]);
     
     setDataLoading(false);
   };
@@ -308,8 +318,13 @@ const AdminPage = () => {
     await admin.updateOrderStatus(orderId, status);
     const updated = await admin.fetchOrders();
     if (updated) {
-      setOrders(updated.orders);
-      setDeposits(updated.deposits);
+      if (Array.isArray(updated)) {
+        setOrders(updated);
+        setDeposits([]);
+      } else {
+        setOrders(updated.orders || []);
+        setDeposits(updated.deposits || []);
+      }
     }
   };
 
