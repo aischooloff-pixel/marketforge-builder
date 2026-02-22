@@ -363,13 +363,13 @@ const ProfilePage = () => {
                         </div>
                       ))}
                     </div>
-                  ) : orders.length === 0 ? (
+                  ) : orders.filter(o => o.order_items && o.order_items.length > 0).length === 0 ? (
                     <div className="bevel-sunken p-8 text-center text-muted-foreground">
                       <PxCart size={32} className="mx-auto mb-3 opacity-50" />
                       <p className="font-pixel text-[10px]">НЕТ ЗАКАЗОВ</p>
                     </div>
                   ) : (
-                    orders.map((order, index) => (
+                    orders.filter(o => o.order_items && o.order_items.length > 0).map((order, index) => (
                       <motion.div
                         key={order.id}
                         initial={{ opacity: 0, y: 10 }}
