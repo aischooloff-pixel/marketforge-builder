@@ -158,13 +158,11 @@ const OrderCard = ({ order, isLoading }: {
                  order.status === 'pending' ? 'Не оплачен' : order.status}
               </Badge>
             </div>
-            {(order.order_items?.length || 0) > 0 && (
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-              </CollapsibleTrigger>
-            )}
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
           </div>
         </div>
 
