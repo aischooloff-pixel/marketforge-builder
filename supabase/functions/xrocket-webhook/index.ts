@@ -75,7 +75,7 @@ serve(async (req) => {
     }
 
     const payloadData = JSON.parse(invoice.payload || "{}");
-    const { userId, amountRub, balanceToUse } = payloadData;
+    const { userId, amountRub, balanceToUse, items } = payloadData;
 
     if (!userId || !amountRub) {
       console.error("Missing payload data");
@@ -139,15 +139,76 @@ serve(async (req) => {
       });
     }
 
+    const isDeposit = !items || !Array.isArray(items) || items.length === 0;
+
     // Update order status — only if still pending
-    if (orderId) {
-      await supabase.from("orders").update({ status: "paid" }).eq("id", orderId).eq("status", "pending");
-    } else {
+    if (isDeposit) {
+      // Balance top-up — credit amountRub to user balance
+      const depositAmount = parseFloat(amountRub);
+      const newBalance = currentBalance - balanceDeduction + depositAmount;
+
       await supabase
+        .from("profiles")
+        .update({ balance: newBalance })
+        .eq("id", userId);
+
+      await supabase.from("transactions").insert({
+        user_id: userId,
+        type: "deposit",
+        amount: depositAmount,
+        balance_after: newBalance,
+        order_id: orderId || null,
+        description: `Пополнение баланса: ${depositAmount}₽`,
+        payment_id: invoiceId,
+      });
+
+      if (orderId) {
+        await supabase.from("orders").update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          delivered_content: `Пополнение баланса на ${depositAmount}₽`,
+        }).eq("id", orderId).eq("status", "pending");
+      } else {
+        await supabase.from("orders").update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          delivered_content: `Пополнение баланса на ${depositAmount}₽`,
+        }).eq("payment_id", invoiceId).eq("status", "pending");
+      }
+
+      console.log(`[xRocket] Deposit ${depositAmount} RUB for user ${userId}`);
+    } else {
+      // Product purchase — mark paid and trigger delivery
+      if (orderId) {
+        await supabase.from("orders").update({ status: "paid" }).eq("id", orderId).eq("status", "pending");
+      } else {
+        await supabase
+          .from("orders")
+          .update({ status: "paid" })
+          .eq("payment_id", invoiceId)
+          .eq("status", "pending");
+      }
+
+      // Trigger auto-delivery
+      const deliverOrderId = orderId || (await supabase
         .from("orders")
-        .update({ status: "paid" })
+        .select("id")
         .eq("payment_id", invoiceId)
-        .eq("status", "pending");
+        .maybeSingle()
+      ).data?.id;
+
+      if (deliverOrderId) {
+        try {
+          const { error: processError } = await supabase.functions.invoke("process-order", {
+            body: { orderId: deliverOrderId },
+          });
+          if (processError) {
+            console.error(`[xRocket] process-order failed for ${deliverOrderId}:`, processError);
+          }
+        } catch (e) {
+          console.error(`[xRocket] process-order exception for ${deliverOrderId}:`, e);
+        }
+      }
     }
 
     // Analytics
@@ -159,22 +220,9 @@ serve(async (req) => {
         payment_id: invoiceId,
         method: "xrocket",
         currency: "USDT",
+        is_deposit: isDeposit,
       },
     });
-
-    // Trigger auto-delivery
-    if (orderId) {
-      try {
-        const { error: processError } = await supabase.functions.invoke("process-order", {
-          body: { orderId },
-        });
-        if (processError) {
-          console.error(`[xRocket] process-order failed for ${orderId}:`, processError);
-        }
-      } catch (e) {
-        console.error(`[xRocket] process-order exception for ${orderId}:`, e);
-      }
-    }
 
     console.log(`xRocket payment processed: ${amountRub} RUB for user ${userId}`);
 

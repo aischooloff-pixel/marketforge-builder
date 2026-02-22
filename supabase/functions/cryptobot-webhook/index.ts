@@ -138,6 +138,8 @@ serve(async (req) => {
       });
     }
 
+    const isDeposit = !items || !Array.isArray(items) || items.length === 0;
+
     if (orderId) {
       // SECURITY: Only mark order as paid if its payment_id matches this invoice
       const { data: matchedOrder } = await supabase
@@ -149,18 +151,112 @@ serve(async (req) => {
         .maybeSingle();
 
       if (matchedOrder) {
-        await supabase.from("orders").update({ status: "paid" }).eq("id", matchedOrder.id);
+        if (isDeposit) {
+          // This is a balance top-up — credit amountRub to user balance
+          const depositAmount = parseFloat(amountRub);
+          const newBalance = currentBalance - balanceDeduction + depositAmount;
+
+          await supabase
+            .from("profiles")
+            .update({ balance: newBalance })
+            .eq("id", userId);
+
+          await supabase.from("transactions").insert({
+            user_id: userId,
+            type: "deposit",
+            amount: depositAmount,
+            balance_after: newBalance,
+            order_id: orderId,
+            description: `Пополнение баланса: ${depositAmount}₽`,
+            payment_id: invoice.invoice_id.toString(),
+          });
+
+          await supabase.from("orders").update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            delivered_content: `Пополнение баланса на ${depositAmount}₽`,
+          }).eq("id", matchedOrder.id);
+
+          console.log(`[CryptoBot] Deposit ${depositAmount} RUB for user ${userId}`);
+        } else {
+          // Product purchase — mark paid and trigger delivery
+          await supabase.from("orders").update({ status: "paid" }).eq("id", matchedOrder.id);
+
+          try {
+            const { error: processError } = await supabase.functions.invoke("process-order", {
+              body: { orderId },
+            });
+            if (processError) {
+              console.error(`[CryptoBot] process-order failed for ${orderId}:`, processError);
+            }
+          } catch (e) {
+            console.error(`[CryptoBot] process-order exception for ${orderId}:`, e);
+          }
+        }
       } else {
         console.warn(`[CryptoBot] Order ${orderId} not matched or already processed (invoice ${invoice.invoice_id})`);
       }
     } else {
-      await supabase
+      // No orderId — find order by payment_id
+      const { data: foundOrder } = await supabase
         .from("orders")
-        .update({ status: "paid" })
+        .select("id")
         .eq("payment_id", invoice.invoice_id.toString())
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (isDeposit) {
+        const depositAmount = parseFloat(amountRub);
+        const newBalance = currentBalance - balanceDeduction + depositAmount;
+
+        await supabase
+          .from("profiles")
+          .update({ balance: newBalance })
+          .eq("id", userId);
+
+        await supabase.from("transactions").insert({
+          user_id: userId,
+          type: "deposit",
+          amount: depositAmount,
+          balance_after: newBalance,
+          order_id: foundOrder?.id || null,
+          description: `Пополнение баланса: ${depositAmount}₽`,
+          payment_id: invoice.invoice_id.toString(),
+        });
+
+        if (foundOrder) {
+          await supabase.from("orders").update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            delivered_content: `Пополнение баланса на ${depositAmount}₽`,
+          }).eq("id", foundOrder.id);
+        }
+
+        console.log(`[CryptoBot] Deposit ${depositAmount} RUB for user ${userId}`);
+      } else {
+        if (foundOrder) {
+          await supabase.from("orders").update({ status: "paid" }).eq("id", foundOrder.id);
+
+          try {
+            const { error: processError } = await supabase.functions.invoke("process-order", {
+              body: { orderId: foundOrder.id },
+            });
+            if (processError) {
+              console.error(`[CryptoBot] process-order failed for ${foundOrder.id}:`, processError);
+            }
+          } catch (e) {
+            console.error(`[CryptoBot] process-order exception for ${foundOrder.id}:`, e);
+          }
+        } else {
+          await supabase.from("orders")
+            .update({ status: "paid" })
+            .eq("payment_id", invoice.invoice_id.toString())
+            .eq("status", "pending");
+        }
+      }
     }
 
+    // Analytics
     await supabase.from("analytics_events").insert({
       user_id: userId,
       event_type: "payment_completed",
@@ -168,22 +264,9 @@ serve(async (req) => {
         amount: amountRub,
         payment_id: invoice.invoice_id,
         currency: invoice.asset,
+        is_deposit: isDeposit,
       },
     });
-
-    // Trigger auto-delivery for the order
-    if (orderId) {
-      try {
-        const { error: processError } = await supabase.functions.invoke("process-order", {
-          body: { orderId },
-        });
-        if (processError) {
-          console.error(`[CryptoBot] process-order failed for ${orderId}:`, processError);
-        }
-      } catch (e) {
-        console.error(`[CryptoBot] process-order exception for ${orderId}:`, e);
-      }
-    }
 
     console.log(`Payment processed: ${amountRub} RUB for user ${userId}`);
 
