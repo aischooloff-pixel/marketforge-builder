@@ -117,10 +117,8 @@ interface User {
 }
 
 // Expandable order card component
-const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
+const OrderCard = ({ order, isLoading }: {
   order: Order;
-  onComplete: () => void;
-  onUpdateStatus: (status: 'pending' | 'paid' | 'completed' | 'cancelled' | 'refunded') => void;
   isLoading: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -209,17 +207,6 @@ const OrderCard = ({ order, onComplete, onUpdateStatus, isLoading }: {
           )}
         </CollapsibleContent>
 
-        {/* Order complete */}
-        {order.status === 'paid' && (
-          <Button
-            size="sm"
-            className="w-full mt-2"
-            onClick={() => onUpdateStatus('completed')}
-            disabled={isLoading}
-          >
-            Выполнить заказ
-          </Button>
-        )}
       </Collapsible>
     </Card>
   );
@@ -821,8 +808,6 @@ const AdminPage = () => {
                         <OrderCard
                           key={order.id}
                           order={order}
-                          onComplete={() => handleUpdateOrderStatus(order.id, 'completed')}
-                          onUpdateStatus={(status) => handleUpdateOrderStatus(order.id, status)}
                           isLoading={admin.isLoading}
                         />
                       );
