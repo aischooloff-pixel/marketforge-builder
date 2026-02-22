@@ -140,43 +140,12 @@ serve(async (req) => {
 
     console.log(`xRocket: Converting ${amount} RUB to ${usdtAmount} USDT (rate: ${rubRate})`);
 
-    // Create invoice via xRocket API
-    const invoiceResponse = await fetch(`${XROCKET_API}/tg-invoices`, {
-      method: "POST",
-      headers: {
-        "Rocket-Pay-Key": xrocketToken,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        amount: parseFloat(usdtAmount),
-        currency: "USDT",
-        description: description || "Пополнение баланса TEMKA.STORE",
-        payload: JSON.stringify({
-          userId,
-          amountRub: amount,
-          balanceToUse: balanceToUse || 0,
-          items: items || [],
-        }),
-        callbackUrl: `${supabaseUrl}/functions/v1/xrocket-webhook`,
-      }),
-    });
-
-    const invoiceData = await invoiceResponse.json();
-
-    if (!invoiceData.success && !invoiceData.data) {
-      console.error("xRocket error:", invoiceData);
-      return json({ error: "Failed to create invoice" }, 500);
-    }
-
-    const invoice = invoiceData.data;
-
-    // Create order
+    // Create order FIRST so we have orderId for the invoice payload
     const { data: newOrder } = await supabase.from("orders").insert({
       user_id: userId,
       status: "pending",
       total: amount,
       payment_method: "xrocket",
-      payment_id: invoice.id?.toString(),
     }).select("id").single();
 
     const finalOrderId = newOrder?.id;
@@ -195,6 +164,45 @@ serve(async (req) => {
       if (itemsError) {
         console.error("Failed to insert order_items:", itemsError);
       }
+    }
+
+    // Create invoice via xRocket API (now with correct orderId in payload)
+    const invoiceResponse = await fetch(`${XROCKET_API}/tg-invoices`, {
+      method: "POST",
+      headers: {
+        "Rocket-Pay-Key": xrocketToken,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: parseFloat(usdtAmount),
+        currency: "USDT",
+        description: description || "Пополнение баланса TEMKA.STORE",
+        payload: JSON.stringify({
+          userId,
+          orderId: finalOrderId,
+          amountRub: amount,
+          balanceToUse: balanceToUse || 0,
+          items: items || [],
+        }),
+        callbackUrl: `${supabaseUrl}/functions/v1/xrocket-webhook`,
+      }),
+    });
+
+    const invoiceData = await invoiceResponse.json();
+
+    if (!invoiceData.success && !invoiceData.data) {
+      console.error("xRocket error:", invoiceData);
+      return json({ error: "Failed to create invoice" }, 500);
+    }
+
+    const invoice = invoiceData.data;
+
+    // Update order with payment_id
+    if (finalOrderId) {
+      await supabase
+        .from("orders")
+        .update({ payment_id: invoice.id?.toString() })
+        .eq("id", finalOrderId);
     }
 
     console.log(`xRocket invoice created: ${invoice.id} for user ${userId}`);

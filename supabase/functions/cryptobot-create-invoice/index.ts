@@ -139,7 +139,36 @@ serve(async (req) => {
 
     console.log(`Converting ${amount} RUB to ${usdtAmount} USDT`);
 
-    // Create invoice via CryptoBot API
+    // Create or find order FIRST so we have orderId for the invoice payload
+    let finalOrderId = orderId;
+    if (!orderId) {
+      const { data: newOrder } = await supabase.from("orders").insert({
+        user_id: userId,
+        status: "pending",
+        total: amount,
+        payment_method: "cryptobot",
+      }).select("id").single();
+      finalOrderId = newOrder?.id;
+    }
+
+    // Create order_items if items were provided
+    if (finalOrderId && items && Array.isArray(items) && items.length > 0) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const orderItems = items.map((item: any) => ({
+        order_id: finalOrderId,
+        product_id: item.productId && uuidRegex.test(item.productId) ? item.productId : null,
+        product_name: item.productName,
+        price: item.price,
+        quantity: item.quantity || 1,
+        options: item.options || {},
+      }));
+      const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+      if (itemsError) {
+        console.error("Failed to insert order_items:", itemsError);
+      }
+    }
+
+    // Create invoice via CryptoBot API (now with correct orderId in payload)
     const invoiceResponse = await fetch(`${CRYPTOBOT_API_URL}/createInvoice`, {
       method: "POST",
       headers: {
@@ -153,7 +182,7 @@ serve(async (req) => {
         hidden_message: `Спасибо за пополнение! Баланс обновлён.`,
         paid_btn_name: "callback",
         paid_btn_url: `${supabaseUrl}/functions/v1/cryptobot-webhook`,
-        payload: JSON.stringify({ userId, orderId, amountRub: amount, balanceToUse: balanceToUse || 0, items: items || [] }),
+        payload: JSON.stringify({ userId, orderId: finalOrderId, amountRub: amount, balanceToUse: balanceToUse || 0, items: items || [] }),
         allow_comments: false,
         allow_anonymous: false,
         expires_in: 3600,
@@ -172,40 +201,12 @@ serve(async (req) => {
 
     const invoice = invoiceData.result;
 
-    // Create or update order with payment_id
-    let finalOrderId = orderId;
-    if (!orderId) {
-      const { data: newOrder } = await supabase.from("orders").insert({
-        user_id: userId,
-        status: "pending",
-        total: amount,
-        payment_method: "cryptobot",
-        payment_id: invoice.invoice_id.toString(),
-      }).select("id").single();
-      finalOrderId = newOrder?.id;
-    } else {
+    // Update order with payment_id from invoice
+    if (finalOrderId) {
       await supabase
         .from("orders")
         .update({ payment_id: invoice.invoice_id.toString() })
-        .eq("id", orderId)
-        .eq("user_id", userId); // SECURITY: ensure order belongs to user
-    }
-
-    // Create order_items if items were provided
-    if (finalOrderId && items && Array.isArray(items) && items.length > 0) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const orderItems = items.map((item: any) => ({
-        order_id: finalOrderId,
-        product_id: item.productId && uuidRegex.test(item.productId) ? item.productId : null,
-        product_name: item.productName,
-        price: item.price,
-        quantity: item.quantity || 1,
-        options: item.options || {},
-      }));
-      const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
-      if (itemsError) {
-        console.error("Failed to insert order_items:", itemsError);
-      }
+        .eq("id", finalOrderId);
     }
 
     console.log(`Invoice created: ${invoice.invoice_id} for user ${userId}`);
