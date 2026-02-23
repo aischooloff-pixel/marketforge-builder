@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 const ProductPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{id: string;}>();
   const { data: product, isLoading, error } = useProduct(id);
   const { data: stockCount = 0, isLoading: stockLoading } = useProductStock(id);
   const { addItem } = useCart();
@@ -40,10 +40,10 @@ const ProductPage = () => {
     }
   }, [product?.long_desc]);
 
-  const isApiProduct = product?.tags?.some(t => t.startsWith('api:px6')) ?? false;
+  const isApiProduct = product?.tags?.some((t) => t.startsWith('api:px6')) ?? false;
   const isTigerProduct = product?.tags?.includes('api:tiger') ?? false;
   const isProfiLikeProduct = product?.tags?.includes('api:profilike') ?? false;
-  
+
   const proxyVersion = product?.tags?.includes('api:px6:v3') ? 3 : product?.tags?.includes('api:px6:v4') ? 4 : 6;
 
   const { data: proxyData, isLoading: proxyLoading } = useProxyAvailability(proxyVersion, isApiProduct);
@@ -67,8 +67,8 @@ const ProductPage = () => {
           </div>
         </main>
         <Footer />
-      </div>
-    );
+      </div>);
+
   }
 
   if (error || !product) {
@@ -90,44 +90,44 @@ const ProductPage = () => {
           </div>
         </main>
         <Footer />
-      </div>
-    );
+      </div>);
+
   }
 
   const needsPeriodSelector = isApiProduct;
 
-  const periodOptionsMap: Record<number, { value: string; label: string; price: number }[]> = {
+  const periodOptionsMap: Record<number, {value: string;label: string;price: number;}[]> = {
     4: [
-      { value: '7', label: 'Неделя', price: 49 },
-      { value: '14', label: '2 недели', price: 79 },
-      { value: '30', label: 'Месяц', price: 139 },
-      { value: '60', label: '2 месяца', price: 279 },
-      { value: '90', label: '3 месяца', price: 389 },
-    ],
+    { value: '7', label: 'Неделя', price: 49 },
+    { value: '14', label: '2 недели', price: 79 },
+    { value: '30', label: 'Месяц', price: 139 },
+    { value: '60', label: '2 месяца', price: 279 },
+    { value: '90', label: '3 месяца', price: 389 }],
+
     6: [
-      { value: '3', label: '3 дня', price: 9 },
-      { value: '7', label: 'Неделя', price: 12 },
-      { value: '14', label: '2 недели', price: 19 },
-      { value: '30', label: 'Месяц', price: 29 },
-      { value: '60', label: '2 месяца', price: 49 },
-      { value: '90', label: '3 месяца', price: 69 },
-    ],
+    { value: '3', label: '3 дня', price: 9 },
+    { value: '7', label: 'Неделя', price: 12 },
+    { value: '14', label: '2 недели', price: 19 },
+    { value: '30', label: 'Месяц', price: 29 },
+    { value: '60', label: '2 месяца', price: 49 },
+    { value: '90', label: '3 месяца', price: 69 }],
+
     3: [
-      { value: '7', label: 'Неделя', price: 15 },
-      { value: '14', label: '2 недели', price: 25 },
-      { value: '30', label: 'Месяц', price: 39 },
-      { value: '60', label: '2 месяца', price: 69 },
-      { value: '90', label: '3 месяца', price: 99 },
-    ],
+    { value: '7', label: 'Неделя', price: 15 },
+    { value: '14', label: '2 недели', price: 25 },
+    { value: '30', label: 'Месяц', price: 39 },
+    { value: '60', label: '2 месяца', price: 69 },
+    { value: '90', label: '3 месяца', price: 99 }]
+
   };
 
   const periodOptions = periodOptionsMap[proxyVersion] || periodOptionsMap[4];
   const defaultPeriod = periodOptions[0]?.value || '7';
   const activePeriod = selectedPeriod || defaultPeriod;
 
-  const currentPeriodPrice = isApiProduct
-    ? (periodOptions.find(p => p.value === activePeriod)?.price || periodOptions[0]?.price || 49)
-    : product.price;
+  const currentPeriodPrice = isApiProduct ?
+  periodOptions.find((p) => p.value === activePeriod)?.price || periodOptions[0]?.price || 49 :
+  product.price;
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
@@ -136,7 +136,7 @@ const ProductPage = () => {
       country: selectedCountry || undefined,
       services: selectedServices.length > 0 ? selectedServices : undefined,
       period: needsPeriodSelector ? parseInt(activePeriod) : undefined,
-      protocol: isApiProduct ? selectedProtocol : undefined,
+      protocol: isApiProduct ? selectedProtocol : undefined
     });
     toast.success(`${product.name} добавлен в корзину`);
     setAddedToCart(true);
@@ -144,7 +144,7 @@ const ProductPage = () => {
   };
 
   const toggleService = (serviceId: string) => {
-    setSelectedServices(prev => prev.includes(serviceId) ? prev.filter(s => s !== serviceId) : [...prev, serviceId]);
+    setSelectedServices((prev) => prev.includes(serviceId) ? prev.filter((s) => s !== serviceId) : [...prev, serviceId]);
   };
 
   const needsCountrySelector = product.countries && product.countries.length > 0;
@@ -166,8 +166,8 @@ const ProductPage = () => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-4xl mx-auto"
-          >
+            className="max-w-4xl mx-auto">
+
             {/* Main Win95 Window */}
             <div className="win95-window crt-glitch-window">
               {/* Title Bar */}
@@ -209,16 +209,16 @@ const ProductPage = () => {
                       <MediaGallery
                         urls={product.media_urls || []}
                         alt={product.name}
-                        fallbackIcon={categoryIcon}
-                      />
-                      {isOutOfStock && (
-                        <div className="absolute inset-0 bg-background/60 flex items-center justify-center pointer-events-none">
+                        fallbackIcon={categoryIcon} />
+
+                      {isOutOfStock &&
+                      <div className="absolute inset-0 bg-background/60 flex items-center justify-center pointer-events-none">
                           <Badge variant="destructive" className="text-sm md:text-lg py-1.5 px-3 gap-1.5">
                             <PackageX className="h-4 w-4 md:h-5 md:w-5" />
                             Нет в наличии
                           </Badge>
                         </div>
-                      )}
+                      }
                     </div>
 
                     {/* Description Panel */}
@@ -226,43 +226,43 @@ const ProductPage = () => {
                       <div className="flex items-center gap-2 mb-2 pb-1 border-b border-border">
                         <span className="text-lg">{categoryIcon}</span>
                         <h2 className="text-sm md:text-base font-bold">{product.name}</h2>
-                        {product.is_popular && (
-                          <Badge variant="outline" className="text-[10px] ml-auto">★ Популярное</Badge>
-                        )}
+                        {product.is_popular &&
+                        <Badge variant="outline" className="text-[10px] ml-auto">★ Популярное</Badge>
+                        }
                       </div>
                       <p className="text-sm text-muted-foreground mb-3">
                         {product.short_desc}
                       </p>
                       <div
                         ref={descRef}
-                        className={`text-sm leading-relaxed whitespace-pre-line overflow-hidden transition-all duration-300 ${descExpanded ? '' : 'max-h-[120px]'}`}
-                      >
+                        className={`text-sm leading-relaxed whitespace-pre-line overflow-hidden transition-all duration-300 ${descExpanded ? '' : 'max-h-[120px]'}`}>
+
                         {product.long_desc}
                       </div>
-                      {descOverflows && (
-                        <button
-                          onClick={() => setDescExpanded(!descExpanded)}
-                          className="flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
-                        >
+                      {descOverflows &&
+                      <button
+                        onClick={() => setDescExpanded(!descExpanded)}
+                        className="flex items-center gap-1 mt-2 text-xs text-primary hover:underline">
+
                           {descExpanded ? <><ChevronUp className="h-3 w-3" /> Свернуть</> : <><ChevronDown className="h-3 w-3" /> Читать полностью</>}
                         </button>
-                      )}
+                      }
                     </div>
 
                     {/* Tags */}
-                    {product.tags && product.tags.filter(t => !t.startsWith('api:')).length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {product.tags.filter(t => !t.startsWith('api:')).map(tag => (
-                          <span key={tag} className="bevel-raised bg-card px-2 py-0.5 text-xs">
+                    {product.tags && product.tags.filter((t) => !t.startsWith('api:')).length > 0 &&
+                    <div className="flex flex-wrap gap-1">
+                        {product.tags.filter((t) => !t.startsWith('api:')).map((tag) =>
+                      <span key={tag} className="bevel-raised bg-card px-2 py-0.5 text-xs">
                             {tag}
                           </span>
-                        ))}
+                      )}
                       </div>
-                    )}
+                    }
 
                     {/* Legal Note */}
-                    {product.legal_note && (
-                      <div className="bevel-sunken bg-background p-2 md:p-3">
+                    {product.legal_note &&
+                    <div className="bevel-sunken bg-background p-2 md:p-3">
                         <div className="flex items-start gap-2">
                           <Shield className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                           <div>
@@ -271,7 +271,7 @@ const ProductPage = () => {
                           </div>
                         </div>
                       </div>
-                    )}
+                    }
                   </div>
 
                   {/* Right: Purchase Panel */}
@@ -288,37 +288,37 @@ const ProductPage = () => {
                         {isProfiLikeProduct && !isOutOfStock && <SocialBoostBuyer />}
 
                         {/* Standard flow */}
-                        {!isTigerProduct && !isProfiLikeProduct && (
-                          <>
+                        {!isTigerProduct && !isProfiLikeProduct &&
+                        <>
                             {/* Badges */}
                             <div className="flex flex-wrap gap-1">
                               <span className="bevel-raised bg-card px-2 py-0.5 text-[10px]">
                                 {product.type === 'subscription' ? '📅 Подписка' : '💰 Разовый'}
                               </span>
-                              {!stockLoading && !isOutOfStock && (
-                                <span className={`bevel-raised bg-card px-2 py-0.5 text-[10px] ${stockCount > 0 && stockCount <= 5 ? 'text-destructive' : ''}`}>
+                              {!stockLoading && !isOutOfStock &&
+                            <span className={`bevel-raised bg-card px-2 py-0.5 text-[10px] ${stockCount > 0 && stockCount <= 5 ? 'text-destructive' : ''}`}>
                                   📦 {stockCount === -1 ? '∞' : stockCount} шт
                                 </span>
-                              )}
+                            }
                             </div>
 
                             {/* Country Selector */}
-                            {isApiProduct && !isOutOfStock && (
-                              <ProxyCountrySelector
-                                countries={proxyData?.countries || []}
-                                availability={proxyData?.availability || {}}
-                                selectedCountry={selectedCountry}
-                                onSelect={setSelectedCountry}
-                                isLoading={proxyLoading}
-                              />
-                            )}
-                            {!isApiProduct && needsCountrySelector && !isOutOfStock && (
-                              <CountrySelector selectedCountry={selectedCountry} onSelect={setSelectedCountry} availableCountries={product.countries} />
-                            )}
+                            {isApiProduct && !isOutOfStock &&
+                          <ProxyCountrySelector
+                            countries={proxyData?.countries || []}
+                            availability={proxyData?.availability || {}}
+                            selectedCountry={selectedCountry}
+                            onSelect={setSelectedCountry}
+                            isLoading={proxyLoading} />
+
+                          }
+                            {!isApiProduct && needsCountrySelector && !isOutOfStock &&
+                          <CountrySelector selectedCountry={selectedCountry} onSelect={setSelectedCountry} availableCountries={product.countries} />
+                          }
 
                             {/* Period */}
-                            {needsPeriodSelector && !isOutOfStock && (
-                              <div>
+                            {needsPeriodSelector && !isOutOfStock &&
+                          <div>
                                 <label className="text-xs font-bold mb-1 flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
                                   Период
@@ -326,19 +326,19 @@ const ProductPage = () => {
                                 <Select value={activePeriod} onValueChange={setSelectedPeriod}>
                                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                                   <SelectContent>
-                                    {periodOptions.map(opt => (
-                                      <SelectItem key={opt.value} value={opt.value}>
+                                    {periodOptions.map((opt) =>
+                                <SelectItem key={opt.value} value={opt.value}>
                                         {opt.label} — {opt.price} ₽
                                       </SelectItem>
-                                    ))}
+                                )}
                                   </SelectContent>
                                 </Select>
                               </div>
-                            )}
+                          }
 
                             {/* Protocol */}
-                            {isApiProduct && !isOutOfStock && (
-                              <div>
+                            {isApiProduct && !isOutOfStock &&
+                          <div>
                                 <label className="text-xs font-bold mb-1 flex items-center gap-1">
                                   <Globe className="h-3 w-3" />
                                   Протокол
@@ -348,24 +348,24 @@ const ProductPage = () => {
                                   <ToggleGroupItem value="socks" className="px-3 text-xs h-7">SOCKS5</ToggleGroupItem>
                                 </ToggleGroup>
                               </div>
-                            )}
+                          }
 
                             {/* Service Selector */}
-                            {needsServiceSelector && !isOutOfStock && (
-                              <ServiceSelector selectedServices={selectedServices} onToggle={toggleService} availableServices={product.services?.map(s => s.toLowerCase())} />
-                            )}
+                            {needsServiceSelector && !isOutOfStock &&
+                          <ServiceSelector selectedServices={selectedServices} onToggle={toggleService} availableServices={product.services?.map((s) => s.toLowerCase())} />
+                          }
 
                             {/* Price */}
                             <div className="bevel-sunken bg-background p-2 text-center">
-                              <span className="text-xl md:text-2xl font-bold text-primary">
+                              <span className="md:text-2xl font-bold text-primary text-2xl">
                                 {currentPeriodPrice.toLocaleString('ru-RU')}
                               </span>
-                              <span className="text-sm text-muted-foreground ml-1">₽</span>
+                              <span className="text-muted-foreground ml-1 text-base">₽</span>
                               {product.type === 'subscription' && <span className="text-xs text-muted-foreground">/мес</span>}
                             </div>
 
                             {/* Add to Cart */}
-                            <Button className="w-full gap-2" onClick={handleAddToCart} disabled={isOutOfStock || (isApiProduct && !selectedCountry) || (isApiProduct && selectedCountry && (proxyData?.availability?.[selectedCountry] || 0) === 0) || (!isApiProduct && needsCountrySelector && !selectedCountry)}>
+                            <Button className="w-full gap-2" onClick={handleAddToCart} disabled={isOutOfStock || isApiProduct && !selectedCountry || isApiProduct && selectedCountry && (proxyData?.availability?.[selectedCountry] || 0) === 0 || !isApiProduct && needsCountrySelector && !selectedCountry}>
                               {isOutOfStock ? <>
                                 <PackageX className="h-4 w-4" />
                                 Нет в наличии
@@ -378,14 +378,14 @@ const ProductPage = () => {
                               </>}
                             </Button>
 
-                            {!isOutOfStock && (
-                              <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground">
+                            {!isOutOfStock &&
+                          <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground">
                                 <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
                                 <span>Возврат и замена через Тех.поддержку</span>
                               </div>
-                            )}
+                          }
                           </>
-                        )}
+                        }
                       </div>
                     </div>
                   </div>
@@ -397,7 +397,7 @@ const ProductPage = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>);
+
 };
 export default ProductPage;
