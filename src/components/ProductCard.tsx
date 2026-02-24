@@ -41,28 +41,28 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
       <Link to={`/product/${product.id}`} className="block h-full">
         <div className="h-full win95-window hover-lift flex flex-col">
           {/* Win95 title bar */}
-          <div className="win95-titlebar px-1.5 py-0.5 gap-1.5">
-            <span className="text-[8px] md:text-[9px] truncate flex-1">{product.categories?.name || 'Разное'}</span>
-            {product.is_popular && <span className="text-[8px] text-warning-foreground">★</span>}
+          <div className="win95-titlebar px-2 py-1 gap-1.5">
+            <span className="text-[9px] md:text-[10px] truncate flex-1">{product.categories?.name || 'Разное'}</span>
+            {product.is_popular && <span className="text-[10px] text-warning-foreground">★ ХИТ</span>}
+          </div>
+
+          {/* Image / Icon area */}
+          <div className="w-full aspect-[4/3] bevel-sunken bg-background flex items-center justify-center overflow-hidden">
+            {product.icon_url ? (
+              <img src={product.icon_url} alt={product.name} className="w-full h-full object-cover" />
+            ) : product.media_urls && product.media_urls.length > 0 && !/\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ? (
+              <img src={product.media_urls[0]} alt={product.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-4xl md:text-5xl">{categoryIcon}</span>
+            )}
           </div>
 
           {/* Content */}
-          <div className="p-2 md:p-3 flex flex-col flex-1 bg-card">
-            {/* Icon + name row */}
-            <div className="flex items-start gap-2 mb-1.5">
-              <div className="w-8 h-8 md:w-10 md:h-10 bevel-sunken bg-background flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {product.icon_url ? (
-                  <img src={product.icon_url} alt={product.name} className="w-full h-full object-cover" />
-                ) : product.media_urls && product.media_urls.length > 0 && !/\.(mp4|webm|mov)$/i.test(product.media_urls[0]) ? (
-                  <img src={product.media_urls[0]} alt={product.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-base md:text-lg">{categoryIcon}</span>
-                )}
-              </div>
-              <h3 className="text-xs md:text-sm font-bold leading-tight line-clamp-2 flex-1 min-w-0">
-                {product.name}
-              </h3>
-            </div>
+          <div className="p-2.5 md:p-3 flex flex-col flex-1 bg-card">
+            {/* Name */}
+            <h3 className="text-sm md:text-base font-bold leading-tight line-clamp-2 mb-1">
+              {product.name}
+            </h3>
 
             {/* Description */}
             <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 mb-2 flex-1">
@@ -70,33 +70,31 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
             </p>
 
             {/* Stock indicator */}
-            <div className="text-[9px] md:text-[10px] mb-1.5">
+            <div className="text-[10px] md:text-xs mb-2">
               {isOutOfStock ?
-              <span className="text-destructive">✕ Раскупили</span> :
+              <span className="text-destructive font-bold">✕ Раскупили</span> :
               stockCount === -1 ?
               <span className="text-primary">● Есть в наличии</span> :
               stockCount <= 5 ?
-              <span className="text-warning">● Осталось {stockCount} шт — залетай</span> :
-
+              <span className="text-warning font-bold">● Осталось {stockCount} шт — залетай</span> :
               <span className="text-primary">● В наличии</span>
               }
             </div>
 
             {/* Price + cart row */}
-            <div className="flex items-center justify-between pt-1.5 border-t border-border/50 mt-auto">
+            <div className="flex items-center justify-between pt-2 border-t-2 border-border/50 mt-auto">
               <div>
-                <span className="md:text-base font-bold text-primary text-lg">{product.price.toLocaleString('ru-RU')}</span>
-                <span className="md:text-xs text-muted-foreground ml-0.5 text-sm">₽</span>
-                {product.type === 'subscription' && <span className="text-[9px] text-muted-foreground">/мес</span>}
+                <span className="text-xl md:text-2xl font-bold text-primary">{product.price.toLocaleString('ru-RU')}</span>
+                <span className="text-sm text-muted-foreground ml-0.5">₽</span>
+                {product.type === 'subscription' && <span className="text-[10px] text-muted-foreground ml-1">/мес</span>}
               </div>
               {!isOutOfStock &&
               <Button
                 size="sm"
                 variant={isInCart || justAdded ? 'default' : 'outline'}
-                className="h-6 text-[10px] md:text-xs px-2"
+                className="h-8 text-xs px-3 bevel-raised"
                 onClick={handleAddToCart}>
-
-                  {isInCart || justAdded ? '✓' : '+ Взять'}
+                  {isInCart || justAdded ? '✓ В корзине' : '+ Взять'}
                 </Button>
               }
             </div>
