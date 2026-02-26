@@ -247,6 +247,9 @@ serve(async (req) => {
       body: { orderId: order.id },
     });
 
+    // Удаляем брошенную корзину — пользователь оплатил
+    await supabase.from("cart_sessions").delete().eq("user_id", userId);
+
     console.log(`[PayWithBalance] Order ${order.id} completed for user ${userId}, balance: ${currentBalance} -> ${newBalance}`);
 
     return new Response(

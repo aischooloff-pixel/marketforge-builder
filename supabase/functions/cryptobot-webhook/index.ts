@@ -268,6 +268,9 @@ serve(async (req) => {
       },
     });
 
+    // Удаляем брошенную корзину — пользователь оплатил
+    await supabase.from("cart_sessions").delete().eq("user_id", userId);
+
     console.log(`Payment processed: ${amountRub} RUB for user ${userId}`);
 
     return new Response("OK", { status: 200 });
