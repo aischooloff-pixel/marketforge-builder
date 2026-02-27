@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 // Через сколько минут бездействия отправлять напоминание
-const REMINDER_DELAY_MINUTES = 60;
+const REMINDER_DELAY_MINUTES = 15;
 
 interface CartItem {
   product: { id: string; name: string; price: number };
