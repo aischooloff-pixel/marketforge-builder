@@ -67,6 +67,47 @@ export type Database = {
           },
         ]
       }
+      cart_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          items: Json
+          reminder_sent: boolean
+          reminder_sent_at: string | null
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items?: Json
+          reminder_sent?: boolean
+          reminder_sent_at?: string | null
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items?: Json
+          reminder_sent?: boolean
+          reminder_sent_at?: string | null
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string | null
