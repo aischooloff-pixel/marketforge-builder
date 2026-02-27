@@ -33,6 +33,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextSaveRef = useRef(false);
 
   const getStorageKey = () => {
     if (user?.telegram_id) return `${CART_STORAGE_KEY}_${user.telegram_id}`;
@@ -41,12 +42,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load cart from localStorage
   useEffect(() => {
+    skipNextSaveRef.current = true;
     const storageKey = getStorageKey();
     try {
       const savedCart = localStorage.getItem(storageKey);
-      if (savedCart) setItems(JSON.parse(savedCart));
+      setItems(savedCart ? JSON.parse(savedCart) : []);
     } catch (error) {
       console.error('Failed to load cart:', error);
+      setItems([]);
     }
     setIsInitialized(true);
   }, [user?.telegram_id]);
@@ -54,6 +57,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Save cart to localStorage
   useEffect(() => {
     if (!isInitialized) return;
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
     try {
       localStorage.setItem(getStorageKey(), JSON.stringify(items));
     } catch (error) {
