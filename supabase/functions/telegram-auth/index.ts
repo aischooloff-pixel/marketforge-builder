@@ -148,36 +148,7 @@ serve(async (req) => {
 
     const telegramUser = parsedData.user;
 
-    // Try to get user's profile photo from Telegram Bot API
-    let photoUrl = telegramUser.photo_url;
-    if (!photoUrl) {
-      try {
-        const photosResponse = await fetch(
-          `https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${telegramUser.id}&limit=1`
-        );
-        const photosData = await photosResponse.json();
-        
-        if (photosData.ok && photosData.result?.photos?.length > 0) {
-          // Get the smallest photo (first in array)
-          const photo = photosData.result.photos[0];
-          const smallestPhoto = photo[0]; // smallest size
-          
-          // Get file path
-          const fileResponse = await fetch(
-            `https://api.telegram.org/bot${botToken}/getFile?file_id=${smallestPhoto.file_id}`
-          );
-          const fileData = await fileResponse.json();
-          
-          if (fileData.ok && fileData.result?.file_path) {
-            photoUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
-          }
-        }
-      } catch (photoError) {
-        console.log("Could not fetch profile photo:", photoError);
-        // Continue without photo - not critical
-      }
-    }
-
+    // Upsert profile (no photo fetch on auth - too slow)
     const { data: profile, error: upsertError } = await supabase
       .from("profiles")
       .upsert(
@@ -186,7 +157,6 @@ serve(async (req) => {
           username: telegramUser.username,
           first_name: telegramUser.first_name,
           last_name: telegramUser.last_name,
-          photo_url: photoUrl || null,
           language_code: telegramUser.language_code || "ru",
         },
         { onConflict: "telegram_id" }
@@ -202,26 +172,28 @@ serve(async (req) => {
       );
     }
 
-    const { data: existingRole } = await supabase
-      .from("user_roles")
-      .select("*")
-      .eq("user_id", profile.id)
-      .single();
+    // Batch: ensure role + fetch roles in parallel
+    const [, { data: roles }] = await Promise.all([
+      // Ensure user role exists (upsert-like)
+      supabase.from("user_roles").upsert(
+        { user_id: profile.id, role: "user" },
+        { onConflict: "user_id" }
+      ),
+      // Fetch all roles
+      supabase.from("user_roles").select("role").eq("user_id", profile.id),
+    ]);
 
-    if (!existingRole) {
-      await supabase.from("user_roles").insert({ user_id: profile.id, role: "user" });
-    }
-
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", profile.id);
-
-    await supabase.from("analytics_events").insert({
+    // Fire-and-forget analytics (don't await)
+    supabase.from("analytics_events").insert({
       user_id: profile.id,
       event_type: "auth",
       event_data: { telegram_id: telegramUser.id },
-    });
+    }).then(() => {});
+
+    // Fire-and-forget photo update in background
+    if (!profile.photo_url) {
+      fetchAndUpdatePhoto(botToken, telegramUser.id, profile.id, supabase).catch(() => {});
+    }
 
     console.log(`User authenticated: ${telegramUser.id} (${telegramUser.username})`);
 
@@ -243,3 +215,23 @@ serve(async (req) => {
     );
   }
 });
+
+async function fetchAndUpdatePhoto(botToken: string, telegramId: number, profileId: string, supabase: any) {
+  try {
+    const photosRes = await fetch(
+      `https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${telegramId}&limit=1`
+    );
+    const photosData = await photosRes.json();
+    if (!photosData.ok || !photosData.result?.photos?.length) return;
+
+    const fileId = photosData.result.photos[0][0].file_id;
+    const fileRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+    const fileData = await fileRes.json();
+    if (!fileData.ok || !fileData.result?.file_path) return;
+
+    const photoUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
+    await supabase.from("profiles").update({ photo_url: photoUrl }).eq("id", profileId);
+  } catch {
+    // Not critical
+  }
+}
