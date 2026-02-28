@@ -40,7 +40,7 @@ const ProfilePage = () => {
 
   const handleTopUp = async () => {
     const amount = parseInt(topUpAmount);
-    if (!amount || amount < 100 || !user) return;
+    if (!amount || amount < 50 || !user) return;
 
     setIsProcessing(true);
 
@@ -234,14 +234,14 @@ const ProfilePage = () => {
                         <label className="text-[10px] font-pixel text-muted-foreground">СУММА:</label>
                         <Input
                           type="number"
-                          placeholder="Минимум 100 ₽"
+                          placeholder="Минимум 50 ₽"
                           value={topUpAmount}
                           onChange={(e) => setTopUpAmount(e.target.value)}
-                          min={100}
+                          min={50}
                           className="bevel-sunken border-0 font-mono h-9"
                         />
                         <div className="grid grid-cols-4 gap-1">
-                          {[500, 1000, 3000, 5000].map(amount => (
+                          {[50, 100, 500, 1000].map(amount => (
                             <button
                               key={amount}
                               onClick={() => setTopUpAmount(amount.toString())}
@@ -289,7 +289,7 @@ const ProfilePage = () => {
                       {/* Submit */}
                       <Button
                         className="w-full bevel-raised font-pixel text-[10px] gap-2"
-                        disabled={!topUpAmount || parseInt(topUpAmount) < 100 || isProcessing}
+                        disabled={!topUpAmount || parseInt(topUpAmount) < 50 || isProcessing}
                         onClick={handleTopUp}
                       >
                         {isProcessing ? (
