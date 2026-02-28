@@ -11,6 +11,7 @@ import { BannedScreen } from "@/components/BannedScreen";
 import { FloatingZiplock } from "@/components/FloatingZiplock";
 import { PoliceRaidGlitch } from "@/components/PoliceRaidGlitch";
 import { CrtBootScreen } from "@/components/CrtBootScreen";
+import { ChannelGate } from "@/components/ChannelGate";
 
 import { useEffect } from "react";
 import Index from "./pages/Index";
@@ -53,6 +54,7 @@ const AppContent = () => {
           <Toaster />
           <Sonner />
           <CrtBootScreen />
+          <ChannelGate />
           
           <FloatingZiplock />
           <PoliceRaidGlitch />
