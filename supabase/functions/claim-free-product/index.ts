@@ -40,17 +40,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2. Check if already claimed this product
-    const { data: existing } = await supabase
+    // 2. Check if already claimed ANY free product (only 1 total allowed)
+    const { data: existingAny } = await supabase
       .from("free_claims")
       .select("id")
       .eq("user_id", profile.id)
-      .eq("product_id", product_id)
+      .limit(1)
       .maybeSingle();
 
-    if (existing) {
+    if (existingAny) {
       return new Response(
-        JSON.stringify({ error: "already_claimed", message: "Ты уже забрал этот товар" }),
+        JSON.stringify({ error: "already_claimed", message: "Ты уже забрал бесплатный подарок" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
           const data = await res.json();
           if (!data.ok || !["member", "administrator", "creator"].includes(data.result?.status)) {
             return new Response(
-              JSON.stringify({ error: "not_subscribed", message: "Подпишись на канал проекта" }),
+              JSON.stringify({ error: "not_subscribed", message: "Сначала подпишись на канал проекта" }),
               { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
@@ -114,50 +114,65 @@ Deno.serve(async (req) => {
       .eq("id", product_id)
       .single();
 
-    // 7. Send via Telegram
     const chatId = profile.telegram_id;
-    const fileUrls: string[] = [];
-    if (claimedItem.file_url) fileUrls.push(claimedItem.file_url);
+    const productName = product?.name || "Товар";
 
-    const textMessage = `🎁 Бесплатный товар получен!\n\n📦 ${product?.name || "Товар"}:\n${claimedItem.content}\n\n🛍 Спасибо! Загляни в каталог за другими товарами.`;
-
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: textMessage.substring(0, 4096),
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
-          ],
-        },
-      }),
-    });
-
-    // Send files if any
-    for (const fileUrl of fileUrls) {
-      const filePath = fileUrl.includes("/storage/v1/object/public/")
-        ? fileUrl.split("/storage/v1/object/public/delivery-files/")[1]
-        : fileUrl.split("/delivery-files/").pop();
-
-      if (!filePath) continue;
-
-      const { data: fileData, error: fileError } = await supabase.storage
-        .from("delivery-files")
-        .download(filePath);
-
-      if (fileError || !fileData) continue;
-
-      const fileName = filePath.split("/").pop() || "file";
-      const formData = new FormData();
-      formData.append("chat_id", chatId.toString());
-      formData.append("document", new File([fileData], fileName));
-      formData.append("caption", `📎 Бесплатный товар: ${product?.name || "Файл"}`);
-
-      await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+    // 7. If there's a file_url, send as a document (not text)
+    if (claimedItem.file_url) {
+      // Send intro message first
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: `🎁 Бесплатный товар получен!\n\n📦 ${productName}\n\n📎 Файл прикреплён ниже ⬇️`,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+            ],
+          },
+        }),
+      });
+
+      // Download and send the file
+      const filePath = claimedItem.file_url.includes("/storage/v1/object/public/")
+        ? claimedItem.file_url.split("/storage/v1/object/public/delivery-files/")[1]
+        : claimedItem.file_url.split("/delivery-files/").pop();
+
+      if (filePath) {
+        const { data: fileData, error: fileError } = await supabase.storage
+          .from("delivery-files")
+          .download(filePath);
+
+        if (!fileError && fileData) {
+          const fileName = filePath.split("/").pop() || "file";
+          const formData = new FormData();
+          formData.append("chat_id", chatId.toString());
+          formData.append("document", new File([fileData], fileName));
+          formData.append("caption", `📎 ${productName}`);
+
+          await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+            method: "POST",
+            body: formData,
+          });
+        }
+      }
+    } else {
+      // No file — send content as text
+      const textMessage = `🎁 Бесплатный товар получен!\n\n📦 ${productName}:\n${claimedItem.content}\n\n🛍 Спасибо! Загляни в каталог за другими товарами.`;
+
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: textMessage.substring(0, 4096),
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+            ],
+          },
+        }),
       });
     }
 

@@ -67,8 +67,10 @@ export const FreeProductsSection = () => {
   const [open, setOpen] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [claiming, setClaiming] = useState(false);
+  const [alreadyClaimed, setAlreadyClaimed] = useState<boolean | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Load products and check if user already claimed
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase
@@ -79,6 +81,30 @@ export const FreeProductsSection = () => {
 
       if (data && data.length > 0) {
         setProducts(data as unknown as Product[]);
+      }
+
+      // Check if current user already claimed any free product
+      const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser?.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("telegram_id", tgUser.id)
+          .maybeSingle();
+
+        if (profile) {
+          const { data: claims } = await supabase
+            .from("free_claims")
+            .select("id")
+            .eq("user_id", profile.id)
+            .limit(1);
+
+          setAlreadyClaimed(claims !== null && claims.length > 0);
+        } else {
+          setAlreadyClaimed(false);
+        }
+      } else {
+        setAlreadyClaimed(false);
       }
     };
     load();
@@ -117,7 +143,7 @@ export const FreeProductsSection = () => {
 
       if (data?.error) {
         const msgs: Record<string, string> = {
-          already_claimed: "Ты уже забрал этот товар",
+          already_claimed: "Ты уже забрал бесплатный подарок",
           not_subscribed: "Сначала подпишись на канал проекта",
           out_of_stock: "Товар закончился",
           check_failed: "Не удалось проверить подписку, попробуй позже",
@@ -125,7 +151,7 @@ export const FreeProductsSection = () => {
         toast({
           title: data.error === "not_subscribed" ? "Подпишись на канал" : "Не получилось",
           description: msgs[data.error] || data.message,
-          variant: data.error === "not_subscribed" ? "destructive" : undefined,
+          variant: "destructive",
         });
         return;
       }
@@ -133,6 +159,7 @@ export const FreeProductsSection = () => {
       if (data?.success) {
         toast({ title: "🎉 Товар отправлен!", description: "Проверь личные сообщения бота" });
         setOpen(false);
+        setAlreadyClaimed(true); // hide section
       }
     } catch (e: any) {
       toast({ title: "Ошибка", description: e.message || "Попробуй позже", variant: "destructive" });
@@ -141,7 +168,8 @@ export const FreeProductsSection = () => {
     }
   };
 
-  if (products.length === 0) return null;
+  // Don't render if no products, still loading claim status, or already claimed
+  if (products.length === 0 || alreadyClaimed === null || alreadyClaimed) return null;
 
   return (
     <>
@@ -190,7 +218,7 @@ export const FreeProductsSection = () => {
 
             <h3 className="text-lg md:text-xl font-bold mb-1">Выбери товар</h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Листай ← → и нажми «Выбрать»
+              Листай ← → и нажми «Выбрать» (можно забрать только 1 раз)
             </p>
 
             {/* scrollable cards */}
