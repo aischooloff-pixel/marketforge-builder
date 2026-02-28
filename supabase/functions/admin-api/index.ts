@@ -1333,6 +1333,75 @@ serve(async (req) => {
         });
       }
 
+      // ============ REQUIRED CHANNELS ============
+      case path === "/required-channels" && method === "GET": {
+        const { data, error } = await supabase
+          .from("required_channels")
+          .select("*")
+          .order("sort_order");
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data || []), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path === "/required-channels" && method === "POST": {
+        const { channel_id, channel_name, channel_url } = body;
+        if (!channel_id || !channel_name || !channel_url) {
+          return new Response(
+            JSON.stringify({ error: "Missing channel_id, channel_name, or channel_url" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data, error } = await supabase
+          .from("required_channels")
+          .insert({ channel_id, channel_name, channel_url })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/required-channels/") && method === "PUT": {
+        const channelId = path.split("/")[2];
+        const updateFields: Record<string, unknown> = {};
+        if (body.is_active !== undefined) updateFields.is_active = body.is_active;
+        if (body.sort_order !== undefined) updateFields.sort_order = body.sort_order;
+        if (body.channel_name !== undefined) updateFields.channel_name = body.channel_name;
+        if (body.channel_url !== undefined) updateFields.channel_url = body.channel_url;
+        if (body.channel_id !== undefined) updateFields.channel_id = body.channel_id;
+
+        const { data, error } = await supabase
+          .from("required_channels")
+          .update(updateFields)
+          .eq("id", channelId)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify(data), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case path.startsWith("/required-channels/") && method === "DELETE": {
+        const channelId = path.split("/")[2];
+        const { error } = await supabase
+          .from("required_channels")
+          .delete()
+          .eq("id", channelId);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Not found" }),
