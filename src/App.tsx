@@ -11,7 +11,7 @@ import { BannedScreen } from "@/components/BannedScreen";
 import { FloatingZiplock } from "@/components/FloatingZiplock";
 import { PoliceRaidGlitch } from "@/components/PoliceRaidGlitch";
 import { CrtBootScreen } from "@/components/CrtBootScreen";
-import { AgeGate } from "@/components/AgeGate";
+
 import { useEffect } from "react";
 import Index from "./pages/Index";
 import CatalogPage from "./pages/CatalogPage";
@@ -53,7 +53,7 @@ const AppContent = () => {
           <Toaster />
           <Sonner />
           <CrtBootScreen />
-          <AgeGate />
+          
           <FloatingZiplock />
           <PoliceRaidGlitch />
           <div className="crt-overlay" />
