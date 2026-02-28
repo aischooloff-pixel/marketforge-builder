@@ -4,75 +4,48 @@ import { Button } from '@/components/ui/button';
 import { PxMail, PxShield } from '@/components/PixelIcons';
 
 const CHANNEL_URL = 'https://t.me/TemkaStoreNews';
-const CACHE_KEY = 'channel_sub_ok';
 
 export const ChannelGate = () => {
-  // null = not yet determined, true = subscribed, false = not subscribed
-  const [status, setStatus] = useState<boolean | null>(() => {
-    // Instant cache check — no render flash
-    if (sessionStorage.getItem(CACHE_KEY) === '1') return true;
-    return null;
-  });
+  // null = initial check in progress, true = subscribed, false = not subscribed
+  const [status, setStatus] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(false);
   const [telegramId, setTelegramId] = useState<number | null>(null);
 
-  useEffect(() => {
-    // Already cached as subscribed
-    if (status === true) return;
+  const runCheck = useCallback(async (id: number) => {
+    setChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-channel-subscription', {
+        body: { telegram_id: id },
+      });
 
+      if (error) {
+        console.error('[ChannelGate] check error:', error);
+        setStatus(false);
+        return;
+      }
+
+      setStatus(data?.subscribed === true);
+    } catch (err) {
+      console.error('[ChannelGate] check failed:', err);
+      setStatus(false);
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+
+    // Вне Telegram не блокируем разработку/preview
     if (!tgUser?.id) {
-      // Not in Telegram — skip gate
       setStatus(true);
       return;
     }
 
     setTelegramId(tgUser.id);
-
-    // Auto-check once on mount
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await supabase.functions.invoke('check-channel-subscription', {
-          body: { telegram_id: tgUser.id },
-        });
-        if (cancelled) return;
-        if (data?.subscribed === true) {
-          sessionStorage.setItem(CACHE_KEY, '1');
-          setStatus(true);
-        } else {
-          setStatus(false);
-        }
-      } catch {
-        if (cancelled) return;
-        // On error don't block user
-        setStatus(true);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, []);
-
-  const checkSubscription = useCallback(async () => {
-    if (!telegramId || checking) return;
-    setChecking(true);
-    try {
-      const { data } = await supabase.functions.invoke('check-channel-subscription', {
-        body: { telegram_id: telegramId },
-      });
-      if (data?.subscribed === true) {
-        sessionStorage.setItem(CACHE_KEY, '1');
-        setStatus(true);
-      } else {
-        setStatus(false);
-      }
-    } catch {
-      // On error don't block
-      setStatus(true);
-    } finally {
-      setChecking(false);
-    }
-  }, [telegramId, checking]);
+    // Автопроверка 1 раз при запуске
+    runCheck(tgUser.id);
+  }, [runCheck]);
 
   const handleSubscribe = () => {
     if (window.Telegram?.WebApp) {
@@ -82,9 +55,18 @@ export const ChannelGate = () => {
     }
   };
 
-  // Don't show anything while checking initially or if subscribed
-  if (status === null || status === true) return null;
+  const handleManualCheck = async () => {
+    if (!telegramId || checking) return;
+    await runCheck(telegramId);
+  };
 
+  // Подписан — пускаем
+  if (status === true) return null;
+
+  // Первичная проверка — не показываем окно (без текста "Проверяю...")
+  if (status === null) return null;
+
+  // Не подписан — блокируем
   return (
     <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="win95-window max-w-sm w-full p-6 text-center space-y-5">
@@ -108,21 +90,19 @@ export const ChannelGate = () => {
           </Button>
 
           <Button
-            onClick={checkSubscription}
+            onClick={handleManualCheck}
             variant="outline"
             className="w-full gap-2"
             disabled={checking}
           >
             <PxShield size={14} />
-            {checking ? 'Проверяю...' : 'Проверить подписку'}
+            Проверить подписку
           </Button>
         </div>
 
-        {status === false && !checking && (
-          <p className="text-xs text-destructive font-mono">
-            ✗ Подписка не обнаружена. Подпишитесь и нажмите «Проверить».
-          </p>
-        )}
+        <p className="text-xs text-destructive font-mono">
+          ✗ Подписка не обнаружена. Подпишитесь и нажмите «Проверить».
+        </p>
       </div>
     </div>
   );
