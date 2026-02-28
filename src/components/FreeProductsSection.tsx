@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,17 @@ const useCountdown = () => {
   return { hours, minutes, seconds };
 };
 
+/* ——— Retro digit cell ——— */
+const TimerDigit = ({ value, label }: { value: string; label: string }) => (
+  <div className="flex flex-col items-center gap-0.5">
+    <div className="bevel-sunken bg-background px-2 py-1 min-w-[36px] md:min-w-[44px] text-center">
+      <span className="font-mono text-lg md:text-2xl font-bold text-primary tracking-wider">
+        {value}
+      </span>
+    </div>
+    <span className="text-[8px] md:text-[9px] text-muted-foreground uppercase">{label}</span>
+  </div>
+);
 
 /* ——— mini card (no price, no cart button) ——— */
 const FreeCard = ({
@@ -221,38 +232,70 @@ export const FreeProductsSection = () => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-2xl mx-auto text-center"
+            className="max-w-3xl mx-auto"
           >
-            {/* Title row with LED signboard */}
-            <div className="flex items-center justify-center gap-3 md:gap-4 mb-3">
-              <h2 className="text-xl md:text-2xl font-bold">
-                🎁 Бесплатные инструменты
-              </h2>
-
-              {/* LED electronic signboard */}
-              <div
-                className="bevel-sunken px-2.5 py-1.5 md:px-3 md:py-2 flex items-center gap-1"
-                style={{ background: "hsl(0 0% 5%)" }}
-              >
-                <span
-                  className="font-mono text-sm md:text-base font-bold tracking-widest"
-                  style={{ color: "hsl(0 100% 50%)", textShadow: "0 0 6px hsl(0 100% 50% / 0.6)" }}
-                >
-                  {hours}:{minutes}:{seconds}
+            <div className="win95-window overflow-hidden">
+              {/* Titlebar */}
+              <div className="win95-titlebar px-3 py-1.5">
+                <span className="text-[10px] md:text-xs truncate flex-1">
+                  ⚡ ОГРАНИЧЕННАЯ АКЦИЯ
                 </span>
+                <span className="text-[10px] animate-pulse">●</span>
+              </div>
+
+              {/* Content area — retro CRT feel */}
+              <div className="relative bg-background p-0">
+                {/* Scanline overlay */}
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-[0.03] z-10"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(0deg, transparent, transparent 2px, hsl(var(--foreground)) 2px, hsl(var(--foreground)) 3px)",
+                  }}
+                />
+
+                <div className="relative z-0 flex flex-col md:flex-row items-stretch">
+                  {/* Left: old monitor / signboard */}
+                  <div className="flex-1 p-4 md:p-6 flex flex-col items-center md:items-start justify-center text-center md:text-left">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl md:text-3xl">🎁</span>
+                      <h2 className="text-lg md:text-xl font-bold text-foreground leading-tight">
+                        Бесплатные<br />инструменты
+                      </h2>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-4 max-w-[240px]">
+                      Подпишись на канал и забери один из инструментов — бесплатно
+                    </p>
+                    <Button
+                      size="lg"
+                      className="gap-2 text-sm px-6 h-10 md:h-11"
+                      onClick={() => setOpen(true)}
+                    >
+                      🎁 Забрать
+                    </Button>
+                  </div>
+
+                  {/* Right: countdown timer panel */}
+                  <div className="bevel-sunken bg-card/50 p-4 md:p-6 flex flex-col items-center justify-center gap-2 min-w-[200px] md:min-w-[240px]">
+                    <div className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-widest mb-1">
+                      До конца акции
+                    </div>
+
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <TimerDigit value={hours} label="час" />
+                      <span className="text-lg md:text-xl font-bold text-muted-foreground animate-pulse pb-4">:</span>
+                      <TimerDigit value={minutes} label="мин" />
+                      <span className="text-lg md:text-xl font-bold text-muted-foreground animate-pulse pb-4">:</span>
+                      <TimerDigit value={seconds} label="сек" />
+                    </div>
+
+                    <div className="text-[8px] md:text-[9px] text-destructive font-bold mt-1 animate-pulse">
+                      ⚠ КОЛИЧЕСТВО ОГРАНИЧЕНО
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <p className="text-sm text-muted-foreground mb-4">
-              Подпишись на канал и забери один из инструментов — бесплатно
-            </p>
-            <Button
-              size="lg"
-              className="gap-2 text-sm md:text-base px-8 h-11 md:h-12"
-              onClick={() => setOpen(true)}
-            >
-              🎁 Забрать бесплатно
-            </Button>
           </motion.div>
         </div>
       </section>
