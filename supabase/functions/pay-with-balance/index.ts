@@ -121,6 +121,43 @@ serve(async (req) => {
     const userId = profile.id;
     const currentBalance = parseFloat(String(profile.balance)) || 0;
 
+    // ====== SERVER-SIDE PRICE VALIDATION ======
+    const productIds = (items as CartItem[]).map(i => i.productId).filter(Boolean);
+    if (productIds.length > 0) {
+      const { data: dbProducts } = await supabase
+        .from("products")
+        .select("id, price")
+        .in("id", productIds);
+
+      if (!dbProducts || dbProducts.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Товары не найдены" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const priceMap = new Map(dbProducts.map((p: any) => [p.id, parseFloat(p.price)]));
+      let calculatedTotal = 0;
+      for (const item of items as CartItem[]) {
+        const realPrice = priceMap.get(item.productId);
+        if (realPrice === undefined) {
+          return new Response(
+            JSON.stringify({ error: `Товар "${item.productName}" не найден` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        calculatedTotal += realPrice * (item.quantity || 1);
+      }
+
+      if (Math.abs(total - calculatedTotal) > 1) {
+        console.error(`Price mismatch: client sent ${total}, server calculated ${calculatedTotal}`);
+        return new Response(
+          JSON.stringify({ error: "Сумма не совпадает с реальными ценами товаров" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     if (currentBalance < total) {
       return new Response(
         JSON.stringify({ error: "Недостаточно средств на балансе" }),

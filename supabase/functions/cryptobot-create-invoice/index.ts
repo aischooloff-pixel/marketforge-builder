@@ -115,6 +115,49 @@ serve(async (req) => {
     const userId = profile.id;
     const webhookUrl = `${supabaseUrl}/functions/v1/cryptobot-webhook`;
 
+    // ====== SERVER-SIDE PRICE VALIDATION ======
+    let verifiedTotal = amount;
+    if (items && Array.isArray(items) && items.length > 0) {
+      const productIds = items.map((i: any) => i.productId).filter(Boolean);
+      if (productIds.length > 0) {
+        const { data: dbProducts } = await supabase
+          .from("products")
+          .select("id, price")
+          .in("id", productIds);
+
+        if (!dbProducts || dbProducts.length === 0) {
+          return new Response(
+            JSON.stringify({ error: "Товары не найдены" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const priceMap = new Map(dbProducts.map((p: any) => [p.id, parseFloat(p.price)]));
+        let calculatedTotal = 0;
+        for (const item of items) {
+          const realPrice = priceMap.get(item.productId);
+          if (realPrice === undefined) {
+            return new Response(
+              JSON.stringify({ error: `Товар "${item.productName}" не найден` }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          calculatedTotal += realPrice * (item.quantity || 1);
+        }
+
+        // Account for optional balanceToUse
+        const expectedCryptoAmount = calculatedTotal - (balanceToUse || 0);
+        if (Math.abs(amount - expectedCryptoAmount) > 1) {
+          console.error(`Price mismatch: client sent ${amount}, server calculated ${expectedCryptoAmount} (total ${calculatedTotal}, balanceToUse ${balanceToUse || 0})`);
+          return new Response(
+            JSON.stringify({ error: "Сумма не совпадает с реальными ценами товаров" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        verifiedTotal = calculatedTotal;
+      }
+    }
+
     // Get current exchange rate from CryptoBot
     const ratesResponse = await fetch(`${CRYPTOBOT_API_URL}/getExchangeRates`, {
       headers: { "Crypto-Pay-API-Token": cryptoBotToken },
@@ -123,14 +166,12 @@ serve(async (req) => {
     
     let usdtAmount: string;
     if (ratesData.ok) {
-      // Find USDT -> RUB rate
       const usdtRub = ratesData.result?.find(
         (r: { source: string; target: string }) => r.source === "USDT" && r.target === "RUB"
       );
       if (usdtRub) {
         usdtAmount = (amount / parseFloat(usdtRub.rate)).toFixed(2);
       } else {
-        // Fallback if rate not found
         usdtAmount = (amount / 90).toFixed(2);
       }
     } else {
@@ -145,7 +186,7 @@ serve(async (req) => {
       const { data: newOrder } = await supabase.from("orders").insert({
         user_id: userId,
         status: "pending",
-        total: amount,
+        total: verifiedTotal,
         payment_method: "cryptobot",
       }).select("id").single();
       finalOrderId = newOrder?.id;

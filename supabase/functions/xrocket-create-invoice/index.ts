@@ -134,6 +134,39 @@ serve(async (req) => {
 
     const userId = profile.id;
 
+    // ====== SERVER-SIDE PRICE VALIDATION ======
+    let verifiedTotal = amount;
+    if (items && Array.isArray(items) && items.length > 0) {
+      const productIds = items.map((i: any) => i.productId).filter(Boolean);
+      if (productIds.length > 0) {
+        const { data: dbProducts } = await supabase
+          .from("products")
+          .select("id, price")
+          .in("id", productIds);
+
+        if (!dbProducts || dbProducts.length === 0) {
+          return json({ error: "Товары не найдены" }, 400);
+        }
+
+        const priceMap = new Map(dbProducts.map((p: any) => [p.id, parseFloat(p.price)]));
+        let calculatedTotal = 0;
+        for (const item of items) {
+          const realPrice = priceMap.get(item.productId);
+          if (realPrice === undefined) {
+            return json({ error: `Товар "${item.productName}" не найден` }, 400);
+          }
+          calculatedTotal += realPrice * (item.quantity || 1);
+        }
+
+        const expectedCryptoAmount = calculatedTotal - (balanceToUse || 0);
+        if (Math.abs(amount - expectedCryptoAmount) > 1) {
+          console.error(`Price mismatch: client sent ${amount}, server calculated ${expectedCryptoAmount} (total ${calculatedTotal}, balanceToUse ${balanceToUse || 0})`);
+          return json({ error: "Сумма не совпадает с реальными ценами товаров" }, 400);
+        }
+        verifiedTotal = calculatedTotal;
+      }
+    }
+
     // Get dynamic exchange rate
     const rubRate = await getUsdtRubRate();
     const usdtAmount = (amount / rubRate).toFixed(2);
@@ -144,7 +177,7 @@ serve(async (req) => {
     const { data: newOrder } = await supabase.from("orders").insert({
       user_id: userId,
       status: "pending",
-      total: amount,
+      total: verifiedTotal,
       payment_method: "xrocket",
     }).select("id").single();
 
