@@ -47,6 +47,48 @@ async function tg(botToken: string, method: string, body: Record<string, unknown
   });
 }
 
+async function getRequiredChannels(supabase: any) {
+  const { data } = await supabase
+    .from("required_channels")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order");
+  return data || [];
+}
+
+async function checkUserSubscriptions(botToken: string, userId: number, channels: any[]): Promise<string[]> {
+  const notSubscribed: string[] = [];
+  for (const ch of channels) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: ch.channel_id, user_id: userId }),
+      });
+      const data = await res.json();
+      const status = data?.result?.status;
+      if (!status || status === "left" || status === "kicked") {
+        notSubscribed.push(ch.id);
+      }
+    } catch (e) {
+      console.error(`[Bot] Failed to check membership for ${ch.channel_id}:`, e);
+      // If check fails, assume not subscribed
+      notSubscribed.push(ch.id);
+    }
+  }
+  return notSubscribed;
+}
+
+function buildSubscriptionMessage(channels: any[]) {
+  const text = "📢 Для использования бота необходимо подписаться на наши каналы:\n\nПодпишитесь и нажмите «✅ Проверить подписку»";
+  const buttons = channels.map((ch: any) => ([{
+    text: `📢 ${ch.channel_name}`,
+    url: ch.channel_url,
+  }]));
+  buttons.push([{ text: "✅ Проверить подписку", callback_data: "check_subscription" }]);
+  return { text, buttons };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -84,6 +126,77 @@ serve(async (req) => {
       const messageId = callback.message?.message_id;
       const data = callback.data as string;
       const fromId = callback.from?.id;
+
+      // --- Check subscription ---
+      if (data === "check_subscription") {
+        const channels = await getRequiredChannels(supabase);
+        if (channels.length === 0) {
+          // No required channels — pass through
+          await tg(botToken, "answerCallbackQuery", { callback_query_id: callback.id, text: "✅ Подписка подтверждена!" });
+          await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
+          // Show captcha or welcome
+          const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${fromId}&select=id,bot_verified`, {
+            headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+          });
+          const profiles = await profileRes.json();
+          const isVerified = profiles?.[0]?.bot_verified === true;
+          if (isVerified) {
+            await tg(botToken, "sendMessage", {
+              chat_id: chatId, text: buildWelcomeMessage(callback.from?.username), parse_mode: "HTML",
+              disable_web_page_preview: true,
+              reply_markup: { inline_keyboard: [
+                [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+                [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
+              ]},
+            });
+          } else {
+            const captcha = buildCaptcha();
+            await tg(botToken, "sendMessage", {
+              chat_id: chatId, text: captcha.text,
+              reply_markup: { inline_keyboard: [captcha.buttons] },
+            });
+          }
+          return new Response("ok", { status: 200 });
+        }
+
+        const notSubscribed = await checkUserSubscriptions(botToken, fromId, channels);
+        if (notSubscribed.length > 0) {
+          await tg(botToken, "answerCallbackQuery", {
+            callback_query_id: callback.id,
+            text: "❌ Вы подписались не на все каналы!",
+            show_alert: true,
+          });
+          return new Response("ok", { status: 200 });
+        }
+
+        // All subscribed — delete message and proceed
+        await tg(botToken, "answerCallbackQuery", { callback_query_id: callback.id, text: "✅ Подписка подтверждена!" });
+        await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
+
+        // Now show captcha or welcome
+        const profileRes2 = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${fromId}&select=id,bot_verified`, {
+          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+        });
+        const profiles2 = await profileRes2.json();
+        const isVerified2 = profiles2?.[0]?.bot_verified === true;
+        if (isVerified2) {
+          await tg(botToken, "sendMessage", {
+            chat_id: chatId, text: buildWelcomeMessage(callback.from?.username), parse_mode: "HTML",
+            disable_web_page_preview: true,
+            reply_markup: { inline_keyboard: [
+              [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+              [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
+            ]},
+          });
+        } else {
+          const captcha = buildCaptcha();
+          await tg(botToken, "sendMessage", {
+            chat_id: chatId, text: captcha.text,
+            reply_markup: { inline_keyboard: [captcha.buttons] },
+          });
+        }
+        return new Response("ok", { status: 200 });
+      }
 
       // --- Captcha ---
       if (data === "captcha_ok") {
@@ -225,6 +338,21 @@ serve(async (req) => {
 
     // --- /start command ---
     if (text === "/start" || text?.startsWith("/start ")) {
+      // Check required channels first
+      const channels = await getRequiredChannels(supabase);
+      if (channels.length > 0) {
+        const notSubscribed = await checkUserSubscriptions(botToken, telegramId, channels);
+        if (notSubscribed.length > 0) {
+          const sub = buildSubscriptionMessage(channels);
+          await tg(botToken, "sendMessage", {
+            chat_id: chatId,
+            text: sub.text,
+            reply_markup: { inline_keyboard: sub.buttons },
+          });
+          return new Response("ok", { status: 200 });
+        }
+      }
+
       const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id,bot_verified`, {
         headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
       });

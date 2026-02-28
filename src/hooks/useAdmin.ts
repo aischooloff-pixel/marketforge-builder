@@ -358,6 +358,7 @@ export const useAdmin = () => {
   return {
     isLoading,
     error,
+    invokeAdminApi,
     // Auth
     loginWithPassword,
     isPasswordAuthed,

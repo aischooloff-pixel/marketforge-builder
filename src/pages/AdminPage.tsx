@@ -15,6 +15,7 @@ import { StatsCharts } from '@/components/admin/StatsCharts';
 import { SupportTicketsTab } from '@/components/admin/SupportTicketsTab';
 import { ReviewsTab } from '@/components/admin/ReviewsTab';
 import { BroadcastTab } from '@/components/admin/BroadcastTab';
+import { RequiredChannelsTab } from '@/components/admin/RequiredChannelsTab';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
 import { 
   LayoutDashboard, 
@@ -38,7 +39,8 @@ import {
   Send,
   ChevronDown,
   ChevronUp,
-  ExternalLink
+  ExternalLink,
+  Radio
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -456,7 +458,7 @@ const AdminPage = () => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-9 mb-6">
+          <TabsList className="grid w-full grid-cols-10 mb-6">
             <TabsTrigger value="dashboard" className="text-xs">
               <LayoutDashboard className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Обзор</span>
@@ -493,6 +495,10 @@ const AdminPage = () => {
                   {tickets.filter(t => t.status === 'open').length}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="channels" className="text-xs">
+              <Radio className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Каналы</span>
             </TabsTrigger>
             <TabsTrigger value="broadcast" className="text-xs">
               <Send className="h-4 w-4 mr-1" />
@@ -895,6 +901,11 @@ const AdminPage = () => {
                     if (data) setTickets(data as any[]);
                   }}
                 />
+              </TabsContent>
+
+              {/* Required Channels */}
+              <TabsContent value="channels">
+                <RequiredChannelsTab invokeAdminApi={admin.invokeAdminApi} />
               </TabsContent>
 
               {/* Broadcast */}
