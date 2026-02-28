@@ -33,9 +33,11 @@ export const RelatedProducts = ({ categoryId, currentProductId }: RelatedProduct
         <span className="text-[9px] md:text-[11px]">🛒 С этим покупают</span>
       </div>
       <div className="p-2 md:p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+        <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-thin">
           {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
+            <div key={p.id} className="min-w-[160px] max-w-[200px] flex-shrink-0">
+              <ProductCard product={p} />
+            </div>
           ))}
         </div>
       </div>
