@@ -142,8 +142,12 @@ export const FreeProductsSection = () => {
       if (error) throw error;
 
       if (data?.error) {
+        if (data.error === "already_claimed") {
+          setOpen(false);
+          setAlreadyClaimed(true);
+          return;
+        }
         const msgs: Record<string, string> = {
-          already_claimed: "Ты уже забрал бесплатный подарок",
           not_subscribed: "Сначала подпишись на канал проекта",
           out_of_stock: "Товар закончился",
           check_failed: "Не удалось проверить подписку, попробуй позже",
