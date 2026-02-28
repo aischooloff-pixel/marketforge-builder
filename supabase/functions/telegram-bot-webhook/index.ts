@@ -129,6 +129,23 @@ serve(async (req) => {
   try {
     const update = await req.json();
 
+    // --- Internal subscription check from web app ---
+    if (update._checkSubscription && update.telegram_id && update.channel_id) {
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: update.channel_id, user_id: update.telegram_id }),
+        });
+        const data = await res.json();
+        const status = data?.result?.status;
+        const subscribed = !!status && status !== "left" && status !== "kicked";
+        return new Response(JSON.stringify({ subscribed }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      } catch {
+        return new Response(JSON.stringify({ subscribed: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     // --- Handle callback_query ---
     const callback = update.callback_query;
     if (callback) {
