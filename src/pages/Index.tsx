@@ -25,6 +25,7 @@ import {
   PxWarning,
 } from "@/components/PixelIcons";
 import { PixelDivider } from "@/components/PixelDivider";
+import { FreeProductsSection } from "@/components/FreeProductsSection";
 
 const Index = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -92,6 +93,11 @@ const Index = () => {
         </section>
 
         <PixelDivider variant="zigzag" />
+
+        {/* Free Products */}
+        <FreeProductsSection />
+
+        <PixelDivider variant="checker" />
         {/* Features */}
         <section className="py-8 md:py-16 bg-secondary/30 criminal-pattern">
           <div className="container mx-auto px-4">
