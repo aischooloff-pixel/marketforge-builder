@@ -10,7 +10,7 @@ export const ChannelGate = () => {
   const [allowed, setAllowed] = useState(false);
   const [checking, setChecking] = useState(false);
   const [telegramId, setTelegramId] = useState<number | null>(null);
-  const [errorText, setErrorText] = useState<string>('');
+  const [errorText, setErrorText] = useState('');
   const [initialized, setInitialized] = useState(false);
   const checkingRef = useRef(false);
 
@@ -55,7 +55,6 @@ export const ChannelGate = () => {
     } finally {
       checkingRef.current = false;
       setChecking(false);
-      setInitialized(true);
     }
   }, [invokeCheckWithTimeout]);
 
@@ -63,14 +62,16 @@ export const ChannelGate = () => {
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
 
     if (!tgUser?.id) {
+      // Вне Telegram не блокируем preview/dev
       setAllowed(true);
       setInitialized(true);
       return;
     }
 
     setTelegramId(tgUser.id);
-    runCheck(tgUser.id);
-  }, [runCheck]);
+    // ВАЖНО: без автопроверки, только ручная кнопка
+    setInitialized(true);
+  }, []);
 
   const handleSubscribe = () => {
     if (window.Telegram?.WebApp) {
@@ -81,7 +82,10 @@ export const ChannelGate = () => {
   };
 
   const handleManualCheck = async () => {
-    if (!telegramId) return;
+    if (!telegramId) {
+      setErrorText('Не удалось получить Telegram ID. Перезапустите приложение из Telegram.');
+      return;
+    }
     await runCheck(telegramId);
   };
 
@@ -122,7 +126,7 @@ export const ChannelGate = () => {
         </div>
 
         <p className="text-xs text-destructive font-mono">
-          {errorText || 'Подписка не обнаружена. Подпишитесь и нажмите «Проверить подписку».'}
+          {errorText || 'Подпишитесь и нажмите «Проверить подписку».'}
         </p>
       </div>
     </div>
