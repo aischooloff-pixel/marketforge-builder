@@ -25,6 +25,7 @@ const categorySchema = z.object({
   slug: z.string().min(1, 'Slug обязателен'),
   icon: z.string().optional(),
   description: z.string().optional(),
+  cashback_percent: z.coerce.number().min(0).max(100).optional(),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -35,6 +36,7 @@ interface Category {
   slug: string;
   icon?: string;
   description?: string;
+  cashback_percent?: number;
 }
 
 interface CategoryFormDialogProps {
@@ -61,6 +63,7 @@ export const CategoryFormDialog = ({
       slug: '',
       icon: '',
       description: '',
+      cashback_percent: 0,
     },
   });
 
@@ -71,6 +74,7 @@ export const CategoryFormDialog = ({
         slug: category.slug,
         icon: category.icon || '',
         description: category.description || '',
+        cashback_percent: category.cashback_percent || 0,
       });
     } else {
       form.reset({
@@ -78,6 +82,7 @@ export const CategoryFormDialog = ({
         slug: '',
         icon: '',
         description: '',
+        cashback_percent: 0,
       });
     }
   }, [category, open, form]);
@@ -98,6 +103,7 @@ export const CategoryFormDialog = ({
       slug: data.slug,
       icon: data.icon || undefined,
       description: data.description || undefined,
+      cashback_percent: data.cashback_percent || 0,
     });
     onOpenChange(false);
   };
@@ -172,6 +178,20 @@ export const CategoryFormDialog = ({
                   <FormLabel>Описание</FormLabel>
                   <FormControl>
                     <Input placeholder="Описание категории" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="cashback_percent"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Кешбэк (%)</FormLabel>
+                  <FormControl>
+                    <Input type="number" min={0} max={100} placeholder="0" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

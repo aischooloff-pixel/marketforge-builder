@@ -30,6 +30,7 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 
   const categoryIcon = product.categories?.icon || '📦';
   const isOutOfStock = stockCount === 0;
+  const cashbackPercent = product.categories?.cashback_percent || 0;
 
   return (
     <motion.div
@@ -80,6 +81,13 @@ export const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
               <span className="text-primary">● В наличии</span>
               }
             </div>
+
+            {/* Cashback badge */}
+            {cashbackPercent > 0 && (
+              <div className="text-[10px] md:text-xs mb-2 text-green-600 dark:text-green-400 font-bold">
+                🎁 Кешбэк {cashbackPercent}%
+              </div>
+            )}
 
             {/* Price + cart row */}
             <div className="flex items-center justify-between pt-2 border-t-2 border-border/50 mt-auto">

@@ -364,6 +364,13 @@ const ProductPage = () => {
                               {product.type === 'subscription' && <span className="text-xs text-muted-foreground">/мес</span>}
                             </div>
 
+                            {/* Cashback */}
+                            {(product.categories?.cashback_percent || 0) > 0 && (
+                              <div className="bevel-raised bg-card p-2 text-center text-sm font-bold text-green-600 dark:text-green-400">
+                                🎁 Кешбэк {product.categories!.cashback_percent}% — вернём {Math.round(currentPeriodPrice * product.categories!.cashback_percent! / 100)} ₽ на баланс
+                              </div>
+                            )}
+
                             {/* Add to Cart */}
                             <Button className="w-full gap-2" onClick={handleAddToCart} disabled={isOutOfStock || isApiProduct && !selectedCountry || isApiProduct && selectedCountry && (proxyData?.availability?.[selectedCountry] || 0) === 0 || !isApiProduct && needsCountrySelector && !selectedCountry}>
                               {isOutOfStock ? <>
