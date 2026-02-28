@@ -12,6 +12,7 @@ import { FloatingZiplock } from "@/components/FloatingZiplock";
 import { PoliceRaidGlitch } from "@/components/PoliceRaidGlitch";
 import { CrtBootScreen } from "@/components/CrtBootScreen";
 import { AgeGate } from "@/components/AgeGate";
+import { ChannelSubscribePopup } from "@/components/ChannelSubscribePopup";
 import { useEffect } from "react";
 import Index from "./pages/Index";
 import CatalogPage from "./pages/CatalogPage";
@@ -54,6 +55,7 @@ const AppContent = () => {
           <Sonner />
           <CrtBootScreen />
           <AgeGate />
+          <ChannelSubscribePopup />
           <FloatingZiplock />
           <PoliceRaidGlitch />
           <div className="crt-overlay" />
