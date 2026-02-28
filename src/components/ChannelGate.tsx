@@ -4,46 +4,72 @@ import { Button } from '@/components/ui/button';
 import { PxMail, PxShield } from '@/components/PixelIcons';
 
 const CHANNEL_URL = 'https://t.me/TemkaStoreNews';
+const FRONTEND_TIMEOUT_MS = 6000;
 
 export const ChannelGate = () => {
-  // null = initial check in progress, true = subscribed, false = not subscribed
-  const [status, setStatus] = useState<boolean | null>(null);
+  // true = подписка подтверждена, false = доступ заблокирован
+  const [allowed, setAllowed] = useState(false);
   const [checking, setChecking] = useState(false);
   const [telegramId, setTelegramId] = useState<number | null>(null);
+  const [errorText, setErrorText] = useState<string>('');
 
-  const runCheck = useCallback(async (id: number) => {
-    setChecking(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('check-channel-subscription', {
+  const invokeCheckWithTimeout = useCallback(async (id: number) => {
+    return await Promise.race([
+      supabase.functions.invoke('check-channel-subscription', {
         body: { telegram_id: id },
-      });
-
-      if (error) {
-        console.error('[ChannelGate] check error:', error);
-        setStatus(false);
-        return;
-      }
-
-      setStatus(data?.subscribed === true);
-    } catch (err) {
-      console.error('[ChannelGate] check failed:', err);
-      setStatus(false);
-    } finally {
-      setChecking(false);
-    }
+      }),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('frontend_timeout')), FRONTEND_TIMEOUT_MS);
+      }),
+    ]);
   }, []);
+
+  const runCheck = useCallback(
+    async (id: number) => {
+      if (checking) return;
+      setChecking(true);
+      setErrorText('');
+
+      try {
+        const result = await invokeCheckWithTimeout(id);
+        const data = (result as { data?: { subscribed?: boolean }; error?: unknown }).data;
+        const error = (result as { data?: { subscribed?: boolean }; error?: unknown }).error;
+
+        if (error) {
+          console.error('[ChannelGate] invoke error:', error);
+          setAllowed(false);
+          setErrorText('Не удалось проверить подписку. Нажмите «Проверить подписку».');
+          return;
+        }
+
+        if (data?.subscribed === true) {
+          setAllowed(true);
+        } else {
+          setAllowed(false);
+          setErrorText('Подписка не обнаружена. Подпишитесь и нажмите «Проверить подписку».');
+        }
+      } catch (err) {
+        console.error('[ChannelGate] timeout/check failed:', err);
+        setAllowed(false);
+        setErrorText('Проверка заняла слишком много времени. Нажмите «Проверить подписку».');
+      } finally {
+        setChecking(false);
+      }
+    },
+    [checking, invokeCheckWithTimeout]
+  );
 
   useEffect(() => {
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
 
-    // Вне Telegram не блокируем разработку/preview
+    // Вне Telegram не блокируем preview/dev
     if (!tgUser?.id) {
-      setStatus(true);
+      setAllowed(true);
       return;
     }
 
     setTelegramId(tgUser.id);
-    // Автопроверка 1 раз при запуске
+    // Однократная проверка при старте (без UI-состояния "Проверяю...")
     runCheck(tgUser.id);
   }, [runCheck]);
 
@@ -56,17 +82,12 @@ export const ChannelGate = () => {
   };
 
   const handleManualCheck = async () => {
-    if (!telegramId || checking) return;
+    if (!telegramId) return;
     await runCheck(telegramId);
   };
 
-  // Подписан — пускаем
-  if (status === true) return null;
+  if (allowed) return null;
 
-  // Первичная проверка — не показываем окно (без текста "Проверяю...")
-  if (status === null) return null;
-
-  // Не подписан — блокируем
   return (
     <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="win95-window max-w-sm w-full p-6 text-center space-y-5">
@@ -101,7 +122,7 @@ export const ChannelGate = () => {
         </div>
 
         <p className="text-xs text-destructive font-mono">
-          ✗ Подписка не обнаружена. Подпишитесь и нажмите «Проверить».
+          {errorText || 'Подписка не обнаружена. Подпишитесь и нажмите «Проверить подписку».'}
         </p>
       </div>
     </div>

@@ -5,6 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const TELEGRAM_TIMEOUT_MS = 4500;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -30,15 +32,28 @@ serve(async (req) => {
 
     const channelUsername = '@TemkaStoreNews';
 
-    const response = await fetch(
-      `https://api.telegram.org/bot${botToken}/getChatMember?chat_id=${channelUsername}&user_id=${telegram_id}`
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort('telegram_timeout'), TELEGRAM_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      const params = new URLSearchParams({
+        chat_id: channelUsername,
+        user_id: String(telegram_id),
+      });
+
+      response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember?${params.toString()}`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const data = await response.json();
 
     if (!data.ok) {
       console.error('Telegram API error:', data);
-      // If bot is not admin in channel or user never interacted, treat as not subscribed
       return new Response(
         JSON.stringify({ subscribed: false, status: 'unknown' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -46,7 +61,6 @@ serve(async (req) => {
     }
 
     const memberStatus = data.result?.status;
-    // member, administrator, creator = subscribed; left, kicked, restricted = not subscribed
     const subscribed = ['member', 'administrator', 'creator'].includes(memberStatus);
 
     return new Response(
@@ -55,9 +69,13 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error checking subscription:', error);
+
+    const message = error instanceof Error ? error.message : String(error);
+    const isTimeout = message.includes('telegram_timeout') || message.includes('aborted');
+
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: isTimeout ? 'telegram_timeout' : 'internal_error', subscribed: false }),
+      { status: isTimeout ? 504 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
