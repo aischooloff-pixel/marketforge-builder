@@ -25,6 +25,7 @@ export interface Product {
     name: string;
     icon: string | null;
     slug: string;
+    cashback_percent?: number;
   } | null;
   available_count?: number;
 }
@@ -51,7 +52,8 @@ export const useProducts = (options: UseProductsOptions = {}) => {
             id,
             name,
             icon,
-            slug
+            slug,
+            cashback_percent
           )
         `)
         .eq('is_active', true)
@@ -134,7 +136,8 @@ export const useProduct = (id: string | undefined) => {
             id,
             name,
             icon,
-            slug
+            slug,
+            cashback_percent
           )
         `)
         .eq('id', id)

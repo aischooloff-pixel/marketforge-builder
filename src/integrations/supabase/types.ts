@@ -110,6 +110,7 @@ export type Database = {
       }
       categories: {
         Row: {
+          cashback_percent: number
           created_at: string | null
           description: string | null
           icon: string | null
@@ -120,6 +121,7 @@ export type Database = {
           sort_order: number | null
         }
         Insert: {
+          cashback_percent?: number
           created_at?: string | null
           description?: string | null
           icon?: string | null
@@ -130,6 +132,7 @@ export type Database = {
           sort_order?: number | null
         }
         Update: {
+          cashback_percent?: number
           created_at?: string | null
           description?: string | null
           icon?: string | null

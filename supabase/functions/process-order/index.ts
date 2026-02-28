@@ -154,6 +154,21 @@ serve(async (req) => {
       }
     }
 
+    // Calculate cashback
+    let totalCashback = 0;
+    for (const item of order.order_items) {
+      if (!item.product_id) continue;
+      const { data: prod } = await supabase
+        .from("products")
+        .select("category_id, categories(cashback_percent)")
+        .eq("id", item.product_id)
+        .single();
+      const cbPercent = (prod?.categories as any)?.cashback_percent || 0;
+      if (cbPercent > 0) {
+        totalCashback += Math.round(item.price * (item.quantity || 1) * cbPercent / 100);
+      }
+    }
+
     // Update order status
     const deliveredContent = deliveredItems.join("\n\n---\n\n");
     
@@ -170,12 +185,43 @@ serve(async (req) => {
       console.error("Failed to update order:", updateOrderError);
     }
 
+    // Credit cashback to user balance
+    if (totalCashback > 0) {
+      console.log(`[ProcessOrder] Crediting cashback ${totalCashback} RUB to user ${order.user_id}`);
+      
+      // Get current balance
+      const { data: profile2 } = await supabase
+        .from("profiles")
+        .select("balance")
+        .eq("id", order.user_id)
+        .single();
+      
+      const currentBalance = profile2?.balance || 0;
+      const newBalance = currentBalance + totalCashback;
+
+      await supabase
+        .from("profiles")
+        .update({ balance: newBalance })
+        .eq("id", order.user_id);
+
+      // Record transaction
+      await supabase.from("transactions").insert({
+        user_id: order.user_id,
+        type: "bonus",
+        amount: totalCashback,
+        balance_after: newBalance,
+        order_id: orderId,
+        description: `Кешбэк за заказ #${orderId.substring(0, 8)}`,
+      });
+    }
+
     // Send via Telegram bot
     if (telegramBotToken && telegramChatId) {
       try {
         // Send text content
         if (deliveredContent) {
-          const textMessage = `✅ Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}\n\n🙏 Спасибо за покупку! Будем рады видеть вас снова.\n⭐ Оставьте, пожалуйста, отзыв — нам важно ваше мнение!`;
+          const cashbackText = totalCashback > 0 ? `\n\n💰 Начислен кешбэк +${totalCashback} ₽ на ваш баланс!` : "";
+          const textMessage = `✅ Заказ #${orderId.substring(0, 8)} оплачен!\n\nВаши товары:\n\n${deliveredContent}${cashbackText}\n\n🙏 Спасибо за покупку! Будем рады видеть вас снова.\n⭐ Оставьте, пожалуйста, отзыв — нам важно ваше мнение!`;
 
           const buttons = [
                 [{ text: "⭐ Оставить отзыв", callback_data: `review_start:${orderId.substring(0, 8)}` }],

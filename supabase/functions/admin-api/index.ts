@@ -455,6 +455,7 @@ serve(async (req) => {
             slug: categoryData.slug,
             icon: categoryData.icon || null,
             description: categoryData.description || null,
+            cashback_percent: categoryData.cashback_percent || 0,
           })
           .select()
           .single();
@@ -475,6 +476,7 @@ serve(async (req) => {
         if (categoryData.description !== undefined) updateFields.description = categoryData.description || null;
         if (categoryData.is_active !== undefined) updateFields.is_active = categoryData.is_active;
         if (categoryData.sort_order !== undefined) updateFields.sort_order = categoryData.sort_order;
+        if (categoryData.cashback_percent !== undefined) updateFields.cashback_percent = categoryData.cashback_percent;
 
         const { data, error } = await supabase
           .from("categories")
