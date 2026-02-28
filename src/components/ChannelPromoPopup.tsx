@@ -4,30 +4,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { ExternalLink, X } from 'lucide-react';
 
-const STORAGE_KEY = 'temka_session_count';
-const SUBSCRIBED_KEY = 'temka_promo_subscribed';
-const CHANNEL_ID = '@TemkaStoreNews';
+const STORAGE_KEY = 'temka_promo_v2_session_count';
+const SUBSCRIBED_KEY = 'temka_promo_v2_subscribed';
+const SESSION_MARK_KEY = 'temka_promo_v2_launch_mark';
 const CHANNEL_URL = 'https://t.me/TemkaStoreNews';
 
 export const ChannelPromoPopup = () => {
   const { user, webApp } = useTelegram();
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
+  const telegramId = webApp?.initDataUnsafe?.user?.id ?? user?.telegram_id;
 
-    // Already dismissed permanently
+  useEffect(() => {
+    if (!telegramId) return;
+
     if (localStorage.getItem(SUBSCRIBED_KEY) === '1') return;
+
+    const launchMark = `${SESSION_MARK_KEY}:${telegramId}`;
+    if (sessionStorage.getItem(launchMark) === '1') return;
+    sessionStorage.setItem(launchMark, '1');
 
     const count = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10) + 1;
     localStorage.setItem(STORAGE_KEY, String(count));
 
-    // Show on 2nd launch, then every 5th (7, 12, 17...)
     const shouldShow = count === 2 || (count > 2 && (count - 2) % 5 === 0);
     if (!shouldShow) return;
 
-    setTimeout(() => setOpen(true), 1500);
-  }, [user]);
+    const timer = setTimeout(() => setOpen(true), 1500);
+    return () => clearTimeout(timer);
+  }, [telegramId]);
 
   const handleSubscribe = () => {
     if (webApp) {
@@ -39,7 +44,7 @@ export const ChannelPromoPopup = () => {
     setOpen(false);
   };
 
-  if (!user) return null;
+  if (!telegramId) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
