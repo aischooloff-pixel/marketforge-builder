@@ -15,6 +15,22 @@ function buildWelcomeMessage(username?: string) {
 🛍 Нажми кнопку ниже, чтобы открыть приложение магазина.`;
 }
 
+// --- Emoji captcha ---
+const CAPTCHA_EMOJIS = ["🍎", "🍕", "🚀", "⚡", "🎮", "🎵", "🌟", "🔥", "💎", "🎯", "🐱", "🦊", "🌈", "☀️", "🍀"];
+
+function buildCaptchaMessage() {
+  // Pick one correct emoji and 3 wrong ones
+  const shuffled = [...CAPTCHA_EMOJIS].sort(() => Math.random() - 0.5);
+  const correct = shuffled[0];
+  const options = shuffled.slice(0, 4).sort(() => Math.random() - 0.5);
+  const text = `🔒 <b>Подтверди, что ты не робот</b>\n\nНажми на эмодзи: <b>${correct}</b>`;
+  const buttons = options.map(emoji => ({
+    text: emoji,
+    callback_data: `captcha:${emoji === correct ? "ok" : "fail"}`,
+  }));
+  return { text, buttons: [buttons] };
+}
+
 async function tg(botToken: string, method: string, body: Record<string, unknown>) {
   return fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
     method: "POST",
@@ -223,6 +239,36 @@ serve(async (req) => {
         return new Response("ok", { status: 200 });
       }
 
+      // --- Captcha callback ---
+      if (data.startsWith("captcha:")) {
+        const result = data.split(":")[1];
+        if (result === "ok") {
+          await tg(botToken, "answerCallbackQuery", {
+            callback_query_id: callback.id,
+            text: "✅ Проверка пройдена!",
+          });
+          await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
+          await ensureProfile(supabaseUrl, supabaseKey, callback.from);
+          await sendWelcome(botToken, chatId, callback.from?.username);
+        } else {
+          await tg(botToken, "answerCallbackQuery", {
+            callback_query_id: callback.id,
+            text: "❌ Неправильно! Попробуй ещё раз.",
+            show_alert: true,
+          });
+          // Replace with new captcha
+          const captcha = buildCaptchaMessage();
+          await tg(botToken, "editMessageText", {
+            chat_id: chatId,
+            message_id: messageId,
+            text: captcha.text,
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: captcha.buttons },
+          });
+        }
+        return new Response("ok", { status: 200 });
+      }
+
       // --- Review: start ---
       if (data.startsWith("review_start:")) {
         const orderId = data.split(":")[1];
@@ -333,24 +379,27 @@ serve(async (req) => {
 
     // --- /start command ---
     if (text === "/start" || text?.startsWith("/start ")) {
-      // Check required channels first
-      const channels = await getRequiredChannels(supabase);
-      if (channels.length > 0) {
-        const notSubscribed = await checkUserSubscriptions(botToken, telegramId, channels);
-        if (notSubscribed.length > 0) {
-          const sub = buildSubscriptionMessage(channels);
-          await tg(botToken, "sendMessage", {
-            chat_id: chatId,
-            text: sub.text,
-            reply_markup: { inline_keyboard: sub.buttons },
-          });
-          return new Response("ok", { status: 200 });
-        }
+      // Check if already verified
+      const { data: existingProfiles } = await supabase
+        .from("profiles")
+        .select("bot_verified")
+        .eq("telegram_id", telegramId)
+        .limit(1);
+      
+      if (existingProfiles?.[0]?.bot_verified) {
+        // Already verified, just send welcome
+        await sendWelcome(botToken, chatId, message.from?.username);
+        return new Response("ok", { status: 200 });
       }
 
-      // Create/update profile and send welcome directly (no captcha)
-      await ensureProfile(supabaseUrl, supabaseKey, message.from);
-      await sendWelcome(botToken, chatId, message.from?.username);
+      // Send captcha
+      const captcha = buildCaptchaMessage();
+      await tg(botToken, "sendMessage", {
+        chat_id: chatId,
+        text: captcha.text,
+        parse_mode: "HTML",
+        reply_markup: { inline_keyboard: captcha.buttons },
+      });
     }
 
     return new Response("ok", { status: 200 });
