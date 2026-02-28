@@ -10,7 +10,6 @@ import { TelegramProvider, useTelegram } from "@/contexts/TelegramContext";
 import { BannedScreen } from "@/components/BannedScreen";
 import { FloatingZiplock } from "@/components/FloatingZiplock";
 import { PoliceRaidGlitch } from "@/components/PoliceRaidGlitch";
-import { TelegramSubscribePopup } from "@/components/TelegramSubscribePopup";
 import { CrtBootScreen } from "@/components/CrtBootScreen";
 import { AgeGate } from "@/components/AgeGate";
 import { useEffect } from "react";
@@ -57,7 +56,6 @@ const AppContent = () => {
           <AgeGate />
           <FloatingZiplock />
           <PoliceRaidGlitch />
-          <TelegramSubscribePopup />
           <div className="crt-overlay" />
           <BrowserRouter>
             <StartAppRedirect />
