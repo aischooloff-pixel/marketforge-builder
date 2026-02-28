@@ -9,6 +9,7 @@ export const ChannelGate = () => {
   const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(false);
   const [telegramId, setTelegramId] = useState<number | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   // Get telegram_id directly from WebApp — no waiting for profile
   useEffect(() => {
@@ -18,6 +19,7 @@ export const ChannelGate = () => {
     } else {
       // Not in Telegram (dev mode) — skip gate
       setIsSubscribed(true);
+      setInitialized(true);
     }
   }, []);
 
@@ -28,15 +30,23 @@ export const ChannelGate = () => {
       const { data, error } = await supabase.functions.invoke('check-channel-subscription', {
         body: { telegram_id: telegramId },
       });
+      
+      console.log('[ChannelGate] Response:', data, error);
+      
       if (error) {
         console.error('[ChannelGate] Error:', error);
+        // On error, don't block the user
+        setIsSubscribed(true);
         return;
       }
       setIsSubscribed(data?.subscribed === true);
     } catch (err) {
       console.error('[ChannelGate] Check failed:', err);
+      // On error, don't block the user
+      setIsSubscribed(true);
     } finally {
       setChecking(false);
+      setInitialized(true);
     }
   }, [telegramId]);
 
@@ -55,10 +65,23 @@ export const ChannelGate = () => {
     }
   };
 
-  // Don't render if subscribed or not in Telegram
+  // Don't render if subscribed
   if (isSubscribed === true) return null;
-  // Show nothing until initial check completes
-  if (isSubscribed === null && !checking) return null;
+  // Show loading while initial check is running
+  if (!initialized) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="win95-window max-w-sm w-full p-6 text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="p-3 bevel-raised bg-card">
+              <PxMail size={32} />
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground font-mono">Проверяю подписку...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
