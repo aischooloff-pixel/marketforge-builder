@@ -518,36 +518,6 @@ export type Database = {
           },
         ]
       }
-      required_channels: {
-        Row: {
-          channel_id: string
-          channel_name: string
-          channel_url: string
-          created_at: string
-          id: string
-          is_active: boolean
-          sort_order: number
-        }
-        Insert: {
-          channel_id: string
-          channel_name: string
-          channel_url: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          sort_order?: number
-        }
-        Update: {
-          channel_id?: string
-          channel_name?: string
-          channel_url?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          sort_order?: number
-        }
-        Relationships: []
-      }
       reviews: {
         Row: {
           author_name: string | null

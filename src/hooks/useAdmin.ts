@@ -141,20 +141,6 @@ export const useAdmin = () => {
     }
   }, [user?.id, adminPassword]);
 
-  // Batch - load all data in one call
-  const fetchBatch = useCallback(async () => {
-    return invokeAdminApi<{
-      stats: Stats;
-      products: Product[];
-      orders: Order[];
-      deposits: any[];
-      users: User[];
-      categories: any[];
-      promos: any[];
-      tickets: any[];
-    }>('/batch', 'GET');
-  }, [invokeAdminApi]);
-
   // Stats
   const fetchStats = useCallback(async (): Promise<Stats | null> => {
     return invokeAdminApi<Stats>('/stats', 'GET');
@@ -372,8 +358,6 @@ export const useAdmin = () => {
   return {
     isLoading,
     error,
-    invokeAdminApi,
-    fetchBatch,
     // Auth
     loginWithPassword,
     isPasswordAuthed,

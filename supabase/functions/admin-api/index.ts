@@ -258,51 +258,6 @@ serve(async (req) => {
 
     // Route handling
     switch (true) {
-      // ============ BATCH (all data in one call) ============
-      case path === "/batch" && method === "GET": {
-        const [
-          { count: usersCount },
-          { count: ordersCount },
-          { data: revenue },
-          { count: productsCount },
-          { data: productsData },
-          { data: ordersData },
-          { data: depositsData },
-          { data: usersData },
-          { data: categoriesData },
-          { data: promosData },
-          { data: ticketsData },
-        ] = await Promise.all([
-          supabase.from("profiles").select("*", { count: "exact", head: true }),
-          supabase.from("orders").select("*", { count: "exact", head: true }).eq("status", "completed"),
-          supabase.from("orders").select("total").eq("status", "completed"),
-          supabase.from("products").select("*", { count: "exact", head: true }).eq("is_active", true),
-          supabase.from("products").select("*, categories(name, icon)").order("created_at", { ascending: false }),
-          supabase.from("orders").select("*, profiles(username, first_name, telegram_id), order_items(*)").order("created_at", { ascending: false }).limit(100),
-          supabase.from("transactions").select("*, profiles:user_id(username, first_name, telegram_id)").eq("type", "deposit").order("created_at", { ascending: false }).limit(100),
-          supabase.from("profiles").select("*, user_roles(role)").order("created_at", { ascending: false }).limit(100),
-          supabase.from("categories").select("*").order("sort_order"),
-          supabase.from("promo_codes").select("*").order("created_at", { ascending: false }),
-          supabase.from("support_tickets").select("*, profiles:user_id(username, first_name, telegram_id)").order("created_at", { ascending: false }),
-        ]);
-
-        const totalRevenue = revenue?.reduce((sum: number, o: { total: string }) => sum + parseFloat(o.total), 0) || 0;
-
-        return new Response(
-          JSON.stringify({
-            stats: { users: usersCount || 0, orders: ordersCount || 0, revenue: totalRevenue, products: productsCount || 0 },
-            products: productsData || [],
-            orders: ordersData || [],
-            deposits: depositsData || [],
-            users: usersData || [],
-            categories: categoriesData || [],
-            promos: promosData || [],
-            tickets: ticketsData || [],
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
       // ============ ANALYTICS ============
       case path === "/stats" && method === "GET": {
         const [
@@ -1374,75 +1329,6 @@ serve(async (req) => {
         console.log(`[Broadcast] Sent: ${sent}, Failed: ${failed}, Total: ${telegramIds.length}`);
 
         return new Response(JSON.stringify({ success: true, sent, failed, total: telegramIds.length }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // ============ REQUIRED CHANNELS ============
-      case path === "/required-channels" && method === "GET": {
-        const { data, error } = await supabase
-          .from("required_channels")
-          .select("*")
-          .order("sort_order");
-
-        if (error) throw error;
-        return new Response(JSON.stringify(data || []), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      case path === "/required-channels" && method === "POST": {
-        const { channel_id, channel_name, channel_url } = body;
-        if (!channel_id || !channel_name || !channel_url) {
-          return new Response(
-            JSON.stringify({ error: "Missing channel_id, channel_name, or channel_url" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const { data, error } = await supabase
-          .from("required_channels")
-          .insert({ channel_id, channel_name, channel_url })
-          .select()
-          .single();
-
-        if (error) throw error;
-        return new Response(JSON.stringify(data), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      case path.startsWith("/required-channels/") && method === "PUT": {
-        const channelId = path.split("/")[2];
-        const updateFields: Record<string, unknown> = {};
-        if (body.is_active !== undefined) updateFields.is_active = body.is_active;
-        if (body.sort_order !== undefined) updateFields.sort_order = body.sort_order;
-        if (body.channel_name !== undefined) updateFields.channel_name = body.channel_name;
-        if (body.channel_url !== undefined) updateFields.channel_url = body.channel_url;
-        if (body.channel_id !== undefined) updateFields.channel_id = body.channel_id;
-
-        const { data, error } = await supabase
-          .from("required_channels")
-          .update(updateFields)
-          .eq("id", channelId)
-          .select()
-          .single();
-
-        if (error) throw error;
-        return new Response(JSON.stringify(data), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      case path.startsWith("/required-channels/") && method === "DELETE": {
-        const channelId = path.split("/")[2];
-        const { error } = await supabase
-          .from("required_channels")
-          .delete()
-          .eq("id", channelId);
-
-        if (error) throw error;
-        return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

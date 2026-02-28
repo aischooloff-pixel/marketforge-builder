@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const CAPTCHA_ITEMS: [string, string][] = [
+  ["🍎", "яблоко"],
+  ["🍕", "пиццу"],
+  ["🚀", "ракету"],
+  ["🎸", "гитару"],
+  ["🐱", "кота"],
+  ["⚽", "мяч"],
+  ["🌟", "звезду"],
+  ["🎲", "кубик"],
+];
+
 function buildWelcomeMessage(username?: string) {
   const nameLink = username ? `<a href="https://t.me/${username}">Темщик</a>` : "Темщик";
   return `👋 <b>${nameLink}</b>, добро пожаловать в <b><a href="https://t.me/Temka_Store_Bot/app">TEMKA.STORE</a></b>!
@@ -15,20 +26,17 @@ function buildWelcomeMessage(username?: string) {
 🛍 Нажми кнопку ниже, чтобы открыть приложение магазина.`;
 }
 
-// --- Emoji captcha ---
-const CAPTCHA_EMOJIS = ["🍎", "🍕", "🚀", "⚡", "🎮", "🎵", "🌟", "🔥", "💎", "🎯", "🐱", "🦊", "🌈", "☀️", "🍀"];
-
-function buildCaptchaMessage() {
-  // Pick one correct emoji and 3 wrong ones
-  const shuffled = [...CAPTCHA_EMOJIS].sort(() => Math.random() - 0.5);
-  const correct = shuffled[0];
-  const options = shuffled.slice(0, 4).sort(() => Math.random() - 0.5);
-  const text = `🔒 <b>Подтверди, что ты не робот</b>\n\nНажми на эмодзи: <b>${correct}</b>`;
-  const buttons = options.map(emoji => ({
+function buildCaptcha() {
+  const shuffled = [...CAPTCHA_ITEMS].sort(() => Math.random() - 0.5);
+  const options = shuffled.slice(0, 3);
+  const correctIdx = Math.floor(Math.random() * 3);
+  const correct = options[correctIdx];
+  const text = `🤖 Привет! Чтобы убедиться, что вы не робот — пройдите проверку.\n\nНажми на ${correct[0]} ${correct[1]}`;
+  const buttons = options.map(([emoji], i) => ({
     text: emoji,
-    callback_data: `captcha:${emoji === correct ? "ok" : "fail"}`,
+    callback_data: i === correctIdx ? "captcha_ok" : "captcha_fail",
   }));
-  return { text, buttons: [buttons] };
+  return { text, buttons };
 }
 
 async function tg(botToken: string, method: string, body: Record<string, unknown>) {
@@ -36,99 +44,6 @@ async function tg(botToken: string, method: string, body: Record<string, unknown
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
-}
-
-async function getRequiredChannels(supabase: any) {
-  const { data } = await supabase.from("required_channels").select("*").eq("is_active", true).order("sort_order");
-  return data || [];
-}
-
-async function checkUserSubscriptions(botToken: string, userId: number, channels: any[]): Promise<string[]> {
-  const notSubscribed: string[] = [];
-  for (const ch of channels) {
-    try {
-      const res = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: ch.channel_id, user_id: userId }),
-      });
-      const data = await res.json();
-      const status = data?.result?.status;
-      if (!status || status === "left" || status === "kicked") {
-        notSubscribed.push(ch.id);
-      }
-    } catch (e) {
-      console.error(`[Bot] Failed to check membership for ${ch.channel_id}:`, e);
-      notSubscribed.push(ch.id);
-    }
-  }
-  return notSubscribed;
-}
-
-function buildSubscriptionMessage(channels: any[]) {
-  const text = "📢 Не жмоться, подпишись на наши каналы:\n\nПодпишись и нажми «✅ Проверить подписку»";
-  const buttons = channels.map((ch: any) => [
-    {
-      text: `📢 ${ch.channel_name}`,
-      url: ch.channel_url,
-    },
-  ]);
-  buttons.push([{ text: "✅ Проверить подписку", callback_data: "check_subscription" }]);
-  return { text, buttons };
-}
-
-async function ensureProfile(supabaseUrl: string, supabaseKey: string, fromUser: any) {
-  const telegramId = fromUser?.id;
-  if (!telegramId) return;
-
-  const checkRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id`, {
-    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
-  });
-  const profiles = await checkRes.json();
-  if (!profiles || profiles.length === 0) {
-    await fetch(`${supabaseUrl}/rest/v1/profiles`, {
-      method: "POST",
-      headers: {
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({
-        telegram_id: telegramId,
-        first_name: fromUser?.first_name || null,
-        username: fromUser?.username || null,
-        bot_verified: true,
-      }),
-    });
-  } else {
-    // Mark verified if not already
-    await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}`, {
-      method: "PATCH",
-      headers: {
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({ bot_verified: true }),
-    });
-  }
-}
-
-async function sendWelcome(botToken: string, chatId: number, username?: string) {
-  await tg(botToken, "sendMessage", {
-    chat_id: chatId,
-    text: buildWelcomeMessage(username),
-    parse_mode: "HTML",
-    disable_web_page_preview: true,
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
-        [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
-      ],
-    },
   });
 }
 
@@ -159,36 +74,8 @@ serve(async (req) => {
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  let update: any;
   try {
-    update = await req.json();
-  } catch (parseErr) {
-    console.error("[TelegramBot] Failed to parse request body:", parseErr);
-    return new Response("ok", { status: 200 });
-  }
-
-  try {
-
-    // --- Internal subscription check from web app ---
-    if (update._checkSubscription && update.telegram_id && update.channel_id) {
-      try {
-        const res = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: update.channel_id, user_id: update.telegram_id }),
-        });
-        const data = await res.json();
-        const status = data?.result?.status;
-        const subscribed = !!status && status !== "left" && status !== "kicked";
-        return new Response(JSON.stringify({ subscribed }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      } catch {
-        return new Response(JSON.stringify({ subscribed: false }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
+    const update = await req.json();
 
     // --- Handle callback_query ---
     const callback = update.callback_query;
@@ -198,98 +85,62 @@ serve(async (req) => {
       const data = callback.data as string;
       const fromId = callback.from?.id;
 
-      // --- Check subscription ---
-      if (data === "check_subscription") {
-        console.log("[Bot] check_subscription callback from user:", fromId);
-        const channels = await getRequiredChannels(supabase);
-        console.log("[Bot] Required channels:", channels.length);
-        if (channels.length === 0) {
-          const ansRes = await tg(botToken, "answerCallbackQuery", {
-            callback_query_id: callback.id,
-            text: "✅ Подписка подтверждена!",
-          });
-          console.log("[Bot] answerCallbackQuery (no channels):", await ansRes.json());
-          await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
-          await ensureProfile(supabaseUrl, supabaseKey, callback.from);
-          await sendWelcome(botToken, chatId, callback.from?.username);
-          return new Response("ok", { status: 200 });
-        }
-
-        const notSubscribed = await checkUserSubscriptions(botToken, fromId, channels);
-        console.log("[Bot] Not subscribed channels:", notSubscribed);
-        if (notSubscribed.length > 0) {
-          const ansRes = await tg(botToken, "answerCallbackQuery", {
-            callback_query_id: callback.id,
-            text: "❌ Вы подписались не на все каналы!",
-            show_alert: true,
-          });
-          console.log("[Bot] answerCallbackQuery (not subscribed):", await ansRes.json());
-          return new Response("ok", { status: 200 });
-        }
-
-        // All subscribed
-        const ansRes = await tg(botToken, "answerCallbackQuery", {
-          callback_query_id: callback.id,
-          text: "✅ Подписка подтверждена!",
-        });
-        console.log("[Bot] answerCallbackQuery (subscribed):", await ansRes.json());
+      // --- Captcha ---
+      if (data === "captcha_ok") {
         await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
-        await ensureProfile(supabaseUrl, supabaseKey, callback.from);
-        await sendWelcome(botToken, chatId, callback.from?.username);
-        return new Response("ok", { status: 200 });
-      }
 
-      // --- Captcha callback ---
-      if (data.startsWith("captcha:")) {
-        const result = data.split(":")[1];
-        if (result === "ok") {
-          await tg(botToken, "answerCallbackQuery", {
-            callback_query_id: callback.id,
-            text: "✅ Проверка пройдена!",
-          });
-          await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
-          await ensureProfile(supabaseUrl, supabaseKey, callback.from);
-          await sendWelcome(botToken, chatId, callback.from?.username);
-        } else {
-          await tg(botToken, "answerCallbackQuery", {
-            callback_query_id: callback.id,
-            text: "❌ Неправильно! Попробуй ещё раз.",
-            show_alert: true,
-          });
-          // Replace with new captcha
-          const captcha = buildCaptchaMessage();
-          await tg(botToken, "editMessageText", {
-            chat_id: chatId,
-            message_id: messageId,
-            text: captcha.text,
-            parse_mode: "HTML",
-            reply_markup: { inline_keyboard: captcha.buttons },
+        // Mark bot_verified
+        await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${fromId}`, {
+          method: "PATCH",
+          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+          body: JSON.stringify({ bot_verified: true }),
+        });
+
+        // Create profile if not exists
+        const checkRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${fromId}&select=id`, {
+          headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+        });
+        const checkProfiles = await checkRes.json();
+        if (!checkProfiles || checkProfiles.length === 0) {
+          await fetch(`${supabaseUrl}/rest/v1/profiles`, {
+            method: "POST",
+            headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+            body: JSON.stringify({ telegram_id: fromId, first_name: callback.from?.first_name || null, username: callback.from?.username || null, bot_verified: true }),
           });
         }
-        return new Response("ok", { status: 200 });
-      }
+
+        await tg(botToken, "sendMessage", {
+          chat_id: chatId, text: buildWelcomeMessage(callback.from?.username), parse_mode: "HTML",
+          disable_web_page_preview: true,
+          reply_markup: { inline_keyboard: [
+            [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+            [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
+          ]},
+        });
+        await tg(botToken, "answerCallbackQuery", { callback_query_id: callback.id, text: "✅ Проверка пройдена!" });
+
+      } else if (data === "captcha_fail") {
+        await tg(botToken, "answerCallbackQuery", { callback_query_id: callback.id, text: "Вы не прошли проверку!", show_alert: true });
 
       // --- Review: start ---
-      if (data.startsWith("review_start:")) {
+      } else if (data.startsWith("review_start:")) {
         const orderId = data.split(":")[1];
         await tg(botToken, "answerCallbackQuery", { callback_query_id: callback.id });
         await tg(botToken, "sendMessage", {
           chat_id: chatId,
           text: "⭐ Оцените покупку от 1 до 5:",
           reply_markup: {
-            inline_keyboard: [
-              [
-                { text: "1 ⭐", callback_data: `review_rate:${orderId}:1` },
-                { text: "2 ⭐", callback_data: `review_rate:${orderId}:2` },
-                { text: "3 ⭐", callback_data: `review_rate:${orderId}:3` },
-                { text: "4 ⭐", callback_data: `review_rate:${orderId}:4` },
-                { text: "5 ⭐", callback_data: `review_rate:${orderId}:5` },
-              ],
-            ],
+            inline_keyboard: [[
+              { text: "1 ⭐", callback_data: `review_rate:${orderId}:1` },
+              { text: "2 ⭐", callback_data: `review_rate:${orderId}:2` },
+              { text: "3 ⭐", callback_data: `review_rate:${orderId}:3` },
+              { text: "4 ⭐", callback_data: `review_rate:${orderId}:4` },
+              { text: "5 ⭐", callback_data: `review_rate:${orderId}:5` },
+            ]],
           },
         });
 
-        // --- Review: rating chosen ---
+      // --- Review: rating chosen ---
       } else if (data.startsWith("review_rate:")) {
         const parts = data.split(":");
         const orderId = parts[1];
@@ -320,7 +171,7 @@ serve(async (req) => {
     const telegramId = message.from?.id;
     const text = message.text?.trim();
 
-    // --- Check for pending review text ---
+    // --- Check for pending review text (from DB) ---
     const { data: pendingArr } = await supabase
       .from("pending_reviews")
       .select("*")
@@ -341,34 +192,29 @@ serve(async (req) => {
       const userProfile = profiles?.[0];
       const userId = userProfile?.id;
 
-      const authorName =
-        [userProfile?.first_name, userProfile?.username ? `@${userProfile.username}` : null]
-          .filter(Boolean)
-          .join(" ") || "Пользователь";
+      const authorName = [userProfile?.first_name, userProfile?.username ? `@${userProfile.username}` : null]
+        .filter(Boolean).join(" ") || "Пользователь";
 
       if (userId) {
-        const { error: reviewErr } = await supabase.from("reviews").insert({
-          user_id: userId,
-          rating: pending.rating,
-          text: text.substring(0, 1000),
-          status: "pending",
-          author_name: authorName,
-        });
+        const { error: reviewErr } = await supabase
+          .from("reviews")
+          .insert({
+            user_id: userId,
+            rating: pending.rating,
+            text: text.substring(0, 1000),
+            status: "pending",
+            author_name: authorName,
+          });
 
         if (!reviewErr) {
           await tg(botToken, "sendMessage", {
             chat_id: chatId,
             text: "✅ Спасибо за отзыв! Он отправлен на модерацию и будет опубликован после проверки.",
-            reply_markup: {
-              inline_keyboard: [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }]],
-            },
+            reply_markup: { inline_keyboard: [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }]] },
           });
         } else {
           console.error("[Bot] Failed to insert review:", reviewErr);
-          await tg(botToken, "sendMessage", {
-            chat_id: chatId,
-            text: "❌ Не удалось сохранить отзыв. Попробуйте позже.",
-          });
+          await tg(botToken, "sendMessage", { chat_id: chatId, text: "❌ Не удалось сохранить отзыв. Попробуйте позже." });
         }
       } else {
         await tg(botToken, "sendMessage", { chat_id: chatId, text: "❌ Профиль не найден. Сначала откройте магазин." });
@@ -379,27 +225,38 @@ serve(async (req) => {
 
     // --- /start command ---
     if (text === "/start" || text?.startsWith("/start ")) {
-      // Check if already verified
-      const { data: existingProfiles } = await supabase
-        .from("profiles")
-        .select("bot_verified")
-        .eq("telegram_id", telegramId)
-        .limit(1);
-      
-      if (existingProfiles?.[0]?.bot_verified) {
-        // Already verified, just send welcome
-        await sendWelcome(botToken, chatId, message.from?.username);
-        return new Response("ok", { status: 200 });
+      const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id,bot_verified`, {
+        headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+      });
+      const profileText = await profileRes.text();
+      console.log("[Bot] Profile lookup for", telegramId, ":", profileRes.status, profileText);
+
+      let isVerified = false;
+      try {
+        const profiles = JSON.parse(profileText);
+        if (profiles && profiles.length > 0 && profiles[0].bot_verified === true) {
+          isVerified = true;
+        }
+      } catch (e) {
+        console.error("[Bot] Failed to parse profiles:", e);
       }
 
-      // Send captcha
-      const captcha = buildCaptchaMessage();
-      await tg(botToken, "sendMessage", {
-        chat_id: chatId,
-        text: captcha.text,
-        parse_mode: "HTML",
-        reply_markup: { inline_keyboard: captcha.buttons },
-      });
+      if (isVerified) {
+        await tg(botToken, "sendMessage", {
+          chat_id: chatId, text: buildWelcomeMessage(message.from?.username), parse_mode: "HTML",
+          disable_web_page_preview: true,
+          reply_markup: { inline_keyboard: [
+            [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+            [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
+          ]},
+        });
+      } else {
+        const captcha = buildCaptcha();
+        await tg(botToken, "sendMessage", {
+          chat_id: chatId, text: captcha.text,
+          reply_markup: { inline_keyboard: [captcha.buttons] },
+        });
+      }
     }
 
     return new Response("ok", { status: 200 });

@@ -15,7 +15,6 @@ import { StatsCharts } from '@/components/admin/StatsCharts';
 import { SupportTicketsTab } from '@/components/admin/SupportTicketsTab';
 import { ReviewsTab } from '@/components/admin/ReviewsTab';
 import { BroadcastTab } from '@/components/admin/BroadcastTab';
-import { RequiredChannelsTab } from '@/components/admin/RequiredChannelsTab';
 import { UserDetailsDialog } from '@/components/admin/UserDetailsDialog';
 import { 
   LayoutDashboard, 
@@ -39,8 +38,7 @@ import {
   Send,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
-  Radio
+  ExternalLink
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -262,18 +260,32 @@ const AdminPage = () => {
     setDataLoading(true);
     
     try {
-      const batchData = await admin.fetchBatch();
+      const [statsData, productsData, ordersData, usersData, categoriesData, promosData, ticketsData] = await Promise.all([
+        admin.fetchStats(),
+        admin.fetchProducts(),
+        admin.fetchOrders(),
+        admin.fetchUsers(),
+        admin.fetchCategories(),
+        admin.fetchPromos(),
+        admin.fetchTickets(),
+      ]);
 
-      if (batchData) {
-        if (batchData.stats) setStats(batchData.stats);
-        if (batchData.products) setProducts(batchData.products);
-        if (batchData.orders) setOrders(batchData.orders);
-        if (batchData.deposits) setDeposits(batchData.deposits);
-        if (batchData.users) setUsers(batchData.users);
-        if (batchData.categories) setCategories(batchData.categories as Category[]);
-        if (batchData.promos) setPromos(batchData.promos as PromoCode[]);
-        if (batchData.tickets) setTickets(batchData.tickets as any[]);
+      if (statsData) setStats(statsData);
+      if (productsData) setProducts(productsData);
+      if (ordersData) {
+        // Handle both old (array) and new ({ orders, deposits }) response formats
+        if (Array.isArray(ordersData)) {
+          setOrders(ordersData);
+          setDeposits([]);
+        } else {
+          setOrders(ordersData.orders || []);
+          setDeposits(ordersData.deposits || []);
+        }
       }
+      if (usersData) setUsers(usersData);
+      if (categoriesData) setCategories(categoriesData as Category[]);
+      if (promosData) setPromos(promosData as PromoCode[]);
+      if (ticketsData) setTickets(ticketsData as any[]);
     } catch (err) {
       console.error('Failed to load admin data:', err);
     }
@@ -444,7 +456,7 @@ const AdminPage = () => {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-10 mb-6">
+          <TabsList className="grid w-full grid-cols-9 mb-6">
             <TabsTrigger value="dashboard" className="text-xs">
               <LayoutDashboard className="h-4 w-4 mr-1" />
               <span className="hidden sm:inline">Обзор</span>
@@ -481,10 +493,6 @@ const AdminPage = () => {
                   {tickets.filter(t => t.status === 'open').length}
                 </span>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="channels" className="text-xs">
-              <Radio className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Каналы</span>
             </TabsTrigger>
             <TabsTrigger value="broadcast" className="text-xs">
               <Send className="h-4 w-4 mr-1" />
@@ -887,11 +895,6 @@ const AdminPage = () => {
                     if (data) setTickets(data as any[]);
                   }}
                 />
-              </TabsContent>
-
-              {/* Required Channels */}
-              <TabsContent value="channels">
-                <RequiredChannelsTab invokeAdminApi={admin.invokeAdminApi} />
               </TabsContent>
 
               {/* Broadcast */}
