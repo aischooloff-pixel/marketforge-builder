@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,58 @@ import type { Product } from "@/hooks/useProducts";
 import { useProductStock } from "@/hooks/useProducts";
 
 const FREE_PRODUCT_TAGS = ["free:tg-shop", "free:invite-script", "free:chat-spam"];
+
+/* ——— 24h countdown hook ——— */
+const useCountdown = () => {
+  const getTarget = () => {
+    const stored = localStorage.getItem("free_promo_target");
+    if (stored) {
+      const t = parseInt(stored, 10);
+      if (t > Date.now()) return t;
+    }
+    // Set new 24h target
+    const target = Date.now() + 24 * 60 * 60 * 1000;
+    localStorage.setItem("free_promo_target", String(target));
+    return target;
+  };
+
+  const [target] = useState(getTarget);
+  const [remaining, setRemaining] = useState(target - Date.now());
+
+  useEffect(() => {
+    const tick = () => {
+      const diff = target - Date.now();
+      if (diff <= 0) {
+        // Reset timer
+        const newTarget = Date.now() + 24 * 60 * 60 * 1000;
+        localStorage.setItem("free_promo_target", String(newTarget));
+        window.location.reload();
+        return;
+      }
+      setRemaining(diff);
+    };
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [target]);
+
+  const hours = String(Math.floor(remaining / 3600000)).padStart(2, "0");
+  const minutes = String(Math.floor((remaining % 3600000) / 60000)).padStart(2, "0");
+  const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+
+  return { hours, minutes, seconds };
+};
+
+/* ——— Retro digit cell ——— */
+const TimerDigit = ({ value, label }: { value: string; label: string }) => (
+  <div className="flex flex-col items-center gap-0.5">
+    <div className="bevel-sunken bg-background px-2 py-1 min-w-[36px] md:min-w-[44px] text-center">
+      <span className="font-mono text-lg md:text-2xl font-bold text-primary tracking-wider">
+        {value}
+      </span>
+    </div>
+    <span className="text-[8px] md:text-[9px] text-muted-foreground uppercase">{label}</span>
+  </div>
+);
 
 /* ——— mini card (no price, no cart button) ——— */
 const FreeCard = ({
@@ -69,8 +121,8 @@ export const FreeProductsSection = () => {
   const [claiming, setClaiming] = useState(false);
   const [alreadyClaimed, setAlreadyClaimed] = useState<boolean | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { hours, minutes, seconds } = useCountdown();
 
-  // Load products and check if user already claimed
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase
@@ -83,7 +135,6 @@ export const FreeProductsSection = () => {
         setProducts(data as unknown as Product[]);
       }
 
-      // Check if current user already claimed any free product
       const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
       if (tgUser?.id) {
         const { data: profile } = await supabase
@@ -98,7 +149,6 @@ export const FreeProductsSection = () => {
             .select("id")
             .eq("user_id", profile.id)
             .limit(1);
-
           setAlreadyClaimed(claims !== null && claims.length > 0);
         } else {
           setAlreadyClaimed(false);
@@ -110,7 +160,6 @@ export const FreeProductsSection = () => {
     load();
   }, []);
 
-  // scroll selected card into view
   useEffect(() => {
     if (!open || !scrollRef.current) return;
     const cards = scrollRef.current.children;
@@ -163,7 +212,7 @@ export const FreeProductsSection = () => {
       if (data?.success) {
         toast({ title: "🎉 Товар отправлен!", description: "Проверь личные сообщения бота" });
         setOpen(false);
-        setAlreadyClaimed(true); // hide section
+        setAlreadyClaimed(true);
       }
     } catch (e: any) {
       toast({ title: "Ошибка", description: e.message || "Попробуй позже", variant: "destructive" });
@@ -172,33 +221,81 @@ export const FreeProductsSection = () => {
     }
   };
 
-  // Don't render if no products, still loading claim status, or already claimed
   if (products.length === 0 || alreadyClaimed === null || alreadyClaimed) return null;
 
   return (
     <>
-      {/* Hero-like banner on Index */}
+      {/* Retro signboard banner */}
       <section className="py-6 md:py-10">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-2xl mx-auto text-center"
+            className="max-w-3xl mx-auto"
           >
-            <h2 className="text-xl md:text-2xl font-bold mb-3">
-              🎁 Бесплатные инструменты
-            </h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Подпишись на канал и забери один из инструментов — бесплатно
-            </p>
-            <Button
-              size="lg"
-              className="gap-2 text-sm md:text-base px-8 h-11 md:h-12"
-              onClick={() => setOpen(true)}
-            >
-              🎁 Забрать бесплатно
-            </Button>
+            <div className="win95-window overflow-hidden">
+              {/* Titlebar */}
+              <div className="win95-titlebar px-3 py-1.5">
+                <span className="text-[10px] md:text-xs truncate flex-1">
+                  ⚡ ОГРАНИЧЕННАЯ АКЦИЯ
+                </span>
+                <span className="text-[10px] animate-pulse">●</span>
+              </div>
+
+              {/* Content area — retro CRT feel */}
+              <div className="relative bg-background p-0">
+                {/* Scanline overlay */}
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-[0.03] z-10"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(0deg, transparent, transparent 2px, hsl(var(--foreground)) 2px, hsl(var(--foreground)) 3px)",
+                  }}
+                />
+
+                <div className="relative z-0 flex flex-col md:flex-row items-stretch">
+                  {/* Left: old monitor / signboard */}
+                  <div className="flex-1 p-4 md:p-6 flex flex-col items-center md:items-start justify-center text-center md:text-left">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl md:text-3xl">🎁</span>
+                      <h2 className="text-lg md:text-xl font-bold text-foreground leading-tight">
+                        Бесплатные<br />инструменты
+                      </h2>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-4 max-w-[240px]">
+                      Подпишись на канал и забери один из инструментов — бесплатно
+                    </p>
+                    <Button
+                      size="lg"
+                      className="gap-2 text-sm px-6 h-10 md:h-11"
+                      onClick={() => setOpen(true)}
+                    >
+                      🎁 Забрать
+                    </Button>
+                  </div>
+
+                  {/* Right: countdown timer panel */}
+                  <div className="bevel-sunken bg-card/50 p-4 md:p-6 flex flex-col items-center justify-center gap-2 min-w-[200px] md:min-w-[240px]">
+                    <div className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-widest mb-1">
+                      До конца акции
+                    </div>
+
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <TimerDigit value={hours} label="час" />
+                      <span className="text-lg md:text-xl font-bold text-muted-foreground animate-pulse pb-4">:</span>
+                      <TimerDigit value={minutes} label="мин" />
+                      <span className="text-lg md:text-xl font-bold text-muted-foreground animate-pulse pb-4">:</span>
+                      <TimerDigit value={seconds} label="сек" />
+                    </div>
+
+                    <div className="text-[8px] md:text-[9px] text-destructive font-bold mt-1 animate-pulse">
+                      ⚠ КОЛИЧЕСТВО ОГРАНИЧЕНО
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -212,7 +309,6 @@ export const FreeProductsSection = () => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4"
           >
-            {/* close btn */}
             <button
               onClick={() => setOpen(false)}
               className="absolute top-4 right-4 bevel-raised bg-card px-2 py-0.5 text-xs font-bold hover:bg-secondary"
@@ -225,7 +321,6 @@ export const FreeProductsSection = () => {
               Листай ← → и нажми «Выбрать» (можно выбрать только 1 раз)
             </p>
 
-            {/* scrollable cards */}
             <div
               ref={scrollRef}
               className="flex gap-3 overflow-x-auto pb-4 px-4 max-w-full scrollbar-hide snap-x snap-mandatory"
@@ -241,7 +336,6 @@ export const FreeProductsSection = () => {
               ))}
             </div>
 
-            {/* dots */}
             <div className="flex gap-1.5 my-3">
               {products.map((_, i) => (
                 <button
@@ -254,7 +348,6 @@ export const FreeProductsSection = () => {
               ))}
             </div>
 
-            {/* action */}
             <Button
               size="lg"
               className="gap-2 px-10 h-11"
