@@ -6,6 +6,9 @@ const corsHeaders = {
 };
 
 const TELEGRAM_TIMEOUT_MS = 3500;
+const RETRIES_PER_TOKEN = 2;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function checkWithBotToken(botToken: string, channelUsername: string, telegramId: number | string) {
   const controller = new AbortController();
@@ -57,32 +60,44 @@ serve(async (req) => {
     const channelUsername = '@TemkaStoreNews';
 
     for (const token of botTokens) {
-      try {
-        const data = await checkWithBotToken(token, channelUsername, telegram_id);
+      for (let attempt = 0; attempt < RETRIES_PER_TOKEN; attempt += 1) {
+        try {
+          const data = await checkWithBotToken(token, channelUsername, telegram_id);
 
-        if (data?.ok) {
-          const memberStatus = data.result?.status;
-          const subscribed = ['member', 'administrator', 'creator'].includes(memberStatus);
+          if (data?.ok) {
+            const memberStatus = data.result?.status;
+            const subscribed = ['member', 'administrator', 'creator'].includes(memberStatus);
 
-          return new Response(
-            JSON.stringify({ subscribed, status: memberStatus }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+            return new Response(
+              JSON.stringify({ subscribed, status: memberStatus, checked_telegram_id: Number(telegram_id) }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          const errorCode = Number(data?.error_code || 0);
+          const description = String(data?.description || '');
+
+          // transient: перегрузка/rate-limit/временные ошибки
+          const retryable = errorCode === 429 || errorCode >= 500 || description.toLowerCase().includes('timeout');
+
+          if (retryable && attempt < RETRIES_PER_TOKEN - 1) {
+            await sleep(250);
+            continue;
+          }
+
+          // явный неуспех проверки подписки
+          break;
+        } catch {
+          if (attempt < RETRIES_PER_TOKEN - 1) {
+            await sleep(250);
+            continue;
+          }
         }
-
-        const errorCode = data?.error_code;
-        // Рейтлимит/временные ошибки -> пробуем резервный токен
-        if (errorCode === 429 || errorCode >= 500) {
-          continue;
-        }
-      } catch {
-        // таймаут/сеть у текущего бота -> пробуем следующий
-        continue;
       }
     }
 
     return new Response(
-      JSON.stringify({ subscribed: false, status: 'unknown' }),
+      JSON.stringify({ subscribed: false, status: 'unknown', checked_telegram_id: Number(telegram_id) }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch {

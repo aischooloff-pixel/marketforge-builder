@@ -5,6 +5,10 @@ import { PxMail, PxShield } from '@/components/PixelIcons';
 
 const CHANNEL_URL = 'https://t.me/TemkaStoreNews';
 const FRONTEND_TIMEOUT_MS = 6000;
+const TG_WAIT_TIMEOUT_MS = 6000;
+const TG_POLL_INTERVAL_MS = 250;
+
+const verificationKey = (telegramId: number) => `channel_sub_verified:${telegramId}`;
 
 export const ChannelGate = () => {
   const [allowed, setAllowed] = useState(false);
@@ -34,23 +38,34 @@ export const ChannelGate = () => {
 
     try {
       const result = await invokeCheckWithTimeout(id);
-      const data = (result as { data?: { subscribed?: boolean }; error?: unknown }).data;
-      const error = (result as { data?: { subscribed?: boolean }; error?: unknown }).error;
+      const data = (result as { data?: { subscribed?: boolean; checked_telegram_id?: number }; error?: unknown }).data;
+      const error = (result as { data?: { subscribed?: boolean; checked_telegram_id?: number }; error?: unknown }).error;
 
       if (error) {
         setAllowed(false);
+        localStorage.removeItem(verificationKey(id));
         setErrorText('Не удалось проверить подписку. Нажмите «Проверить подписку».');
         return;
       }
 
+      if (data?.checked_telegram_id && Number(data.checked_telegram_id) !== id) {
+        setAllowed(false);
+        localStorage.removeItem(verificationKey(id));
+        setErrorText('Ошибка синхронизации Telegram ID. Перезапустите приложение из Telegram.');
+        return;
+      }
+
       if (data?.subscribed === true) {
+        localStorage.setItem(verificationKey(id), '1');
         setAllowed(true);
       } else {
+        localStorage.removeItem(verificationKey(id));
         setAllowed(false);
         setErrorText('Подписка не обнаружена. Подпишитесь и нажмите «Проверить подписку».');
       }
     } catch {
       setAllowed(false);
+      localStorage.removeItem(verificationKey(id));
       setErrorText('Проверка заняла слишком много времени. Нажмите «Проверить подписку».');
     } finally {
       checkingRef.current = false;
@@ -59,18 +74,40 @@ export const ChannelGate = () => {
   }, [invokeCheckWithTimeout]);
 
   useEffect(() => {
-    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    const startedAt = Date.now();
+    let mounted = true;
 
-    if (!tgUser?.id) {
-      // Вне Telegram не блокируем preview/dev
-      setAllowed(true);
-      setInitialized(true);
-      return;
-    }
+    const interval = window.setInterval(() => {
+      if (!mounted) return;
 
-    setTelegramId(tgUser.id);
-    // ВАЖНО: без автопроверки, только ручная кнопка
-    setInitialized(true);
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser?.id) {
+        const id = Number(tgUser.id);
+        setTelegramId(id);
+
+        if (localStorage.getItem(verificationKey(id)) === '1') {
+          setAllowed(true);
+        } else {
+          setAllowed(false);
+        }
+
+        setInitialized(true);
+        window.clearInterval(interval);
+        return;
+      }
+
+      if (Date.now() - startedAt > TG_WAIT_TIMEOUT_MS) {
+        // Вне Telegram / initData не пришли
+        setAllowed(true);
+        setInitialized(true);
+        window.clearInterval(interval);
+      }
+    }, TG_POLL_INTERVAL_MS);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
   }, []);
 
   const handleSubscribe = () => {
@@ -89,8 +126,8 @@ export const ChannelGate = () => {
     await runCheck(telegramId);
   };
 
-  if (allowed) return null;
   if (!initialized) return null;
+  if (allowed) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
