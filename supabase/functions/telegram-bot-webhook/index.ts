@@ -184,12 +184,15 @@ serve(async (req) => {
 
       // --- Check subscription ---
       if (data === "check_subscription") {
+        console.log("[Bot] check_subscription callback from user:", fromId);
         const channels = await getRequiredChannels(supabase);
+        console.log("[Bot] Required channels:", channels.length);
         if (channels.length === 0) {
-          await tg(botToken, "answerCallbackQuery", {
+          const ansRes = await tg(botToken, "answerCallbackQuery", {
             callback_query_id: callback.id,
             text: "✅ Подписка подтверждена!",
           });
+          console.log("[Bot] answerCallbackQuery (no channels):", await ansRes.json());
           await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
           await ensureProfile(supabaseUrl, supabaseKey, callback.from);
           await sendWelcome(botToken, chatId, callback.from?.username);
@@ -197,20 +200,23 @@ serve(async (req) => {
         }
 
         const notSubscribed = await checkUserSubscriptions(botToken, fromId, channels);
+        console.log("[Bot] Not subscribed channels:", notSubscribed);
         if (notSubscribed.length > 0) {
-          await tg(botToken, "answerCallbackQuery", {
+          const ansRes = await tg(botToken, "answerCallbackQuery", {
             callback_query_id: callback.id,
             text: "❌ Вы подписались не на все каналы!",
             show_alert: true,
           });
+          console.log("[Bot] answerCallbackQuery (not subscribed):", await ansRes.json());
           return new Response("ok", { status: 200 });
         }
 
         // All subscribed
-        await tg(botToken, "answerCallbackQuery", {
+        const ansRes = await tg(botToken, "answerCallbackQuery", {
           callback_query_id: callback.id,
           text: "✅ Подписка подтверждена!",
         });
+        console.log("[Bot] answerCallbackQuery (subscribed):", await ansRes.json());
         await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
         await ensureProfile(supabaseUrl, supabaseKey, callback.from);
         await sendWelcome(botToken, chatId, callback.from?.username);
