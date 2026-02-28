@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useTelegram } from '@/contexts/TelegramContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, X } from 'lucide-react';
@@ -27,26 +26,7 @@ export const ChannelPromoPopup = () => {
     const shouldShow = count === 2 || (count > 2 && (count - 2) % 5 === 0);
     if (!shouldShow) return;
 
-    // Check if already subscribed via bot API
-    const checkSub = async () => {
-      try {
-        const { data } = await supabase.functions.invoke('telegram-bot-webhook', {
-          body: {
-            _checkSubscription: true,
-            telegram_id: user.telegram_id,
-            channel_id: CHANNEL_ID,
-          },
-        });
-        if (data?.subscribed) {
-          localStorage.setItem(SUBSCRIBED_KEY, '1');
-          return;
-        }
-      } catch {
-        // If check fails, show popup anyway
-      }
-      setTimeout(() => setOpen(true), 1500);
-    };
-    checkSub();
+    setTimeout(() => setOpen(true), 1500);
   }, [user]);
 
   const handleSubscribe = () => {
