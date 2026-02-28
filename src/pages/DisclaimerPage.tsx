@@ -129,6 +129,16 @@ const DisclaimerPage = () => {
               ]}
             />
 
+            <Section
+              icon={UserCheck}
+              title="6. Возрастное ограничение"
+              items={[
+                'Все товары и услуги TEMKA.STORE предназначены исключительно для лиц, достигших 18-летнего возраста.',
+                'Оформляя заказ, вы подтверждаете, что вам исполнилось 18 лет и вы обладаете полной дееспособностью для совершения сделок в соответствии с гражданским законодательством Российской Федерации.',
+                'TEMKA.STORE оставляет за собой право запросить подтверждение возраста и отказать в обслуживании лицам, не достигшим 18 лет.',
+              ]}
+            />
+
             <Card className="p-5 mt-8 border-destructive/30 bg-destructive/5">
               <p className="text-sm font-medium text-destructive mb-2">⚠️ Важное предупреждение</p>
               <p className="text-sm text-muted-foreground leading-relaxed">
