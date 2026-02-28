@@ -10,6 +10,7 @@ import { ProxyCountrySelector } from '@/components/ProxyCountrySelector';
 import { TigerNumberBuyer } from '@/components/TigerNumberBuyer';
 import { SocialBoostBuyer } from '@/components/SocialBoostBuyer';
 import { MediaGallery } from '@/components/MediaGallery';
+import { RelatedProducts } from '@/components/RelatedProducts';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -399,6 +400,11 @@ const ProductPage = () => {
                 </div>
               </div>
             </div>
+
+            {/* Related Products */}
+            {product.category_id && (
+              <RelatedProducts categoryId={product.category_id} currentProductId={product.id} />
+            )}
           </motion.div>
         </div>
       </main>
