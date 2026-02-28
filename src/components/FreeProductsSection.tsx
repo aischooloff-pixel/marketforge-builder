@@ -1,58 +1,105 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { PxStar } from "@/components/PixelIcons";
 import { useToast } from "@/hooks/use-toast";
-
-interface FreeProduct {
-  id: string;
-  name: string;
-  icon: string;
-  desc: string;
-}
+import type { Product } from "@/hooks/useProducts";
+import { useProductStock } from "@/hooks/useProducts";
 
 const FREE_PRODUCT_TAGS = ["free:tg-shop", "free:invite-script", "free:chat-spam"];
 
-const FALLBACK_ITEMS: FreeProduct[] = [
-  { id: "", name: "Готовый ТГ магазин (бот)", icon: "🤖", desc: "Полностью готовый Telegram-бот магазин" },
-  { id: "", name: "Скрипт инвайтинга", icon: "📨", desc: "Автоматический инвайтинг в группы" },
-  { id: "", name: "Скрипт рассылки по чатам", icon: "📢", desc: "Массовая рассылка сообщений" },
-];
+/* ——— mini card (no price, no cart button) ——— */
+const FreeCard = ({
+  product,
+  selected,
+  onClick,
+}: {
+  product: Product;
+  selected: boolean;
+  onClick: () => void;
+}) => {
+  const { data: stockCount = 0 } = useProductStock(product.id);
+  const categoryIcon = (product as any).categories?.icon || "📦";
+  const isOut = stockCount === 0;
 
+  return (
+    <div
+      onClick={isOut ? undefined : onClick}
+      className={`win95-window flex-shrink-0 w-[220px] md:w-[260px] cursor-pointer transition-all select-none
+        ${selected ? "ring-2 ring-primary" : ""}
+        ${isOut ? "opacity-40 cursor-not-allowed" : "hover-lift"}`}
+    >
+      <div className="win95-titlebar px-2 py-1 gap-1.5">
+        <span className="text-[9px] md:text-[10px] truncate flex-1">
+          {(product as any).categories?.name || "Бесплатно"}
+        </span>
+        <span className="text-[10px] text-warning-foreground">🎁 FREE</span>
+      </div>
+
+      <div className="w-full aspect-[4/3] bevel-sunken bg-background flex items-center justify-center overflow-hidden">
+        {product.icon_url ? (
+          <img src={product.icon_url} alt={product.name} className="w-full h-full object-cover" />
+        ) : product.media_urls && product.media_urls.length > 0 ? (
+          <img src={product.media_urls[0]} alt={product.name} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-4xl md:text-5xl">{categoryIcon}</span>
+        )}
+      </div>
+
+      <div className="p-2.5 md:p-3 bg-card">
+        <h3 className="text-sm md:text-base font-bold leading-tight line-clamp-2 mb-1">
+          {product.name}
+        </h3>
+        <p className="text-xs text-muted-foreground line-clamp-2">{product.short_desc || "—"}</p>
+
+        {isOut && (
+          <div className="text-[10px] text-destructive font-bold mt-2">✕ Раскупили</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ——— main section ——— */
 export const FreeProductsSection = () => {
   const { toast } = useToast();
-  const [products, setProducts] = useState<FreeProduct[]>(FALLBACK_ITEMS);
-  const [claiming, setClaiming] = useState<string | null>(null);
-  const [claimed, setClaimed] = useState<Record<string, string>>({});
+  const [products, setProducts] = useState<Product[]>([]);
+  const [open, setOpen] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [claiming, setClaiming] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase
         .from("products")
-        .select("id, name, icon_url, short_desc, tags")
+        .select("*, categories(*)")
         .eq("is_active", true)
         .overlaps("tags", FREE_PRODUCT_TAGS);
 
       if (data && data.length > 0) {
-        setProducts(
-          data.map((p) => ({
-            id: p.id,
-            name: p.name,
-            icon: p.icon_url || "🎁",
-            desc: p.short_desc || "",
-          }))
-        );
+        setProducts(data as unknown as Product[]);
       }
     };
     load();
   }, []);
 
-  const handleClaim = async (product: FreeProduct) => {
-    if (!product.id) {
-      toast({ title: "Товар не настроен", description: "Обратитесь к администратору", variant: "destructive" });
-      return;
+  // scroll selected card into view
+  useEffect(() => {
+    if (!open || !scrollRef.current) return;
+    const cards = scrollRef.current.children;
+    if (cards[selectedIdx]) {
+      (cards[selectedIdx] as HTMLElement).scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
     }
+  }, [selectedIdx, open]);
+
+  const handleClaim = async () => {
+    const product = products[selectedIdx];
+    if (!product) return;
 
     const tgUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
     if (!tgUser?.id) {
@@ -60,95 +107,133 @@ export const FreeProductsSection = () => {
       return;
     }
 
-    setClaiming(product.id);
+    setClaiming(true);
     try {
       const { data, error } = await supabase.functions.invoke("claim-free-product", {
         body: { telegram_id: tgUser.id, product_id: product.id },
       });
 
-      if (error) {
-        const parsed = typeof error === "object" && "context" in error
-          ? await (error as any).context?.json?.() ?? {}
-          : {};
-        throw new Error(parsed?.message || data?.message || "Ошибка");
-      }
+      if (error) throw error;
 
       if (data?.error) {
-        if (data.error === "already_claimed") {
-          toast({ title: "Уже получено", description: data.message });
-        } else if (data.error === "not_subscribed") {
-          toast({ title: "Подпишись на канал", description: "Для получения подпишись на канал проекта", variant: "destructive" });
-        } else {
-          toast({ title: "Ошибка", description: data.message, variant: "destructive" });
-        }
+        const msgs: Record<string, string> = {
+          already_claimed: "Ты уже забрал этот товар",
+          not_subscribed: "Сначала подпишись на канал проекта",
+          out_of_stock: "Товар закончился",
+          check_failed: "Не удалось проверить подписку, попробуй позже",
+        };
+        toast({
+          title: data.error === "not_subscribed" ? "Подпишись на канал" : "Не получилось",
+          description: msgs[data.error] || data.message,
+          variant: data.error === "not_subscribed" ? "destructive" : undefined,
+        });
         return;
       }
 
-      setClaimed((prev) => ({ ...prev, [product.id]: data.content || data.file_url || "Готово!" }));
-      toast({ title: "🎉 Товар получен!", description: "Контент ниже" });
+      if (data?.success) {
+        toast({ title: "🎉 Товар отправлен!", description: "Проверь личные сообщения бота" });
+        setOpen(false);
+      }
     } catch (e: any) {
       toast({ title: "Ошибка", description: e.message || "Попробуй позже", variant: "destructive" });
     } finally {
-      setClaiming(null);
+      setClaiming(false);
     }
   };
 
+  if (products.length === 0) return null;
+
   return (
-    <section className="py-8 md:py-16 bg-secondary/30 criminal-pattern">
-      <div className="container mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="text-center mb-6 md:mb-10"
-        >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bevel-raised bg-card text-foreground text-xs font-medium mb-3">
-            <PxStar size={16} filled />
-            БЕСПЛАТНО
-          </div>
-          <h2 className="text-2xl md:text-3xl font-bold mb-1">Забери бесплатно</h2>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Подпишись на канал и получи один из инструментов
-          </p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 max-w-4xl mx-auto">
-          {products.map((product, index) => {
-            const isClaimed = !!claimed[product.id];
-            return (
-              <motion.div
-                key={product.id || index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <div className="win95-window p-4 md:p-5 h-full flex flex-col text-center">
-                  <div className="text-4xl mb-3">{product.icon}</div>
-                  <h3 className="font-bold text-sm md:text-base mb-1">{product.name}</h3>
-                  <p className="text-xs text-muted-foreground mb-4 flex-1">{product.desc}</p>
-
-                  {isClaimed ? (
-                    <div className="bevel-sunken bg-card p-2 font-mono text-xs break-all max-h-24 overflow-y-auto text-left">
-                      <span className="text-muted-foreground select-none">&gt; </span>
-                      {claimed[product.id]}
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      className="w-full gap-1.5 text-xs"
-                      disabled={claiming === product.id || !product.id}
-                      onClick={() => handleClaim(product)}
-                    >
-                      {claiming === product.id ? "Получаю..." : "🎁 Забрать"}
-                    </Button>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
+    <>
+      {/* Hero-like banner on Index */}
+      <section className="py-6 md:py-10">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-2xl mx-auto text-center"
+          >
+            <h2 className="text-xl md:text-2xl font-bold mb-3">
+              🎁 Бесплатные инструменты
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Подпишись на канал и забери один из инструментов — бесплатно
+            </p>
+            <Button
+              size="lg"
+              className="gap-2 text-sm md:text-base px-8 h-11 md:h-12"
+              onClick={() => setOpen(true)}
+            >
+              🎁 Забрать бесплатно
+            </Button>
+          </motion.div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* Modal / overlay */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+          >
+            {/* close btn */}
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute top-4 right-4 bevel-raised bg-card px-2 py-0.5 text-xs font-bold hover:bg-secondary"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-lg md:text-xl font-bold mb-1">Выбери товар</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Листай ← → и нажми «Выбрать»
+            </p>
+
+            {/* scrollable cards */}
+            <div
+              ref={scrollRef}
+              className="flex gap-3 overflow-x-auto pb-4 px-4 max-w-full scrollbar-hide snap-x snap-mandatory"
+            >
+              {products.map((p, i) => (
+                <div key={p.id} className="snap-center">
+                  <FreeCard
+                    product={p}
+                    selected={selectedIdx === i}
+                    onClick={() => setSelectedIdx(i)}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* dots */}
+            <div className="flex gap-1.5 my-3">
+              {products.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedIdx(i)}
+                  className={`w-2 h-2 transition-colors ${
+                    selectedIdx === i ? "bg-primary" : "bg-muted-foreground/30"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* action */}
+            <Button
+              size="lg"
+              className="gap-2 px-10 h-11"
+              disabled={claiming}
+              onClick={handleClaim}
+            >
+              {claiming ? "Отправляю..." : "Выбрать"}
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
