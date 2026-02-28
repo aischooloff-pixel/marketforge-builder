@@ -262,32 +262,18 @@ const AdminPage = () => {
     setDataLoading(true);
     
     try {
-      const [statsData, productsData, ordersData, usersData, categoriesData, promosData, ticketsData] = await Promise.all([
-        admin.fetchStats(),
-        admin.fetchProducts(),
-        admin.fetchOrders(),
-        admin.fetchUsers(),
-        admin.fetchCategories(),
-        admin.fetchPromos(),
-        admin.fetchTickets(),
-      ]);
+      const batchData = await admin.fetchBatch();
 
-      if (statsData) setStats(statsData);
-      if (productsData) setProducts(productsData);
-      if (ordersData) {
-        // Handle both old (array) and new ({ orders, deposits }) response formats
-        if (Array.isArray(ordersData)) {
-          setOrders(ordersData);
-          setDeposits([]);
-        } else {
-          setOrders(ordersData.orders || []);
-          setDeposits(ordersData.deposits || []);
-        }
+      if (batchData) {
+        if (batchData.stats) setStats(batchData.stats);
+        if (batchData.products) setProducts(batchData.products);
+        if (batchData.orders) setOrders(batchData.orders);
+        if (batchData.deposits) setDeposits(batchData.deposits);
+        if (batchData.users) setUsers(batchData.users);
+        if (batchData.categories) setCategories(batchData.categories as Category[]);
+        if (batchData.promos) setPromos(batchData.promos as PromoCode[]);
+        if (batchData.tickets) setTickets(batchData.tickets as any[]);
       }
-      if (usersData) setUsers(usersData);
-      if (categoriesData) setCategories(categoriesData as Category[]);
-      if (promosData) setPromos(promosData as PromoCode[]);
-      if (ticketsData) setTickets(ticketsData as any[]);
     } catch (err) {
       console.error('Failed to load admin data:', err);
     }

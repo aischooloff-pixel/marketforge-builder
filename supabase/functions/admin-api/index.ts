@@ -258,6 +258,51 @@ serve(async (req) => {
 
     // Route handling
     switch (true) {
+      // ============ BATCH (all data in one call) ============
+      case path === "/batch" && method === "GET": {
+        const [
+          { count: usersCount },
+          { count: ordersCount },
+          { data: revenue },
+          { count: productsCount },
+          { data: productsData },
+          { data: ordersData },
+          { data: depositsData },
+          { data: usersData },
+          { data: categoriesData },
+          { data: promosData },
+          { data: ticketsData },
+        ] = await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          supabase.from("orders").select("*", { count: "exact", head: true }).eq("status", "completed"),
+          supabase.from("orders").select("total").eq("status", "completed"),
+          supabase.from("products").select("*", { count: "exact", head: true }).eq("is_active", true),
+          supabase.from("products").select("*, categories(name, icon)").order("created_at", { ascending: false }),
+          supabase.from("orders").select("*, profiles(username, first_name, telegram_id), order_items(*)").order("created_at", { ascending: false }).limit(100),
+          supabase.from("transactions").select("*, profiles:user_id(username, first_name, telegram_id)").eq("type", "deposit").order("created_at", { ascending: false }).limit(100),
+          supabase.from("profiles").select("*, user_roles(role)").order("created_at", { ascending: false }).limit(100),
+          supabase.from("categories").select("*").order("sort_order"),
+          supabase.from("promo_codes").select("*").order("created_at", { ascending: false }),
+          supabase.from("support_tickets").select("*, profiles:user_id(username, first_name, telegram_id)").order("created_at", { ascending: false }),
+        ]);
+
+        const totalRevenue = revenue?.reduce((sum: number, o: { total: string }) => sum + parseFloat(o.total), 0) || 0;
+
+        return new Response(
+          JSON.stringify({
+            stats: { users: usersCount || 0, orders: ordersCount || 0, revenue: totalRevenue, products: productsCount || 0 },
+            products: productsData || [],
+            orders: ordersData || [],
+            deposits: depositsData || [],
+            users: usersData || [],
+            categories: categoriesData || [],
+            promos: promosData || [],
+            tickets: ticketsData || [],
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // ============ ANALYTICS ============
       case path === "/stats" && method === "GET": {
         const [
