@@ -143,8 +143,15 @@ serve(async (req) => {
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  let update: any;
   try {
-    const update = await req.json();
+    update = await req.json();
+  } catch (parseErr) {
+    console.error("[TelegramBot] Failed to parse request body:", parseErr);
+    return new Response("ok", { status: 200 });
+  }
+
+  try {
 
     // --- Internal subscription check from web app ---
     if (update._checkSubscription && update.telegram_id && update.channel_id) {
