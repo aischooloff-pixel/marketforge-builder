@@ -24,11 +24,7 @@ async function tg(botToken: string, method: string, body: Record<string, unknown
 }
 
 async function getRequiredChannels(supabase: any) {
-  const { data } = await supabase
-    .from("required_channels")
-    .select("*")
-    .eq("is_active", true)
-    .order("sort_order");
+  const { data } = await supabase.from("required_channels").select("*").eq("is_active", true).order("sort_order");
   return data || [];
 }
 
@@ -55,11 +51,13 @@ async function checkUserSubscriptions(botToken: string, userId: number, channels
 }
 
 function buildSubscriptionMessage(channels: any[]) {
-  const text = "📢 Для использования бота необходимо подписаться на наши каналы:\n\nПодпишитесь и нажмите «✅ Проверить подписку»";
-  const buttons = channels.map((ch: any) => ([{
-    text: `📢 ${ch.channel_name}`,
-    url: ch.channel_url,
-  }]));
+  const text = "📢 Не жмоться, подпишись на наши каналы:\n\nПодпишись и нажми «✅ Проверить подписку»";
+  const buttons = channels.map((ch: any) => [
+    {
+      text: `📢 ${ch.channel_name}`,
+      url: ch.channel_url,
+    },
+  ]);
   buttons.push([{ text: "✅ Проверить подписку", callback_data: "check_subscription" }]);
   return { text, buttons };
 }
@@ -69,20 +67,35 @@ async function ensureProfile(supabaseUrl: string, supabaseKey: string, fromUser:
   if (!telegramId) return;
 
   const checkRes = await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}&select=id`, {
-    headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}` },
+    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
   });
   const profiles = await checkRes.json();
   if (!profiles || profiles.length === 0) {
     await fetch(`${supabaseUrl}/rest/v1/profiles`, {
       method: "POST",
-      headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-      body: JSON.stringify({ telegram_id: telegramId, first_name: fromUser?.first_name || null, username: fromUser?.username || null, bot_verified: true }),
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        telegram_id: telegramId,
+        first_name: fromUser?.first_name || null,
+        username: fromUser?.username || null,
+        bot_verified: true,
+      }),
     });
   } else {
     // Mark verified if not already
     await fetch(`${supabaseUrl}/rest/v1/profiles?telegram_id=eq.${telegramId}`, {
       method: "PATCH",
-      headers: { "apikey": supabaseKey, "Authorization": `Bearer ${supabaseKey}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
       body: JSON.stringify({ bot_verified: true }),
     });
   }
@@ -90,12 +103,16 @@ async function ensureProfile(supabaseUrl: string, supabaseKey: string, fromUser:
 
 async function sendWelcome(botToken: string, chatId: number, username?: string) {
   await tg(botToken, "sendMessage", {
-    chat_id: chatId, text: buildWelcomeMessage(username), parse_mode: "HTML",
+    chat_id: chatId,
+    text: buildWelcomeMessage(username),
+    parse_mode: "HTML",
     disable_web_page_preview: true,
-    reply_markup: { inline_keyboard: [
-      [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
-      [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
-    ]},
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+        [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
+      ],
+    },
   });
 }
 
@@ -140,9 +157,13 @@ serve(async (req) => {
         const data = await res.json();
         const status = data?.result?.status;
         const subscribed = !!status && status !== "left" && status !== "kicked";
-        return new Response(JSON.stringify({ subscribed }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ subscribed }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       } catch {
-        return new Response(JSON.stringify({ subscribed: false }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ subscribed: false }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
@@ -158,7 +179,10 @@ serve(async (req) => {
       if (data === "check_subscription") {
         const channels = await getRequiredChannels(supabase);
         if (channels.length === 0) {
-          await tg(botToken, "answerCallbackQuery", { callback_query_id: callback.id, text: "✅ Подписка подтверждена!" });
+          await tg(botToken, "answerCallbackQuery", {
+            callback_query_id: callback.id,
+            text: "✅ Подписка подтверждена!",
+          });
           await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
           await ensureProfile(supabaseUrl, supabaseKey, callback.from);
           await sendWelcome(botToken, chatId, callback.from?.username);
@@ -176,7 +200,10 @@ serve(async (req) => {
         }
 
         // All subscribed
-        await tg(botToken, "answerCallbackQuery", { callback_query_id: callback.id, text: "✅ Подписка подтверждена!" });
+        await tg(botToken, "answerCallbackQuery", {
+          callback_query_id: callback.id,
+          text: "✅ Подписка подтверждена!",
+        });
         await tg(botToken, "deleteMessage", { chat_id: chatId, message_id: messageId });
         await ensureProfile(supabaseUrl, supabaseKey, callback.from);
         await sendWelcome(botToken, chatId, callback.from?.username);
@@ -191,17 +218,19 @@ serve(async (req) => {
           chat_id: chatId,
           text: "⭐ Оцените покупку от 1 до 5:",
           reply_markup: {
-            inline_keyboard: [[
-              { text: "1 ⭐", callback_data: `review_rate:${orderId}:1` },
-              { text: "2 ⭐", callback_data: `review_rate:${orderId}:2` },
-              { text: "3 ⭐", callback_data: `review_rate:${orderId}:3` },
-              { text: "4 ⭐", callback_data: `review_rate:${orderId}:4` },
-              { text: "5 ⭐", callback_data: `review_rate:${orderId}:5` },
-            ]],
+            inline_keyboard: [
+              [
+                { text: "1 ⭐", callback_data: `review_rate:${orderId}:1` },
+                { text: "2 ⭐", callback_data: `review_rate:${orderId}:2` },
+                { text: "3 ⭐", callback_data: `review_rate:${orderId}:3` },
+                { text: "4 ⭐", callback_data: `review_rate:${orderId}:4` },
+                { text: "5 ⭐", callback_data: `review_rate:${orderId}:5` },
+              ],
+            ],
           },
         });
 
-      // --- Review: rating chosen ---
+        // --- Review: rating chosen ---
       } else if (data.startsWith("review_rate:")) {
         const parts = data.split(":");
         const orderId = parts[1];
@@ -253,29 +282,34 @@ serve(async (req) => {
       const userProfile = profiles?.[0];
       const userId = userProfile?.id;
 
-      const authorName = [userProfile?.first_name, userProfile?.username ? `@${userProfile.username}` : null]
-        .filter(Boolean).join(" ") || "Пользователь";
+      const authorName =
+        [userProfile?.first_name, userProfile?.username ? `@${userProfile.username}` : null]
+          .filter(Boolean)
+          .join(" ") || "Пользователь";
 
       if (userId) {
-        const { error: reviewErr } = await supabase
-          .from("reviews")
-          .insert({
-            user_id: userId,
-            rating: pending.rating,
-            text: text.substring(0, 1000),
-            status: "pending",
-            author_name: authorName,
-          });
+        const { error: reviewErr } = await supabase.from("reviews").insert({
+          user_id: userId,
+          rating: pending.rating,
+          text: text.substring(0, 1000),
+          status: "pending",
+          author_name: authorName,
+        });
 
         if (!reviewErr) {
           await tg(botToken, "sendMessage", {
             chat_id: chatId,
             text: "✅ Спасибо за отзыв! Он отправлен на модерацию и будет опубликован после проверки.",
-            reply_markup: { inline_keyboard: [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }]] },
+            reply_markup: {
+              inline_keyboard: [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }]],
+            },
           });
         } else {
           console.error("[Bot] Failed to insert review:", reviewErr);
-          await tg(botToken, "sendMessage", { chat_id: chatId, text: "❌ Не удалось сохранить отзыв. Попробуйте позже." });
+          await tg(botToken, "sendMessage", {
+            chat_id: chatId,
+            text: "❌ Не удалось сохранить отзыв. Попробуйте позже.",
+          });
         }
       } else {
         await tg(botToken, "sendMessage", { chat_id: chatId, text: "❌ Профиль не найден. Сначала откройте магазин." });
