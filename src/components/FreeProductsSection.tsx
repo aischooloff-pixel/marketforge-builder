@@ -25,7 +25,7 @@ const FreeCard = ({
   return (
     <div
       onClick={isOut ? undefined : onClick}
-      className={`win95-window flex-shrink-0 w-[220px] md:w-[260px] cursor-pointer transition-all select-none
+      className={`win95-window flex-shrink-0 w-[220px] md:w-[260px] h-[280px] md:h-[320px] flex flex-col cursor-pointer transition-all select-none
         ${selected ? "ring-2 ring-primary" : ""}
         ${isOut ? "opacity-40 cursor-not-allowed" : "hover-lift"}`}
     >
@@ -46,7 +46,7 @@ const FreeCard = ({
         )}
       </div>
 
-      <div className="p-2.5 md:p-3 bg-card">
+      <div className="p-2.5 md:p-3 bg-card flex-1 flex flex-col">
         <h3 className="text-sm md:text-base font-bold leading-tight line-clamp-2 mb-1">
           {product.name}
         </h3>
