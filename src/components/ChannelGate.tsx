@@ -7,58 +7,72 @@ const CHANNEL_URL = 'https://t.me/TemkaStoreNews';
 const CACHE_KEY = 'channel_sub_ok';
 
 export const ChannelGate = () => {
-  const [isSubscribed, setIsSubscribed] = useState<boolean | null>(null);
+  // null = not yet determined, true = subscribed, false = not subscribed
+  const [status, setStatus] = useState<boolean | null>(() => {
+    // Instant cache check — no render flash
+    if (sessionStorage.getItem(CACHE_KEY) === '1') return true;
+    return null;
+  });
   const [checking, setChecking] = useState(false);
   const [telegramId, setTelegramId] = useState<number | null>(null);
-  const [error, setError] = useState(false);
 
   useEffect(() => {
+    // Already cached as subscribed
+    if (status === true) return;
+
     const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
     if (!tgUser?.id) {
       // Not in Telegram — skip gate
-      setIsSubscribed(true);
-      return;
-    }
-
-    // Check cache first
-    if (sessionStorage.getItem(CACHE_KEY) === '1') {
-      setIsSubscribed(true);
+      setStatus(true);
       return;
     }
 
     setTelegramId(tgUser.id);
-    // Show the gate immediately, no auto-check
-    setIsSubscribed(false);
+
+    // Auto-check once on mount
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.functions.invoke('check-channel-subscription', {
+          body: { telegram_id: tgUser.id },
+        });
+        if (cancelled) return;
+        if (data?.subscribed === true) {
+          sessionStorage.setItem(CACHE_KEY, '1');
+          setStatus(true);
+        } else {
+          setStatus(false);
+        }
+      } catch {
+        if (cancelled) return;
+        // On error don't block user
+        setStatus(true);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, []);
 
   const checkSubscription = useCallback(async () => {
-    if (!telegramId) return;
+    if (!telegramId || checking) return;
     setChecking(true);
-    setError(false);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('check-channel-subscription', {
+      const { data } = await supabase.functions.invoke('check-channel-subscription', {
         body: { telegram_id: telegramId },
       });
-
-      if (fnError) {
-        console.error('[ChannelGate] Error:', fnError);
-        setError(true);
-        return;
-      }
-
       if (data?.subscribed === true) {
         sessionStorage.setItem(CACHE_KEY, '1');
-        setIsSubscribed(true);
+        setStatus(true);
       } else {
-        setError(true);
+        setStatus(false);
       }
-    } catch (err) {
-      console.error('[ChannelGate] Check failed:', err);
-      setError(true);
+    } catch {
+      // On error don't block
+      setStatus(true);
     } finally {
       setChecking(false);
     }
-  }, [telegramId]);
+  }, [telegramId, checking]);
 
   const handleSubscribe = () => {
     if (window.Telegram?.WebApp) {
@@ -68,7 +82,8 @@ export const ChannelGate = () => {
     }
   };
 
-  if (isSubscribed === true || isSubscribed === null) return null;
+  // Don't show anything while checking initially or if subscribed
+  if (status === null || status === true) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4">
@@ -83,7 +98,6 @@ export const ChannelGate = () => {
           <h2 className="text-lg font-bold">Подписка на канал</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Для доступа к магазину необходимо подписаться на наш новостной канал.
-            Там публикуются важные обновления, акции и новые поступления.
           </p>
         </div>
 
@@ -104,7 +118,7 @@ export const ChannelGate = () => {
           </Button>
         </div>
 
-        {error && !checking && (
+        {status === false && !checking && (
           <p className="text-xs text-destructive font-mono">
             ✗ Подписка не обнаружена. Подпишитесь и нажмите «Проверить».
           </p>
