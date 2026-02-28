@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: `🎁 Бесплатный товар получен!\n\n📦 ${productName}\n\n📎 Файл прикреплён ниже ⬇️`,
+          text: `🎁 Бесплатный товар получен!\n\n📦 ${productName}\n\n📎 Файл прикреплён ниже ⬇️\n\n⭐ Пожалуйста, оставьте отзыв — нам очень важно ваше мнение!`,
           reply_markup: {
             inline_keyboard: [
               [{ text: "⭐ Оставить отзыв", callback_data: `review_start:free_${product_id.substring(0, 8)}` }],
@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
       }
     } else {
       // No file — send content as text
-      const textMessage = `🎁 Бесплатный товар получен!\n\n📦 ${productName}:\n${claimedItem.content}\n\n🛍 Спасибо! Загляни в каталог за другими товарами.`;
+      const textMessage = `🎁 Бесплатный товар получен!\n\n📦 ${productName}:\n${claimedItem.content}\n\n🛍 Спасибо! Загляни в каталог за другими товарами.\n\n⭐ Пожалуйста, оставьте отзыв — нам очень важно ваше мнение!`;
 
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
