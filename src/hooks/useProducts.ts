@@ -106,6 +106,9 @@ export const useProducts = (options: UseProductsOptions = {}) => {
 
       let products = data || [];
 
+      // Exclude free giveaway products from regular catalog
+      products = products.filter(p => !p.tags?.some(t => t.startsWith('free:')));
+
       // Client-side search filter (for text search across multiple fields)
       if (options.search) {
         const searchLower = options.search.toLowerCase();

@@ -61,6 +61,7 @@ interface Product {
   category_id?: string;
   tags?: string[];
   media_urls?: string[];
+  icon_url?: string;
   categories?: { name: string; icon: string };
 }
 
@@ -426,9 +427,14 @@ const AdminPage = () => {
     );
   }
 
+  const isFreeProduct = (p: Product) => p.tags?.some(t => t.startsWith('free:'));
+
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const freeProducts = filteredProducts.filter(isFreeProduct);
+  const paidProducts = filteredProducts.filter(p => !isFreeProduct(p));
 
   const filteredUsers = users.filter(u => 
     u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -580,47 +586,91 @@ const AdminPage = () => {
                     </Button>
                   </div>
 
+                  {/* Free products section */}
+                  {freeProducts.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">🎁 Бесплатные</Badge>
+                        <span className="text-xs text-muted-foreground">{freeProducts.length} шт</span>
+                      </div>
+                      <div className="space-y-2">
+                        {freeProducts.map((product) => (
+                          <Card key={product.id} className="p-4 border-primary/20">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                {/* Thumbnail */}
+                                <div className="w-10 h-10 rounded bg-muted flex-shrink-0 overflow-hidden bevel-sunken">
+                                  {product.icon_url ? (
+                                    <img src={product.icon_url} alt="" className="w-full h-full object-cover" />
+                                  ) : product.media_urls && product.media_urls.length > 0 ? (
+                                    <img src={product.media_urls[0]} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-lg">🎁</div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-medium truncate">{product.name}</h3>
+                                    <Badge variant="outline" className="text-[10px]">FREE</Badge>
+                                    {!product.is_active && <Badge variant="secondary" className="text-xs">Скрыт</Badge>}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground truncate">{product.short_desc}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenProductItems(product)} title="Позиции">
+                                  <Upload className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenProductForm(product)} title="Редактировать">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                      {paidProducts.length > 0 && (
+                        <div className="flex items-center gap-2 mt-4">
+                          <span className="text-xs text-muted-foreground font-medium">Платные товары</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Paid products */}
                   <div className="space-y-2">
-                    {filteredProducts.map((product) => (
+                    {paidProducts.map((product) => (
                       <Card key={product.id} className="p-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium truncate">{product.name}</h3>
-                              {!product.is_active && (
-                                <Badge variant="secondary" className="text-xs">Скрыт</Badge>
-                              )}
-                              {product.is_popular && (
-                                <Badge className="text-xs">Популярное</Badge>
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            {/* Thumbnail */}
+                            <div className="w-10 h-10 rounded bg-muted flex-shrink-0 overflow-hidden bevel-sunken">
+                              {product.icon_url ? (
+                                <img src={product.icon_url} alt="" className="w-full h-full object-cover" />
+                              ) : product.media_urls && product.media_urls.length > 0 ? (
+                                <img src={product.media_urls[0]} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-lg">{product.categories?.icon || '📦'}</div>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">{product.short_desc}</p>
-                            <p className="text-sm font-bold mt-1">{product.price.toLocaleString('ru-RU')} ₽</p>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium truncate">{product.name}</h3>
+                                {!product.is_active && <Badge variant="secondary" className="text-xs">Скрыт</Badge>}
+                                {product.is_popular && <Badge className="text-xs">Популярное</Badge>}
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate">{product.short_desc}</p>
+                              <p className="text-sm font-bold mt-1">{product.price.toLocaleString('ru-RU')} ₽</p>
+                            </div>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenProductItems(product)}
-                              title="Загрузить позиции"
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenProductItems(product)} title="Позиции">
                               <Upload className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleToggleProductActive(product.id, product.is_active)}
-                              disabled={admin.isLoading}
-                              title={product.is_active ? 'Скрыть' : 'Показать'}
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => handleToggleProductActive(product.id, product.is_active)} disabled={admin.isLoading} title={product.is_active ? 'Скрыть' : 'Показать'}>
                               {product.is_active ? <Ban className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => handleOpenProductForm(product)}
-                              title="Редактировать"
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenProductForm(product)} title="Редактировать">
                               <Edit className="h-4 w-4" />
                             </Button>
                           </div>
