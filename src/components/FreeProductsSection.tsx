@@ -259,7 +259,7 @@ export const FreeProductsSection = () => {
                   <div className="flex-1 p-4 md:p-6 flex flex-col items-center md:items-start justify-center text-center md:text-left">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-2xl md:text-3xl">🎁</span>
-                      <h2 className="text-lg md:text-xl font-bold text-foreground leading-tight crt-glitch-text" data-text="Бесплатные инструменты">
+                      <h2 className="text-lg md:text-xl font-bold text-foreground leading-tight">
                         Бесплатные<br />инструменты
                       </h2>
                     </div>
