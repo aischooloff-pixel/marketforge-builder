@@ -57,7 +57,7 @@ serve(async (req) => {
       );
     }
 
-    const channelUsername = '@TemkaStoreNews';
+    const channelUsername = '@Temka_Store_News';
 
     for (const token of botTokens) {
       for (let attempt = 0; attempt < RETRIES_PER_TOKEN; attempt += 1) {

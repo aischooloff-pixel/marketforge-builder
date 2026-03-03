@@ -30,7 +30,7 @@ export const Footer = () => {
             <Link to="/disclaimer" className="hover:text-primary transition-colors">[Дисклеймер]</Link>
             <Link to="/privacy" className="hover:text-primary transition-colors">[Конфиденциальность]</Link>
             <Link to="/terms" className="hover:text-primary transition-colors">[Соглашение]</Link>
-            <a href="https://t.me/TemkaStoreNews" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">[Канал в TG]</a>
+            <a href="https://t.me/Temka_Store_News" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">[Канал в TG]</a>
           </div>
 
           {/* Info block */}

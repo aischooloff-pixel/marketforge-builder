@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { PxMail, PxShield } from '@/components/PixelIcons';
 
-const CHANNEL_URL = 'https://t.me/TemkaStoreNews';
+const CHANNEL_URL = 'https://t.me/Temka_Store_News';
 const FRONTEND_TIMEOUT_MS = 6000;
 const TG_WAIT_TIMEOUT_MS = 6000;
 const TG_POLL_INTERVAL_MS = 250;

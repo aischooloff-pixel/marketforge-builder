@@ -114,7 +114,7 @@ serve(async (req) => {
           disable_web_page_preview: true,
           reply_markup: { inline_keyboard: [
             [{ text: "🛍 Открыть магазин", url: "https://t.me/temka_store_robot/app" }],
-            [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
+            [{ text: "📢 Наш канал", url: "https://t.me/Temka_Store_News" }],
           ]},
         });
         await tg(botToken, "answerCallbackQuery", { callback_query_id: callback.id, text: "✅ Проверка пройдена!" });
@@ -247,7 +247,7 @@ serve(async (req) => {
           disable_web_page_preview: true,
           reply_markup: { inline_keyboard: [
             [{ text: "🛍 Открыть магазин", url: "https://t.me/temka_store_robot/app" }],
-            [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
+            [{ text: "📢 Наш канал", url: "https://t.me/Temka_Store_News" }],
           ]},
         });
       } else {
