@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { PxMail, PxShield } from '@/components/PixelIcons';
 
 const CHANNEL_URL = 'https://t.me/Temka_Store_News';
+const CHANNEL_CACHE_VERSION = 'temka_store_news_v2';
 const FRONTEND_TIMEOUT_MS = 6000;
 const TG_WAIT_TIMEOUT_MS = 6000;
 const TG_POLL_INTERVAL_MS = 250;
 
-const verificationKey = (telegramId: number) => `channel_sub_verified:${telegramId}`;
+const verificationKey = (telegramId: number) => `channel_sub_verified:${CHANNEL_CACHE_VERSION}:${telegramId}`;
 
 export const ChannelGate = () => {
   const [allowed, setAllowed] = useState(false);
