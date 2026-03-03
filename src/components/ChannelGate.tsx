@@ -8,8 +8,25 @@ const CHANNEL_CACHE_VERSION = 'temka_store_news_v2';
 const FRONTEND_TIMEOUT_MS = 6000;
 const TG_WAIT_TIMEOUT_MS = 6000;
 const TG_POLL_INTERVAL_MS = 250;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 const verificationKey = (telegramId: number) => `channel_sub_verified:${CHANNEL_CACHE_VERSION}:${telegramId}`;
+
+const isCacheValid = (telegramId: number): boolean => {
+  const raw = localStorage.getItem(verificationKey(telegramId));
+  if (!raw) return false;
+  const ts = Number(raw);
+  if (isNaN(ts)) return false;
+  return Date.now() - ts < CACHE_TTL_MS;
+};
+
+const setCacheValid = (telegramId: number) => {
+  localStorage.setItem(verificationKey(telegramId), String(Date.now()));
+};
+
+const clearCache = (telegramId: number) => {
+  localStorage.removeItem(verificationKey(telegramId));
+};
 
 export const ChannelGate = () => {
   const [allowed, setAllowed] = useState(false);
@@ -44,29 +61,29 @@ export const ChannelGate = () => {
 
       if (error) {
         setAllowed(false);
-        localStorage.removeItem(verificationKey(id));
+        clearCache(id);
         setErrorText('Не удалось проверить подписку. Нажмите «Проверить подписку».');
         return;
       }
 
       if (data?.checked_telegram_id && Number(data.checked_telegram_id) !== id) {
         setAllowed(false);
-        localStorage.removeItem(verificationKey(id));
+        clearCache(id);
         setErrorText('Ошибка синхронизации Telegram ID. Перезапустите приложение из Telegram.');
         return;
       }
 
       if (data?.subscribed === true) {
-        localStorage.setItem(verificationKey(id), '1');
+        setCacheValid(id);
         setAllowed(true);
       } else {
-        localStorage.removeItem(verificationKey(id));
+        clearCache(id);
         setAllowed(false);
         setErrorText('Подписка не обнаружена. Подпишитесь и нажмите «Проверить подписку».');
       }
     } catch {
       setAllowed(false);
-      localStorage.removeItem(verificationKey(id));
+      clearCache(id);
       setErrorText('Проверка заняла слишком много времени. Нажмите «Проверить подписку».');
     } finally {
       checkingRef.current = false;
@@ -86,9 +103,10 @@ export const ChannelGate = () => {
         const id = Number(tgUser.id);
         setTelegramId(id);
 
-        if (localStorage.getItem(verificationKey(id)) === '1') {
+        if (isCacheValid(id)) {
           setAllowed(true);
         } else {
+          clearCache(id);
           setAllowed(false);
         }
 
