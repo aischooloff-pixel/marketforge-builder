@@ -80,7 +80,7 @@ const Index = () => {
                       Информация
                     </Button>
                   </Link>
-                  <a href="https://t.me/TemkaStoreNews" target="_blank" rel="noopener noreferrer">
+                  <a href="https://t.me/Temka_Store_News" target="_blank" rel="noopener noreferrer">
                     <Button size="sm" variant="outline" className="gap-1.5 text-xs px-4 h-9">
                       <PxMail size={14} />
                       Телеграм канал
