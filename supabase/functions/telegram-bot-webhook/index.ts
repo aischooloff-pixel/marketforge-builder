@@ -19,7 +19,7 @@ const CAPTCHA_ITEMS: [string, string][] = [
 
 function buildWelcomeMessage(username?: string) {
   const nameLink = username ? `<a href="https://t.me/${username}">Темщик</a>` : "Темщик";
-  return `👋 <b>${nameLink}</b>, добро пожаловать в <b><a href="https://t.me/Temka_Store_Bot/app">TEMKA.STORE</a></b>!
+  return `👋 <b>${nameLink}</b>, добро пожаловать в <b><a href="https://t.me/temka_store_robot/app">TEMKA.STORE</a></b>!
 
 Здесь ты можешь приобрести цифровые товары для себя или работы быстро и дешево.
 
@@ -113,7 +113,7 @@ serve(async (req) => {
           chat_id: chatId, text: buildWelcomeMessage(callback.from?.username), parse_mode: "HTML",
           disable_web_page_preview: true,
           reply_markup: { inline_keyboard: [
-            [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+            [{ text: "🛍 Открыть магазин", url: "https://t.me/temka_store_robot/app" }],
             [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
           ]},
         });
@@ -210,7 +210,7 @@ serve(async (req) => {
           await tg(botToken, "sendMessage", {
             chat_id: chatId,
             text: "✅ Спасибо за отзыв! Он отправлен на модерацию и будет опубликован после проверки.",
-            reply_markup: { inline_keyboard: [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }]] },
+            reply_markup: { inline_keyboard: [[{ text: "🛍 Вернуться в магазин", url: "https://t.me/temka_store_robot/app" }]] },
           });
         } else {
           console.error("[Bot] Failed to insert review:", reviewErr);
@@ -246,7 +246,7 @@ serve(async (req) => {
           chat_id: chatId, text: buildWelcomeMessage(message.from?.username), parse_mode: "HTML",
           disable_web_page_preview: true,
           reply_markup: { inline_keyboard: [
-            [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+            [{ text: "🛍 Открыть магазин", url: "https://t.me/temka_store_robot/app" }],
             [{ text: "📢 Наш канал", url: "https://t.me/TemkaStoreNews" }],
           ]},
         });
