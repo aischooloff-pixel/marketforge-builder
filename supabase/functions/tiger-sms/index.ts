@@ -164,7 +164,7 @@ serve(async (req) => {
                 text: `📱 Виртуальный номер получен!\n\n📋 Сервис: ${body.serviceName || service}\n📞 Номер: +${phone}\n💰 Стоимость: ${price} ₽\n\nОткройте приложение для приёма SMS-кода.`,
                 reply_markup: {
                   inline_keyboard: [
-                    [{ text: "📱 Мои номера", url: "https://t.me/Temka_Store_Bot/app?startapp=numbers" }],
+                    [{ text: "📱 Мои номера", url: "https://t.me/temka_store_robot/app?startapp=numbers" }],
                     [{ text: "⭐ Оставить отзыв", callback_data: `review_start:${reviewId}` }],
                   ],
                 },

@@ -165,7 +165,7 @@ serve(async (req) => {
               text: `🚀 Заказ на накрутку создан!\n\n📱 Сервис: ${category} — ${serviceName}\n🔗 Ссылка: ${link}\n📊 Количество: ${quantity}\n💰 Стоимость: ${price} ₽\n\n⏳ Ожидайте выполнения накрутки. Мы уведомим вас, когда заказ будет выполнен.`,
               reply_markup: {
                 inline_keyboard: [
-                  [{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+                  [{ text: "🛍 Вернуться в магазин", url: "https://t.me/temka_store_robot/app" }],
                 ],
               },
             }),
@@ -249,7 +249,7 @@ serve(async (req) => {
                   reply_markup: {
                     inline_keyboard: [
                       [{ text: "⭐ Оставить отзыв", callback_data: `review_start:boost_${orderId}` }],
-                      [{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+                      [{ text: "🛍 Вернуться в магазин", url: "https://t.me/temka_store_robot/app" }],
                     ],
                   },
                 }),

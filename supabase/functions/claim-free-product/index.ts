@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
           reply_markup: {
             inline_keyboard: [
               [{ text: "⭐ Оставить отзыв", callback_data: `review_start:free_${product_id.substring(0, 8)}` }],
-              [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+              [{ text: "🛍 Открыть магазин", url: "https://t.me/temka_store_robot/app" }],
             ],
           },
         }),
@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
           reply_markup: {
             inline_keyboard: [
               [{ text: "⭐ Оставить отзыв", callback_data: `review_start:free_${product_id.substring(0, 8)}` }],
-              [{ text: "🛍 Открыть магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+              [{ text: "🛍 Открыть магазин", url: "https://t.me/temka_store_robot/app" }],
             ],
           },
         }),

@@ -225,7 +225,7 @@ serve(async (req) => {
 
           const buttons = [
                 [{ text: "⭐ Оставить отзыв", callback_data: `review_start:${orderId.substring(0, 8)}` }],
-                [{ text: "🛍 Вернуться в магазин", url: "https://t.me/Temka_Store_Bot/app" }],
+                [{ text: "🛍 Вернуться в магазин", url: "https://t.me/temka_store_robot/app" }],
               ];
 
           await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {

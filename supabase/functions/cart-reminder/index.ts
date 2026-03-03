@@ -106,7 +106,7 @@ serve(async (req) => {
                 [
                   {
                     text: "🛒 Перейти к корзине",
-                    url: "https://t.me/Temka_Store_Bot/app?startapp=cart",
+                    url: "https://t.me/temka_store_robot/app?startapp=cart",
                   },
                 ],
               ],
