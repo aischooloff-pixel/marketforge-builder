@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { PxMail, PxShield } from '@/components/PixelIcons';
+import { useTelegram } from '@/contexts/TelegramContext';
 
 const CHANNEL_URL = 'https://t.me/Temka_Store_News';
 const CHANNEL_CACHE_VERSION = 'temka_store_news_v2';
 const FRONTEND_TIMEOUT_MS = 6000;
-const TG_WAIT_TIMEOUT_MS = 6000;
+const TG_WAIT_TIMEOUT_MS = 15000;
 const TG_POLL_INTERVAL_MS = 250;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -29,6 +30,7 @@ const clearCache = (telegramId: number) => {
 };
 
 export const ChannelGate = () => {
+  const { user: telegramUser } = useTelegram();
   const [allowed, setAllowed] = useState(false);
   const [checking, setChecking] = useState(false);
   const [telegramId, setTelegramId] = useState<number | null>(null);
@@ -98,15 +100,17 @@ export const ChannelGate = () => {
     const interval = window.setInterval(() => {
       if (!mounted) return;
 
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      if (tgUser?.id) {
-        const id = Number(tgUser.id);
-        setTelegramId(id);
+      const initDataTelegramId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+      const contextTelegramId = telegramUser?.telegram_id;
+      const resolvedId = Number(initDataTelegramId ?? contextTelegramId ?? 0);
 
-        if (isCacheValid(id)) {
+      if (resolvedId > 0) {
+        setTelegramId(resolvedId);
+
+        if (isCacheValid(resolvedId)) {
           setAllowed(true);
         } else {
-          clearCache(id);
+          clearCache(resolvedId);
           setAllowed(false);
         }
 
@@ -116,8 +120,16 @@ export const ChannelGate = () => {
       }
 
       if (Date.now() - startedAt > TG_WAIT_TIMEOUT_MS) {
-        // Вне Telegram / initData не пришли
-        setAllowed(true);
+        const isTelegramRuntime = Boolean(window.Telegram?.WebApp?.initData && window.Telegram.WebApp.initData.length > 0);
+
+        if (isTelegramRuntime) {
+          setAllowed(false);
+          setErrorText('Не удалось получить Telegram ID. Перезапустите мини-приложение из Telegram.');
+        } else {
+          // Вне Telegram / initData не пришли
+          setAllowed(true);
+        }
+
         setInitialized(true);
         window.clearInterval(interval);
       }
@@ -127,7 +139,7 @@ export const ChannelGate = () => {
       mounted = false;
       window.clearInterval(interval);
     };
-  }, []);
+  }, [telegramUser?.telegram_id]);
 
   const handleSubscribe = () => {
     if (window.Telegram?.WebApp) {
@@ -138,11 +150,12 @@ export const ChannelGate = () => {
   };
 
   const handleManualCheck = async () => {
-    if (!telegramId) {
+    const id = telegramId ?? telegramUser?.telegram_id ?? null;
+    if (!id) {
       setErrorText('Не удалось получить Telegram ID. Перезапустите приложение из Telegram.');
       return;
     }
-    await runCheck(telegramId);
+    await runCheck(id);
   };
 
   if (!initialized) return null;
