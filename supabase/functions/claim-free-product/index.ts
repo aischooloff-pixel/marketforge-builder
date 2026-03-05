@@ -6,6 +6,32 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const TELEGRAM_TIMEOUT_MS = 5000;
+const RETRIES_PER_TOKEN = 2;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function checkWithBotToken(botToken: string, channelId: string, telegramId: number | string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort("telegram_timeout"), TELEGRAM_TIMEOUT_MS);
+
+  try {
+    const params = new URLSearchParams({
+      chat_id: channelId,
+      user_id: String(telegramId),
+    });
+
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember?${params.toString()}`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -23,7 +49,17 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
+    const primaryBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const backupBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN_BACKUP");
+    const botTokens = [primaryBotToken, backupBotToken].filter((v): v is string => Boolean(v));
+
+    if (botTokens.length === 0) {
+      return new Response(JSON.stringify({ error: "bot_token_not_configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, serviceKey);
 
     // 1. Find user profile
@@ -63,19 +99,51 @@ Deno.serve(async (req) => {
 
     if (channels && channels.length > 0) {
       for (const ch of channels) {
-        try {
-          const res = await fetch(
-            `https://api.telegram.org/bot${botToken}/getChatMember?chat_id=${ch.channel_id}&user_id=${telegram_id}`,
-            { signal: AbortSignal.timeout(5000) }
-          );
-          const data = await res.json();
-          if (!data.ok || !["member", "administrator", "creator"].includes(data.result?.status)) {
-            return new Response(
-              JSON.stringify({ error: "not_subscribed", message: "Сначала подпишись на канал проекта" }),
-              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
+        const channelId = ch.channel_id;
+        let verified = false;
+
+        for (const token of botTokens) {
+          for (let attempt = 0; attempt < RETRIES_PER_TOKEN; attempt += 1) {
+            try {
+              const tgData = await checkWithBotToken(token, channelId, telegram_id);
+
+              if (tgData?.ok) {
+                const memberStatus = tgData.result?.status;
+                const subscribed = ["member", "administrator", "creator"].includes(memberStatus);
+
+                if (!subscribed) {
+                  return new Response(
+                    JSON.stringify({ error: "not_subscribed", message: "Сначала подпишись на канал проекта" }),
+                    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                  );
+                }
+
+                verified = true;
+                break;
+              }
+
+              const errorCode = Number(tgData?.error_code || 0);
+              const description = String(tgData?.description || "").toLowerCase();
+              const retryable = errorCode === 429 || errorCode >= 500 || description.includes("timeout");
+
+              if (retryable && attempt < RETRIES_PER_TOKEN - 1) {
+                await sleep(250);
+                continue;
+              }
+
+              break;
+            } catch {
+              if (attempt < RETRIES_PER_TOKEN - 1) {
+                await sleep(250);
+                continue;
+              }
+            }
           }
-        } catch {
+
+          if (verified) break;
+        }
+
+        if (!verified) {
           return new Response(
             JSON.stringify({ error: "check_failed", message: "Не удалось проверить подписку, попробуй позже" }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -120,7 +188,7 @@ Deno.serve(async (req) => {
     // 7. If there's a file_url, send as a document (not text)
     if (claimedItem.file_url) {
       // Send intro message first
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      await fetch(`https://api.telegram.org/bot${botTokens[0]}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -152,7 +220,7 @@ Deno.serve(async (req) => {
           formData.append("document", new File([fileData], fileName));
           formData.append("caption", `📎 ${productName}`);
 
-          await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+          await fetch(`https://api.telegram.org/bot${botTokens[0]}/sendDocument`, {
             method: "POST",
             body: formData,
           });
@@ -162,7 +230,7 @@ Deno.serve(async (req) => {
       // No file — send content as text
       const textMessage = `🎁 Бесплатный товар получен!\n\n📦 ${productName}:\n${claimedItem.content}\n\n🛍 Спасибо! Загляни в каталог за другими товарами.\n\n⭐ Пожалуйста, оставьте отзыв — нам очень важно ваше мнение!`;
 
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      await fetch(`https://api.telegram.org/bot${botTokens[0]}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
